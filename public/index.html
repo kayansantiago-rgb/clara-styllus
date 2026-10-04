@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clara Styllus · PDV</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23a14d6f'/><text x='16' y='22' font-family='Georgia' font-size='16' fill='white' text-anchor='middle'>CS</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <aside class="menu">
+    <div class="marca">
+      <span class="marca-nome">Clara Styllus</span>
+      <span class="marca-sub">Ponto de venda</span>
+    </div>
+    <nav>
+      <a href="#/pdv" data-rota="pdv"><span class="ico">🛍️</span>Vender <kbd>F1</kbd></a>
+      <a href="#/produtos" data-rota="produtos"><span class="ico">👗</span>Produtos</a>
+      <a href="#/etiquetas" data-rota="etiquetas"><span class="ico">🏷️</span>Etiquetas</a>
+      <a href="#/vendas" data-rota="vendas"><span class="ico">🧾</span>Vendas</a>
+      <a href="#/clientes" data-rota="clientes"><span class="ico">👤</span>Clientes</a>
+      <a href="#/caixa" data-rota="caixa"><span class="ico">💰</span>Caixa</a>
+      <a href="#/relatorios" data-rota="relatorios"><span class="ico">📊</span>Relatórios</a>
+      <a href="#/config" data-rota="config"><span class="ico">⚙️</span>Configurações</a>
+    </nav>
+    <div class="status-caixa" id="status-caixa"></div>
+  </aside>
+
+  <main id="conteudo"></main>
+
+  <div id="modal-fundo" class="modal-fundo" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <header><h2 id="modal-titulo"></h2><button class="fechar" data-fechar aria-label="Fechar">×</button></header>
+      <div id="modal-corpo"></div>
+    </div>
+  </div>
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+  <iframe id="frame-impressao" title="impressão" tabindex="-1"></iframe>
+
+  <script src="/js/barcode.js"></script>
+  <script src="/js/util.js"></script>
+  <script src="/js/impressao.js"></script>
+  <script src="/js/telas/pdv.js"></script>
+  <script src="/js/telas/produtos.js"></script>
+  <script src="/js/telas/etiquetas.js"></script>
+  <script src="/js/telas/vendas.js"></script>
+  <script src="/js/telas/clientes.js"></script>
+  <script src="/js/telas/caixa.js"></script>
+  <script src="/js/telas/relatorios.js"></script>
+  <script src="/js/telas/config.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
