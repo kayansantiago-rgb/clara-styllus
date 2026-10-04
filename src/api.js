@@ -7,6 +7,8 @@ const { transacao } = require('./db');
 const { gerarEan13Interno } = require('./codigos');
 const { hashSenha, conferirSenha, novoToken } = require('./auth');
 const { instalarCrediario } = require('./crediario');
+const { instalarInventario } = require('./inventario');
+const taxas = require('./taxas');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
@@ -487,6 +489,8 @@ function criarApi(db) {
     db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto,
   });
 
+  instalarInventario({ db, rota, erro, inteiro, texto, plano, planos, transacao });
+
   // ----------------------------------------------------------------- caixa
   const resumoCaixa = (caixaId) => {
     const caixa = plano(db.prepare('SELECT * FROM caixas WHERE id = ?').get(caixaId));
@@ -706,9 +710,11 @@ function criarApi(db) {
         mov.run(p.id, -it.quantidade, `Venda #${vendaId}`, vendaId);
       }
       const insPag = db.prepare(
-        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas) VALUES (?,?,?,?)'
+        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa) VALUES (?,?,?,?,?)'
       );
-      for (const p of pagamentos) insPag.run(vendaId, p.forma, p.valor, p.parcelas);
+      for (const p of pagamentos) {
+        insPag.run(vendaId, p.forma, p.valor, p.parcelas, taxas.calcular(cfg, p.forma, p.parcelas, p.valor));
+      }
       if (fiado) {
         crediario.lancarParcelas({
           clienteId, vendaId, valor: fiado.valor, parcelas: fiado.parcelas,
@@ -832,9 +838,51 @@ function criarApi(db) {
         )
         .all(de, ate)
     );
+    // Taxas das maquininhas: usa a taxa gravada na venda; vendas antigas (sem taxa gravada)
+    // são calculadas com as taxas atuais.
+    const linhasTaxa = [];
+    const juntar = (origem, rows) => {
+      for (const r of rows) {
+        const taxa = (r.taxa || 0) + taxas.calcular(cfg, r.forma, r.parcelas, r.sem_taxa || 0);
+        if (!taxa && !['debito', 'credito', 'pix'].includes(r.forma)) continue;
+        linhasTaxa.push({
+          origem, forma: r.forma, parcelas: r.parcelas, bruto: r.valor, taxa, liquido: r.valor - taxa,
+          percentual: taxas.percentual(cfg, r.forma, r.parcelas),
+        });
+      }
+    };
+    const cfg = config();
+    juntar('vendas', planos(
+      db
+        .prepare(
+          `SELECT p.forma, p.parcelas, SUM(p.valor) AS valor, SUM(p.taxa) AS taxa,
+             SUM(CASE WHEN p.taxa IS NULL THEN p.valor END) AS sem_taxa
+           FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
+           WHERE ${filtro} GROUP BY p.forma, p.parcelas ORDER BY p.forma, p.parcelas`
+        )
+        .all(de, ate)
+    ));
+    juntar('crediario', planos(
+      db
+        .prepare(
+          `SELECT forma, 1 AS parcelas, SUM(valor) AS valor, SUM(taxa) AS taxa,
+             SUM(CASE WHEN taxa IS NULL THEN valor END) AS sem_taxa
+           FROM crediario_recebimentos WHERE status = 'ok' AND date(criado_em) BETWEEN ? AND ?
+           GROUP BY forma`
+        )
+        .all(de, ate)
+    ));
+    const totalTaxas = linhasTaxa.reduce((a, l) => a + l.taxa, 0);
+    totais.taxas = totalTaxas;
+    totais.lucro_apos_taxas = totais.lucro_bruto - totalTaxas;
     return {
       de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor,
       crediario: crediario.resumoGeral(de, ate),
+      taxas: {
+        linhas: linhasTaxa,
+        total: totalTaxas,
+        bruto: linhasTaxa.reduce((a, l) => a + l.bruto, 0),
+      },
     };
   }, 'admin');
 

@@ -56,6 +56,23 @@ Telas.relatorios = (() => {
         <div class="card"><small>Ticket médio</small><b>${brl(t.ticket_medio)}</b></div>
         <div class="card"><small>Descontos dados</small><b>${brl(t.descontos)}</b></div>
         <div class="card"><small>Lucro bruto (venda − custo)</small><b>${brl(t.lucro_bruto)}</b></div>
+        <div class="card"><small>Taxas das maquininhas</small><b class="${t.taxas ? 'txt-perigo' : ''}">− ${brl(t.taxas)}</b></div>
+        <div class="card destaque"><small>Lucro depois das taxas</small><b>${brl(t.lucro_apos_taxas)}</b></div>
+      </div>
+      <div class="cartao">
+        <h3>💳 Maquininhas: quanto realmente cai na conta</h3>
+        ${r.taxas.linhas.length ? `
+        <table class="tabela">
+          <thead><tr><th>Forma</th><th>Origem</th><th class="r">Taxa</th><th class="r">Valor vendido</th><th class="r">Taxa (R$)</th><th class="r">Líquido</th></tr></thead>
+          <tbody>${r.taxas.linhas.map((l) => `<tr>
+            <td>${U.FORMAS[l.forma] || l.forma}${l.forma === 'credito' ? (l.parcelas > 1 ? ` ${l.parcelas}x` : ' à vista') : ''}</td>
+            <td><small>${l.origem === 'crediario' ? 'recebimento do crediário' : 'vendas'}</small></td>
+            <td class="r">${l.percentual ? l.percentual.toLocaleString('pt-BR') + '%' : '<small>sem taxa</small>'}</td>
+            <td class="r">${brl(l.bruto)}</td><td class="r txt-perigo">− ${brl(l.taxa)}</td><td class="r"><b>${brl(l.liquido)}</b></td></tr>`).join('')}</tbody>
+          <tfoot><tr><th colspan="3">Total</th><th class="r">${brl(r.taxas.bruto)}</th><th class="r txt-perigo">− ${brl(r.taxas.total)}</th><th class="r">${brl(r.taxas.bruto - r.taxas.total)}</th></tr></tfoot>
+        </table>
+        ${r.taxas.total ? '' : '<p class="dica">Cadastre as taxas da sua maquininha em <a href="#/config">Configurações → Taxas das maquininhas</a>.</p>'}`
+    : '<div class="vazio">Nenhuma venda em cartão ou PIX no período.</div>'}
       </div>
       <div class="cards">
         <div class="card"><small>Crediário: recebido no período</small><b>${brl(r.crediario.recebido)}</b></div>

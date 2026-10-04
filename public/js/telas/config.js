@@ -30,6 +30,9 @@ Telas.config = (() => {
     }
     if (dados.crediario_limite_padrao) dados.crediario_limite_padrao = String(U.paraCentavos(dados.crediario_limite_padrao) || '');
     if (dados.meta_mensal) dados.meta_mensal = String(U.paraCentavos(dados.meta_mensal) || '');
+    for (const k of ['taxa_debito', 'taxa_credito_vista', 'taxa_credito_2a6', 'taxa_credito_7a12', 'taxa_pix']) {
+      if (dados[k]) dados[k] = dados[k].replace('%', '').trim();
+    }
     return dados;
   }
 
@@ -102,6 +105,19 @@ Telas.config = (() => {
             ${check('etiqueta_mostrar_loja', 'Mostrar nome da loja')}
             ${check('etiqueta_mostrar_preco', 'Mostrar preço')}
             <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="etiqueta">🏷️ Imprimir etiqueta de teste</button></div>
+          </div>
+        </div>
+        <div class="cartao">
+          <h3>💳 Taxas das maquininhas</h3>
+          <p class="dica">Coloque a porcentagem que a maquininha (Stone, Cielo, PagSeguro, Mercado Pago…) desconta.
+            O sistema grava a taxa em cada venda e mostra nos Relatórios quanto realmente cai na conta.
+            Deixe vazio o que não tem taxa.</p>
+          <div class="grade-form tres">
+            ${campo('taxa_debito', 'Débito (%)', 'inputmode="decimal" placeholder="ex.: 1,99"')}
+            ${campo('taxa_credito_vista', 'Crédito à vista (%)', 'inputmode="decimal" placeholder="ex.: 3,19"')}
+            ${campo('taxa_credito_2a6', 'Crédito 2 a 6x (%)', 'inputmode="decimal" placeholder="ex.: 4,59"')}
+            ${campo('taxa_credito_7a12', 'Crédito 7 a 12x (%)', 'inputmode="decimal" placeholder="ex.: 5,99"')}
+            ${campo('taxa_pix', 'PIX (%)', 'inputmode="decimal" placeholder="geralmente 0"')}
           </div>
         </div>
         <div class="cartao">

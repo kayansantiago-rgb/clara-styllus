@@ -360,6 +360,29 @@ tr.linha-vermelho td { background: #fff7f6; }
 .txt-rosa { color: var(--rosa); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+/* Inventário */
+.passos { padding-left: 20px; line-height: 1.8; margin: 0 0 8px; }
+.inv-grade { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.inv-busca { margin-bottom: 12px; }
+.inv-ultimo { display: flex; align-items: center; gap: 16px; border-radius: 14px; padding: 18px; background: #fff; border: 2px solid var(--borda); min-height: 120px; }
+.inv-ultimo.ok { border-color: var(--ok); background: #f1faf5; }
+.inv-ultimo.alerta { border-color: var(--alerta); background: #fff8e8; }
+.inv-ultimo.erro { border-color: var(--perigo); background: #fff1ef; }
+.inv-ultimo .ultimo-foto { width: 84px; height: 84px; background: var(--rosa-claro); border: 0; }
+.inv-ultimo-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.inv-ultimo-txt small { color: var(--suave); }
+.inv-ultimo-txt span { font-size: 21px; font-weight: 700; }
+.inv-contagem { text-align: center; display: flex; flex-direction: column; }
+.inv-contagem b { font-size: 54px; line-height: 1; }
+.inv-leituras { max-height: calc(100vh - 300px); overflow: auto; margin: 0; }
+.inv-barra-card .meta-barra { margin: 8px 0 4px; }
+.abas { display: flex; gap: 4px; border-bottom: 1px solid var(--borda); margin: 6px 0 10px; }
+.aba { font: inherit; border: 0; background: none; padding: 8px 14px; cursor: pointer; border-bottom: 3px solid transparent; color: var(--suave); }
+.aba.sel { border-color: var(--rosa); color: var(--texto); font-weight: 600; }
+.finalizar-inv { border-top: 1px solid var(--borda); margin-top: 14px; padding-top: 12px; }
+.txt-ok { color: var(--ok); }
+@media (max-width: 1100px) { .inv-grade { grid-template-columns: 1fr; } }
+
 /* -------------------------------------------------------- etiquetas */
 .qtd-input { width: 80px; text-align: center; }
 .previa-etiqueta { display: flex; justify-content: center; padding: 20px; background: #eee; border-radius: 8px; }

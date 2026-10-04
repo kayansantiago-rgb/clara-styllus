@@ -30,6 +30,8 @@ function dividir(valor, n) {
   return Array.from({ length: n }, (_, i) => base + (i === 0 ? valor - base * n : 0));
 }
 
+const taxas = require('./taxas');
+
 function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto }) {
   const saldo = (clienteId) => {
     const r = db
@@ -227,10 +229,11 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
       }
       const r = db
         .prepare(
-          `INSERT INTO crediario_recebimentos (cliente_id, caixa_id, usuario_id, operador, valor, forma, observacao)
-           VALUES (?,?,?,?,?,?,?)`
+          `INSERT INTO crediario_recebimentos (cliente_id, caixa_id, usuario_id, operador, valor, forma, observacao, taxa)
+           VALUES (?,?,?,?,?,?,?,?)`
         )
-        .run(params.id, caixa.id, usuario.id, usuario.nome, valor, forma, texto(corpo.observacao, 500));
+        .run(params.id, caixa.id, usuario.id, usuario.nome, valor, forma, texto(corpo.observacao, 500),
+          taxas.calcular(config(), forma, 1, valor));
       const recId = Number(r.lastInsertRowid);
       let resta = valor;
       for (const p of abertas) {

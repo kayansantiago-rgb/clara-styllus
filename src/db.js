@@ -213,6 +213,12 @@ const CONFIG_PADRAO = {
   // Painel e tela de venda
   meta_mensal: '',
   som_bipe: '1',
+  // Taxas das maquininhas (% por venda)
+  taxa_debito: '',
+  taxa_credito_vista: '',
+  taxa_credito_2a6: '',
+  taxa_credito_7a12: '',
+  taxa_pix: '',
 };
 
 function abrirBanco(arquivo) {
@@ -238,6 +244,42 @@ function migrar(db) {
   if (!colunas('vendas').includes('usuario_id')) {
     db.exec('ALTER TABLE vendas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
   }
+  if (!colunas('venda_pagamentos').includes('taxa')) {
+    db.exec('ALTER TABLE venda_pagamentos ADD COLUMN taxa INTEGER');
+  }
+  if (!colunas('crediario_recebimentos').includes('taxa')) {
+    db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN taxa INTEGER');
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS inventarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      descricao TEXT,
+      categoria TEXT,
+      status TEXT NOT NULL DEFAULT 'aberto' CHECK (status IN ('aberto','finalizado','cancelado')),
+      usuario TEXT,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      finalizado_em TEXT,
+      ajustados INTEGER,
+      valor_sobra INTEGER,
+      valor_falta INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS inventario_leituras (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inventario_id INTEGER NOT NULL REFERENCES inventarios(id),
+      produto_id INTEGER NOT NULL REFERENCES produtos(id),
+      quantidade INTEGER NOT NULL,
+      usuario TEXT,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_inv_leit ON inventario_leituras(inventario_id, produto_id);
+    CREATE TABLE IF NOT EXISTS inventario_itens (
+      inventario_id INTEGER NOT NULL REFERENCES inventarios(id),
+      produto_id INTEGER NOT NULL REFERENCES produtos(id),
+      estoque_sistema INTEGER NOT NULL,
+      contado INTEGER NOT NULL,
+      PRIMARY KEY (inventario_id, produto_id)
+    );
+  `);
   if (!colunas('produtos').includes('foto_versao')) {
     db.exec('ALTER TABLE produtos ADD COLUMN foto_versao INTEGER');
   }
