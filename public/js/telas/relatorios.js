@@ -57,6 +57,12 @@ Telas.relatorios = (() => {
         <div class="card"><small>Descontos dados</small><b>${brl(t.descontos)}</b></div>
         <div class="card"><small>Lucro bruto (venda − custo)</small><b>${brl(t.lucro_bruto)}</b></div>
       </div>
+      <div class="cards">
+        <div class="card"><small>Crediário: recebido no período</small><b>${brl(r.crediario.recebido)}</b></div>
+        <div class="card"><small>Crediário: total a receber</small><b>${brl(r.crediario.a_receber)}</b></div>
+        <div class="card"><small>Crediário: vencido</small><b class="${r.crediario.vencido ? 'txt-perigo' : ''}">${brl(r.crediario.vencido)}</b></div>
+        <div class="card"><small>Clientes em atraso</small><b>${r.crediario.clientes_atraso}</b></div>
+      </div>
       <div class="duas-colunas">
         <div class="cartao">
           <h3>Vendas por dia</h3>

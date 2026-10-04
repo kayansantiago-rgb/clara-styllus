@@ -40,7 +40,9 @@ Telas.etiquetas = (() => {
         <div class="cartao">
           <h3>Pré-visualização</h3>
           <p class="dica">Etiqueta de ${esc(cfg.etiqueta_largura_mm)} × ${esc(cfg.etiqueta_altura_mm)} mm,
-            ${cfg.etiqueta_colunas === '1' ? 'rolo (1 por página)' : `folha A4 com ${esc(cfg.etiqueta_colunas)} colunas`}.
+            ${cfg.impressao_etiqueta_modo === 'navegador'
+    ? (cfg.etiqueta_colunas === '1' ? 'rolo, pelo navegador' : `folha A4 com ${esc(cfg.etiqueta_colunas)} colunas, pelo navegador`)
+    : `rolo com ${esc(cfg.etiqueta_colunas)} coluna(s), direto na impressora (${cfg.impressao_etiqueta_modo.toUpperCase()}${cfg.impressora_etiqueta ? ' · ' + esc(cfg.impressora_etiqueta) : ' · escolha a impressora!'})`}.
             Mude em <a href="#/config">Configurações</a>.</p>
           <div id="previa" class="previa-etiqueta"></div>
         </div>

@@ -1,18 +1,22 @@
-/* Caixa: abertura, sangria, suprimento e fechamento. */
+/* Caixa: abertura, sangria, suprimento e fechamento (as janelas também são usadas no PDV). */
 Telas.caixa = (() => {
   const { esc, brl, api, aviso, erro, abrirModal, fecharModal, dataHora } = U;
   let raiz;
+
+  /** Nome da forma no resumo do caixa (crediário não entra dinheiro na hora). */
+  const rotulo = (f) => (f === 'crediario' ? 'Crediário (a receber)' : U.FORMAS[f] || f);
+
+  const recarregar = () => {
+    atualizarStatusCaixa();
+    if (raiz) abrir(raiz);
+  };
 
   async function abrir(el) {
     raiz = el;
     const [atual, historico] = await Promise.all([api('/api/caixa/atual'), api('/api/caixas')]);
     raiz.innerHTML = `
       <div class="cabecalho-tela"><h1>Caixa</h1></div>
-      ${atual.caixa ? painel(atual) : `
-        <div class="cartao cartao-estreito">
-          <p>O caixa está fechado.</p>
-          <a class="btn btn-primario" href="#/pdv">Abrir caixa na tela de venda</a>
-        </div>`}
+      ${atual.caixa ? painel(atual) : formAbrir()}
       <div class="cartao">
         <h3>Caixas anteriores</h3>
         <table class="tabela">
@@ -29,35 +33,74 @@ Telas.caixa = (() => {
       try { Impressao.fechamentoCaixa(await api(`/api/caixas/${b.dataset.imp}`)); } catch (e) { erro(e); }
     };
     if (atual.caixa) {
-      raiz.querySelector('#sangria').onclick = () => movimento('sangria');
-      raiz.querySelector('#suprimento').onclick = () => movimento('suprimento');
+      raiz.querySelector('#sangria').onclick = () => movimento('sangria', recarregar);
+      raiz.querySelector('#suprimento').onclick = () => movimento('suprimento', recarregar);
       raiz.querySelector('#parcial').onclick = () => Impressao.fechamentoCaixa(atual);
-      raiz.querySelector('#fechar').onclick = () => fechar(atual);
+      raiz.querySelector('#gaveta').onclick = () => Impressao.abrirGaveta();
+      raiz.querySelector('#fechar').onclick = () => fechar(atual, recarregar);
+    } else {
+      ligarFormAbrir(raiz, recarregar);
     }
   }
 
+  // --------------------------------------------------------------- abrir
+  function formAbrir() {
+    return `
+      <div class="cartao cartao-estreito caixa-abrir">
+        <h2>🔒 Caixa fechado</h2>
+        <p>Conte o dinheiro que está na gaveta (troco) e abra o caixa para começar a vender.</p>
+        <form id="f-abrir" class="form">
+          <p>Operador(a): <b>${esc(U.sessao.usuario.nome)}</b></p>
+          <label>Troco inicial na gaveta (R$)<input name="valor" inputmode="decimal" placeholder="0,00" autofocus></label>
+          <button class="btn btn-primario btn-grande">🔓 Abrir caixa</button>
+        </form>
+      </div>`;
+  }
+
+  function ligarFormAbrir(el, aoAbrir) {
+    const form = el.querySelector('#f-abrir');
+    form.valor.focus();
+    form.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const valor = U.paraCentavos(form.valor.value);
+      if (Number.isNaN(valor) || valor < 0) return aviso('Valor inválido.', 'erro');
+      try {
+        await api('/api/caixa/abrir', { metodo: 'POST', corpo: { valor_abertura: valor } });
+        aviso('Caixa aberto. Boas vendas!');
+        aoAbrir();
+      } catch (e) { erro(e); }
+    };
+  }
+
+  // -------------------------------------------------------------- painel
   function painel(r) {
+    const troco = r.vendas.troco;
+    const recebido = (r.recebimentos_crediario || []).reduce((a, f) => a + f.valor, 0);
     return `
       <div class="cartao">
-        <h3>Caixa nº ${r.caixa.id} — aberto em ${dataHora(r.caixa.aberto_em)} por ${esc(r.caixa.operador || '—')}</h3>
+        <div class="caixa-topo">
+          <h3>🔓 Caixa nº ${r.caixa.id} — aberto em ${dataHora(r.caixa.aberto_em)} por ${esc(r.caixa.operador || '—')}</h3>
+        </div>
         <div class="cards">
+          <div class="card destaque"><small>Dinheiro esperado na gaveta</small><b>${brl(r.dinheiro_esperado)}</b></div>
           <div class="card"><small>Vendas</small><b>${r.vendas.quantidade}</b></div>
           <div class="card"><small>Total vendido</small><b>${brl(r.vendas.total)}</b></div>
-          <div class="card"><small>Dinheiro esperado na gaveta</small><b>${brl(r.dinheiro_esperado)}</b></div>
-          ${r.formas.map((f) => `<div class="card"><small>${U.FORMAS[f.forma] || f.forma}</small><b>${brl(f.forma === 'dinheiro' ? f.valor - r.vendas.troco : f.valor)}</b></div>`).join('')}
+          ${r.formas.map((f) => `<div class="card"><small>${rotulo(f.forma)}</small><b>${brl(f.forma === 'dinheiro' ? f.valor - troco : f.valor)}</b></div>`).join('')}
+          ${recebido ? `<div class="card"><small>Recebido do crediário</small><b>${brl(recebido)}</b></div>` : ''}
         </div>
         ${r.movimentos.length ? `<h4>Sangrias e suprimentos</h4>${r.movimentos.map((m) =>
     `<div class="linha"><span>${dataHora(m.criado_em)} · ${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '-' : '+'}${brl(m.valor)}</span></div>`).join('')}` : ''}
         <div class="acoes">
-          <button class="btn" id="sangria">➖ Sangria (retirada)</button>
-          <button class="btn" id="suprimento">➕ Suprimento (reforço)</button>
+          <button class="btn" id="sangria">➖ Sangria</button>
+          <button class="btn" id="suprimento">➕ Suprimento</button>
+          <button class="btn" id="gaveta">🗄️ Abrir gaveta</button>
           <button class="btn" id="parcial">🖨️ Imprimir parcial</button>
-          <button class="btn btn-primario" id="fechar">Fechar caixa</button>
+          <button class="btn btn-perigo" id="fechar">🔒 Fechar caixa</button>
         </div>
       </div>`;
   }
 
-  function movimento(tipo) {
+  function movimento(tipo, aoConcluir) {
     const corpo = abrirModal(tipo === 'sangria' ? 'Sangria (retirada de dinheiro)' : 'Suprimento (reforço de troco)', `
       <form class="form">
         <label>Valor (R$)<input name="valor" inputmode="decimal" required autofocus></label>
@@ -72,25 +115,36 @@ Telas.caixa = (() => {
         await api('/api/caixa/movimento', { metodo: 'POST', corpo: { tipo, valor, motivo: ev.target.motivo.value } });
         aviso('Lançado.');
         fecharModal();
-        if (raiz) abrir(raiz);
+        if (aoConcluir) aoConcluir();
       } catch (e) { erro(e); }
     };
   }
 
-  function fechar(r) {
+  async function fechar(r, aoConcluir) {
+    if (!r) {
+      try { r = await api('/api/caixa/atual'); } catch (e) { return erro(e); }
+      if (!r.caixa) return aviso('O caixa já está fechado.', 'alerta');
+    }
     const corpo = abrirModal('Fechar caixa', `
-      <p>Conte o dinheiro da gaveta e informe o valor. O sistema espera <b>${brl(r.dinheiro_esperado)}</b>.</p>
+      <div class="resumo-fechar">
+        <div class="linha"><span>Vendas</span><b>${r.vendas.quantidade} · ${brl(r.vendas.total)}</b></div>
+        ${r.formas.map((f) => `<div class="linha"><span>${rotulo(f.forma)}</span><span>${brl(f.forma === 'dinheiro' ? f.valor - r.vendas.troco : f.valor)}</span></div>`).join('')}
+        ${(r.recebimentos_crediario || []).map((f) => `<div class="linha"><span>Recebido do crediário · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
+        ${r.movimentos.map((m) => `<div class="linha"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '-' : '+'}${brl(m.valor)}</span></div>`).join('')}
+        <div class="linha"><span>Troco inicial</span><span>${brl(r.caixa.valor_abertura)}</span></div>
+        <div class="linha total"><span>Dinheiro esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>
+      </div>
       <form class="form">
-        <label>Dinheiro contado (R$)<input name="valor" inputmode="decimal" required autofocus></label>
+        <label>Dinheiro contado na gaveta (R$)<input name="valor" inputmode="decimal" required autofocus></label>
         <div id="dif" class="dica"></div>
         <label>Observação<textarea name="obs" rows="2"></textarea></label>
-        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Fechar e imprimir</button></div>
-      </form>`, { largura: '460px' });
+        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-perigo">🔒 Fechar e imprimir</button></div>
+      </form>`, { largura: '480px' });
     const form = corpo.querySelector('form');
     form.valor.oninput = () => {
       const v = U.paraCentavos(form.valor.value);
       const d = v - r.dinheiro_esperado;
-      corpo.querySelector('#dif').innerHTML = Number.isNaN(v) ? '' : d === 0 ? '✅ Caixa batendo.'
+      corpo.querySelector('#dif').innerHTML = Number.isNaN(v) || !form.valor.value ? '' : d === 0 ? '✅ Caixa batendo.'
         : `Diferença: <b class="${d < 0 ? 'txt-perigo' : ''}">${d > 0 ? 'sobra de ' : 'falta de '}${brl(Math.abs(d))}</b>`;
     };
     form.onsubmit = async (ev) => {
@@ -100,13 +154,12 @@ Telas.caixa = (() => {
       try {
         const fechado = await api('/api/caixa/fechar', { metodo: 'POST', corpo: { valor_informado: valor, observacao: form.obs.value } });
         fecharModal();
-        Impressao.fechamentoCaixa(fechado);
         aviso('Caixa fechado.');
-        atualizarStatusCaixa();
-        if (raiz) abrir(raiz);
+        Impressao.fechamentoCaixa(fechado);
+        if (aoConcluir) aoConcluir();
       } catch (e) { erro(e); }
     };
   }
 
-  return { abrir, sair: () => { raiz = null; } };
+  return { abrir, movimento, fechar, formAbrir, ligarFormAbrir, sair: () => { raiz = null; } };
 })();

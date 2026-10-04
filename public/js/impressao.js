@@ -1,4 +1,10 @@
-/* Montagem e impressão de cupom (térmica 58/80 mm), cupom de troca, fechamento de caixa e etiquetas. */
+/*
+ * Impressão de cupom, cupom de troca, fechamento de caixa, recibo do crediário e etiquetas.
+ *
+ * Modo padrão ("direta"): o servidor manda os comandos (ESC/POS, ZPL ou EPL) direto para a
+ * impressora escolhida em Configurações — sem o diálogo do navegador, sem margens nem escala.
+ * O modo "navegador" continua disponível como alternativa (ex.: etiquetas em folha A4).
+ */
 const Impressao = (() => {
   const { esc, brl, num, dataHora, cpf, FORMAS } = U;
 
@@ -101,7 +107,7 @@ const Impressao = (() => {
     </div>`;
   }
 
-  async function cupom(venda) {
+  async function cupomNavegador(venda) {
     const cfg = await U.config();
     const vias = Math.max(1, Number(cfg.cupom_vias) || 1);
     const nomes = ['Via do cliente', 'Via da loja'];
@@ -111,7 +117,7 @@ const Impressao = (() => {
   }
 
   /** Cupom de troca: lista as peças sem mostrar preço (para presente). */
-  async function cupomTroca(venda) {
+  async function cupomTrocaNavegador(venda) {
     const cfg = await U.config();
     const itens = venda.itens.map((it) => `
       <div class="linha"><span class="item-nome">${it.quantidade}x ${esc(descItem(it))}</span></div>
@@ -130,7 +136,7 @@ const Impressao = (() => {
     </div>`);
   }
 
-  async function fechamentoCaixa(r) {
+  async function fechamentoCaixaNavegador(r) {
     const cfg = await U.config();
     const c = r.caixa;
     const formas = r.formas.map((f) =>
@@ -216,7 +222,7 @@ const Impressao = (() => {
   }
 
   /** lista: [{ produto, quantidade }] */
-  async function etiquetas(lista) {
+  async function etiquetasNavegador(lista) {
     const cfg = await U.config();
     const html = lista
       .flatMap(({ produto, quantidade }) => Array(quantidade).fill(htmlEtiqueta(produto, cfg)))
@@ -225,5 +231,59 @@ const Impressao = (() => {
     imprimirHtml(cssEtiquetas(cfg), colunas > 1 ? `<div class="folha">${html}</div>` : html);
   }
 
-  return { cupom, cupomTroca, fechamentoCaixa, etiquetas, htmlEtiqueta, cssEtiquetas };
+  // ------------------------------------------------------- impressão direta
+  const direta = (cfg) => cfg.impressao_cupom_modo !== 'navegador';
+
+  async function enviar(caminho, corpo, sucesso) {
+    try {
+      await U.api(caminho, { metodo: 'POST', corpo: corpo || {} });
+      if (sucesso) U.aviso(sucesso);
+      return true;
+    } catch (e) {
+      U.aviso(e.message + (e.status === 502 ? ' Confira a impressora em Configurações → Impressão.' : ''), 'erro');
+      return false;
+    }
+  }
+
+  async function cupom(venda, { gaveta = true } = {}) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return cupomNavegador(venda);
+    return enviar(`/api/imprimir/venda/${venda.id}`, { gaveta });
+  }
+
+  async function cupomTroca(venda) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return cupomTrocaNavegador(venda);
+    return enviar(`/api/imprimir/venda/${venda.id}`, { tipo: 'troca' }, 'Cupom de troca enviado para a impressora.');
+  }
+
+  async function fechamentoCaixa(r) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return fechamentoCaixaNavegador(r);
+    return enviar(`/api/imprimir/caixa/${r.caixa.id}`, {}, 'Resumo do caixa enviado para a impressora.');
+  }
+
+  async function recebimento(rec) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return U.aviso('Recibo do crediário só sai na impressão direta (Configurações → Impressão).', 'alerta');
+    return enviar(`/api/imprimir/recebimento/${rec.id}`, {});
+  }
+
+  async function abrirGaveta() {
+    return enviar('/api/imprimir/gaveta', {}, 'Gaveta aberta.');
+  }
+
+  /** lista: [{ produto, quantidade }] */
+  async function etiquetas(lista) {
+    const cfg = await U.config();
+    if (cfg.impressao_etiqueta_modo === 'navegador') return etiquetasNavegador(lista);
+    const total = lista.reduce((a, x) => a + x.quantidade, 0);
+    return enviar('/api/imprimir/etiquetas',
+      { itens: lista.map((x) => ({ produto_id: x.produto.id, quantidade: x.quantidade })) },
+      `${total} etiqueta(s) enviada(s) para a impressora.`);
+  }
+
+  return {
+    cupom, cupomTroca, fechamentoCaixa, recebimento, abrirGaveta, etiquetas, htmlEtiqueta, cssEtiquetas,
+  };
 })();

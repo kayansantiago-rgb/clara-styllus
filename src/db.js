@@ -130,6 +130,46 @@ CREATE TABLE IF NOT EXISTS estoque_movimentos (
   criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_estmov_prod ON estoque_movimentos(produto_id);
+
+-- Crediário: cada compra fiada vira parcelas; recebimentos abatem as parcelas mais antigas.
+CREATE TABLE IF NOT EXISTS crediario_parcelas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+  venda_id INTEGER REFERENCES vendas(id),
+  descricao TEXT,
+  numero INTEGER NOT NULL DEFAULT 1,
+  total_parcelas INTEGER NOT NULL DEFAULT 1,
+  valor INTEGER NOT NULL,
+  valor_pago INTEGER NOT NULL DEFAULT 0,
+  vencimento TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'aberta' CHECK (status IN ('aberta','paga','cancelada')),
+  pago_em TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_parc_cliente ON crediario_parcelas(cliente_id, status);
+CREATE INDEX IF NOT EXISTS idx_parc_venda ON crediario_parcelas(venda_id);
+
+CREATE TABLE IF NOT EXISTS crediario_recebimentos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+  caixa_id INTEGER NOT NULL REFERENCES caixas(id),
+  usuario_id INTEGER REFERENCES usuarios(id),
+  operador TEXT,
+  valor INTEGER NOT NULL,
+  forma TEXT NOT NULL,
+  observacao TEXT,
+  status TEXT NOT NULL DEFAULT 'ok' CHECK (status IN ('ok','estornado')),
+  estornado_em TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_receb_cliente ON crediario_recebimentos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_receb_caixa ON crediario_recebimentos(caixa_id);
+
+CREATE TABLE IF NOT EXISTS crediario_recebimento_parcelas (
+  recebimento_id INTEGER NOT NULL REFERENCES crediario_recebimentos(id),
+  parcela_id INTEGER NOT NULL REFERENCES crediario_parcelas(id),
+  valor INTEGER NOT NULL
+);
 `;
 
 const CONFIG_PADRAO = {
@@ -153,6 +193,23 @@ const CONFIG_PADRAO = {
   estoque_negativo: '0',
   desconto_maximo_pct: '30',
   impressao_automatica: '1',
+  // Impressão direta (sem o diálogo do navegador)
+  impressao_cupom_modo: 'direta',
+  impressora_cupom: '',
+  cupom_colunas: '48',
+  cupom_acentos: 'cp850',
+  cupom_corte: '1',
+  gaveta_abrir: '1',
+  impressao_etiqueta_modo: 'zpl',
+  impressora_etiqueta: '',
+  etiqueta_dpi: '203',
+  etiqueta_espaco_mm: '2',
+  etiqueta_gap_mm: '3',
+  // Crediário
+  crediario_dias_primeira: '30',
+  crediario_max_parcelas: '6',
+  crediario_bloquear_atraso: '1',
+  crediario_limite_padrao: '',
 };
 
 function abrirBanco(arquivo) {
@@ -177,6 +234,9 @@ function migrar(db) {
   const colunas = (tabela) => db.prepare(`PRAGMA table_info(${tabela})`).all().map((c) => c.name);
   if (!colunas('vendas').includes('usuario_id')) {
     db.exec('ALTER TABLE vendas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
+  }
+  if (!colunas('clientes').includes('limite_credito')) {
+    db.exec('ALTER TABLE clientes ADD COLUMN limite_credito INTEGER');
   }
   if (!colunas('caixas').includes('usuario_id')) {
     db.exec('ALTER TABLE caixas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');

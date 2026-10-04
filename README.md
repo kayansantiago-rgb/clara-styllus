@@ -10,14 +10,17 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   (tudo) e **vendedor(a)** (vende, abre/fecha caixa, consulta vendas, clientes e etiquetas).
 - **Vender (frente de caixa)**: leitor de código de barras, busca por nome, quantidade (`3*código`),
   desconto por item ou na venda (em R$ ou %), vendedor(a), cliente e CPF no cupom.
-- **Pagamento**: dinheiro (com troco), PIX, débito, crédito (parcelado) e pagamento dividido entre formas.
-- **Cupom**: comprovante para impressora térmica de 80 mm ou 58 mm, com 1 ou 2 vias, e
-  **cupom de troca** (sem preços, para presente).
+- **Pagamento**: dinheiro (com troco), PIX, débito, crédito (parcelado), **crediário** e pagamento
+  dividido entre formas.
+- **Crediário**: venda parcelada para o cliente, lista de quem está devendo e em atraso, recebimento
+  com recibo, cobrança pelo WhatsApp e lançamento dos débitos do caderno antigo.
+- **Cupom**: comprovante impresso **direto na térmica** (80 ou 58 mm, sem a janela do navegador), com
+  1 ou 2 vias, e **cupom de troca** (sem preços, para presente).
 - **Produtos**: cadastro com **grade de tamanho × cor** de uma só vez, preço de custo e de venda,
   margem, estoque mínimo, entrada/saída/ajuste de estoque e histórico.
-- **Etiquetas**: código de barras EAN-13 gerado automaticamente (ou o do fornecedor), impressão em
-  rolo de etiquetas térmicas (Argox, Elgin, Zebra…) ou em folha A4 adesiva.
-- **Caixa**: abertura com troco, sangria, suprimento, fechamento com conferência do dinheiro e
+- **Etiquetas**: código de barras EAN-13 gerado automaticamente (ou o do fornecedor), impressão direta
+  em ZPL/EPL nas térmicas de etiqueta (Zebra, Elgin, Argox…) ou em folha A4 adesiva.
+- **Caixa**: abrir e fechar direto da tela de venda; sangria, suprimento, abertura da gaveta, fechamento com conferência do dinheiro e
   impressão do resumo.
 - **Vendas**: consulta, reimpressão e cancelamento (devolve as peças ao estoque).
 - **Clientes**: cadastro, aniversário, observações e histórico de compras.
@@ -64,16 +67,36 @@ Para gerar localmente (Linux/WSL com `nsis` instalado): `bash instalador/build.s
 Variáveis opcionais: `PORTA` (padrão 3456), `BANCO` (caminho do arquivo do banco) e `HOST`
 (use `0.0.0.0` para acessar de outro computador da rede).
 
-## Impressão
+## Impressão direta (sem a janela do navegador)
 
-A impressão usa o diálogo do navegador (Chrome ou Edge recomendados).
+O cupom e as etiquetas são enviados **direto para a impressora**, já montados na linguagem dela.
+Não passam pelo diálogo de impressão do navegador, por isso não saem com margem, escala ou corte errado.
 
-- **Cupom**: instale o driver da impressora térmica (Elgin i9, Bematech MP-4200, Epson TM-T20…),
-  configure o papel como bobina de 80 mm (ou 58 mm) e, no diálogo, escolha **Margens: nenhuma**.
-- **Etiquetas**: em *Configurações* informe o tamanho da etiqueta (ex.: 40 × 30 mm) e as colunas
-  (1 para rolo). No driver da impressora de etiquetas, configure o mesmo tamanho.
-- **Sem diálogo de impressão**: se a loja usa uma única impressora, abra o Chrome com
-  `--kiosk-printing` para imprimir direto na impressora padrão.
+- **Cupom (ESC/POS)**: Elgin i7/i8/i9, Epson TM-T20, Bematech MP-4200 (em modo ESC/POS), Daruma, Tanca,
+  Knup e a maioria das térmicas de 58/80 mm. Também corta o papel e **abre a gaveta** nas vendas em dinheiro.
+- **Etiquetas (ZPL ou EPL/PPLB)**: Zebra, Elgin L42/L42 Pro, Argox e similares. Funciona com rolo de
+  1 ou mais etiquetas lado a lado.
+
+Como configurar (em **Configurações → Impressora de cupom / Impressora de etiquetas**):
+
+1. Instale a impressora no Windows com o driver do fabricante (ou “Generic / Text Only”).
+2. Clique em **↻** para listar as impressoras do Windows e escolha a certa.
+3. Ajuste o tamanho (80 ou 58 mm; tamanho da etiqueta em mm) e clique em **Imprimir teste**.
+4. Se aparecerem caracteres estranhos no lugar dos acentos, troque **Acentos** para “Sem acentos”.
+
+O modo **“pelo navegador”** continua disponível (por exemplo, para etiquetas em folha A4 de
+impressora comum). A impressão direta usa o .NET Framework que já vem no Windows 10/11.
+
+## Crediário
+
+- Na venda, escolha **Crediário**: o sistema pede o cliente, o número de parcelas e o 1º vencimento.
+  O cupom sai em 2 vias, com as parcelas e uma linha para o cliente assinar.
+- Na aba **Crediário** você vê quem está devendo, quanto está vencido e há quantos dias.
+  Ali dá para **receber** (o valor entra no caixa aberto e abate as parcelas mais antigas, com
+  recibo impresso), **cobrar pelo WhatsApp** e, para o administrador, **lançar débitos antigos**
+  (do caderno), estornar recebimentos e cancelar parcelas lançadas por engano.
+- Em *Configurações → Crediário*: máximo de parcelas, prazo do 1º vencimento, limite padrão e
+  bloqueio de nova compra para quem está em atraso. O limite de cada cliente fica no cadastro dele.
 
 ## Atalhos na tela de venda
 
@@ -86,7 +109,7 @@ A impressão usa o diálogo do navegador (Chrome ou Edge recomendados).
 | F7 | Desconto na venda |
 | F8 | Remover o último item |
 | F9 | Cancelar a venda |
-| 1–5 | Escolher a forma de pagamento (na tela de pagamento) |
+| 1–6 | Escolher a forma de pagamento (na tela de pagamento) |
 | Esc | Fechar janela |
 
 ## Sobre o cupom fiscal (NFC-e)

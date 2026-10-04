@@ -36,7 +36,7 @@ function criarServidor(db) {
         bruto += c;
         if (bruto.length > 5e6) req.destroy();
       });
-      req.on('end', () => {
+      req.on('end', async () => {
         let corpo = null;
         try {
           corpo = bruto ? JSON.parse(bruto) : null;
@@ -45,7 +45,7 @@ function criarServidor(db) {
         }
         try {
           const token = lerCookie(req.headers.cookie, COOKIE);
-          const r = despachar(req.method, url.pathname, url.searchParams, corpo, token);
+          const r = await despachar(req.method, url.pathname, url.searchParams, corpo, token);
           if (!r) return enviarJson(res, 404, { erro: 'Rota não encontrada.' });
           if (r.sessao !== undefined) {
             res.setHeader('Set-Cookie', r.sessao

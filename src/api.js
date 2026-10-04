@@ -6,10 +6,14 @@ const path = require('node:path');
 const { transacao } = require('./db');
 const { gerarEan13Interno } = require('./codigos');
 const { hashSenha, conferirSenha, novoToken } = require('./auth');
+const { instalarCrediario } = require('./crediario');
+const documentos = require('./impressao/documentos');
+const { gerarEtiquetas } = require('./impressao/etiquetas');
+const impressora = require('./impressao/impressora');
 
 const HORAS_SESSAO = 14;
 
-const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito', 'outro'];
+const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito', 'crediario', 'outro'];
 
 class ErroHttp extends Error {
   constructor(status, mensagem) {
@@ -356,6 +360,8 @@ function criarApi(db) {
       email: texto(c.email),
       aniversario: texto(c.aniversario, 10),
       observacao: texto(c.observacao, 1000),
+      limite_credito: c.limite_credito === '' || c.limite_credito == null
+        ? null : inteiro(c.limite_credito, 'limite_credito', { min: 0 }),
     };
   };
 
@@ -376,6 +382,7 @@ function criarApi(db) {
   rota('GET', '/api/clientes/:id', ({ params }) => {
     const c = plano(db.prepare('SELECT * FROM clientes WHERE id = ?').get(params.id));
     if (!c) throw erro(404, 'Cliente não encontrado.');
+    c.crediario = crediario.saldo(c.id);
     c.compras = planos(
       db
         .prepare(
@@ -387,27 +394,37 @@ function criarApi(db) {
     return c;
   });
 
-  rota('POST', '/api/clientes', ({ corpo }) => {
+  rota('POST', '/api/clientes', ({ corpo, usuario }) => {
     const c = lerCliente(corpo || {});
+    if (usuario.perfil !== 'admin') c.limite_credito = null; // limite só o administrador define
     const r = db
       .prepare(
-        `INSERT INTO clientes (nome, cpf, telefone, email, aniversario, observacao)
-         VALUES (?,?,?,?,?,?)`
+        `INSERT INTO clientes (nome, cpf, telefone, email, aniversario, observacao, limite_credito)
+         VALUES (?,?,?,?,?,?,?)`
       )
-      .run(c.nome, c.cpf, c.telefone, c.email, c.aniversario, c.observacao);
+      .run(c.nome, c.cpf, c.telefone, c.email, c.aniversario, c.observacao, c.limite_credito);
     return plano(db.prepare('SELECT * FROM clientes WHERE id = ?').get(r.lastInsertRowid));
   });
 
-  rota('PUT', '/api/clientes/:id', ({ params, corpo }) => {
+  rota('PUT', '/api/clientes/:id', ({ params, corpo, usuario }) => {
     const c = lerCliente(corpo || {});
+    if (usuario.perfil !== 'admin') {
+      const atual = db.prepare('SELECT limite_credito FROM clientes WHERE id = ?').get(params.id);
+      c.limite_credito = atual ? atual.limite_credito : null;
+    }
     const r = db
       .prepare(
-        `UPDATE clientes SET nome=?, cpf=?, telefone=?, email=?, aniversario=?, observacao=?
-         WHERE id = ?`
+        `UPDATE clientes SET nome=?, cpf=?, telefone=?, email=?, aniversario=?, observacao=?,
+           limite_credito=? WHERE id = ?`
       )
-      .run(c.nome, c.cpf, c.telefone, c.email, c.aniversario, c.observacao, params.id);
+      .run(c.nome, c.cpf, c.telefone, c.email, c.aniversario, c.observacao, c.limite_credito, params.id);
     if (!r.changes) throw erro(404, 'Cliente não encontrado.');
     return plano(db.prepare('SELECT * FROM clientes WHERE id = ?').get(params.id));
+  });
+
+  // ------------------------------------------------------------- crediário
+  const crediario = instalarCrediario({
+    db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto,
   });
 
   // ----------------------------------------------------------------- caixa
@@ -442,12 +459,15 @@ function criarApi(db) {
     const dinheiro = formas.find((f) => f.forma === 'dinheiro')?.valor || 0;
     const sangrias = soma('sangria');
     const suprimentos = soma('suprimento');
+    const recebimentos = crediario.recebimentosDoCaixa(caixaId);
+    const recebidoDinheiro = recebimentos.find((f) => f.forma === 'dinheiro')?.valor || 0;
     const dinheiroEsperado =
-      caixa.valor_abertura + suprimentos - sangrias + dinheiro - vendas.troco;
+      caixa.valor_abertura + suprimentos - sangrias + dinheiro - vendas.troco + recebidoDinheiro;
     return {
       caixa,
       vendas: { ...vendas, canceladas },
       formas,
+      recebimentos_crediario: recebimentos,
       movimentos,
       sangrias,
       suprimentos,
@@ -513,6 +533,7 @@ function criarApi(db) {
     v.pagamentos = planos(
       db.prepare('SELECT * FROM venda_pagamentos WHERE venda_id = ? ORDER BY id').all(id)
     );
+    v.crediario = crediario.parcelasDaVenda(id);
     return v;
   };
 
@@ -570,12 +591,17 @@ function criarApi(db) {
         if (!FORMAS_PAGAMENTO.includes(p.forma)) {
           throw erro(400, `Forma de pagamento inválida: ${p.forma}`);
         }
+        const parcelado = p.forma === 'credito' || p.forma === 'crediario';
         return {
           forma: p.forma,
           valor: inteiro(p.valor, 'valor do pagamento', { min: 1 }),
-          parcelas: p.forma === 'credito' ? inteiro(p.parcelas, 'parcelas', { min: 1, padrao: 1 }) : 1,
+          parcelas: parcelado ? inteiro(p.parcelas, 'parcelas', { min: 1, padrao: 1 }) : 1,
+          primeiro_vencimento: p.forma === 'crediario' ? texto(p.primeiro_vencimento, 10) : null,
         };
       });
+      if (pagamentos.filter((p) => p.forma === 'crediario').length > 1) {
+        throw erro(400, 'Use só um lançamento de crediário por venda.');
+      }
       const pago = pagamentos.reduce((a, p) => a + p.valor, 0);
       if (pago < total) throw erro(400, 'Valor pago é menor que o total da venda.');
       const troco = pago - total;
@@ -591,6 +617,8 @@ function criarApi(db) {
           throw erro(400, 'Cliente não encontrado.');
         }
       }
+      const fiado = pagamentos.find((p) => p.forma === 'crediario');
+      if (fiado && !clienteId) throw erro(400, 'Para vender no crediário, identifique o cliente.');
 
       const r = db
         .prepare(
@@ -621,6 +649,12 @@ function criarApi(db) {
         'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas) VALUES (?,?,?,?)'
       );
       for (const p of pagamentos) insPag.run(vendaId, p.forma, p.valor, p.parcelas);
+      if (fiado) {
+        crediario.lancarParcelas({
+          clienteId, vendaId, valor: fiado.valor, parcelas: fiado.parcelas,
+          primeiroVencimento: fiado.primeiro_vencimento, descricao: `Venda nº ${vendaId}`,
+        });
+      }
 
       return buscarVenda(vendaId);
     });
@@ -657,6 +691,7 @@ function criarApi(db) {
     const motivo = texto(corpo.motivo, 500);
     if (!motivo) throw erro(400, 'Informe o motivo do cancelamento.');
     return transacao(db, () => {
+      crediario.cancelarDaVenda(venda.id);
       db.prepare(
         `UPDATE vendas SET status = 'cancelada', motivo_cancelamento = ?,
            cancelada_em = datetime('now','localtime') WHERE id = ?`
@@ -737,7 +772,10 @@ function criarApi(db) {
         )
         .all(de, ate)
     );
-    return { de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor };
+    return {
+      de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor,
+      crediario: crediario.resumoGeral(de, ate),
+    };
   }, 'admin');
 
   // ---------------------------------------------------------------- backup
@@ -755,7 +793,94 @@ function criarApi(db) {
     };
   }, 'admin');
 
-  /** Resolve uma requisição; devolve { status, corpo } ou null se a rota não existir. */
+  // -------------------------------------------------------------- impressão
+  const imprimir = async (cfgImpressora, dados, nome) => {
+    try {
+      await impressora.enviar(cfgImpressora, dados, nome);
+    } catch (e) {
+      throw erro(502, `Não consegui imprimir: ${e.message}`);
+    }
+    return { ok: true };
+  };
+
+  rota('GET', '/api/impressoras', async () => {
+    try {
+      return await impressora.listarImpressoras();
+    } catch (e) {
+      throw erro(502, `Não consegui listar as impressoras: ${e.message}`);
+    }
+  });
+
+  rota('POST', '/api/imprimir/venda/:id', ({ params, corpo }) => {
+    const cfg = config();
+    const venda = buscarVenda(params.id);
+    if (corpo.tipo === 'troca') {
+      return imprimir(cfg.impressora_cupom, documentos.cupomTroca(venda, cfg).bytes(), `troca-${venda.id}`);
+    }
+    const vias = Math.max(1, Number(cfg.cupom_vias) || 1);
+    const comCrediario = venda.crediario.length > 0;
+    const nomes = ['Via do cliente', 'Via da loja'];
+    const pagouDinheiro = venda.pagamentos.some((p) => p.forma === 'dinheiro');
+    const partes = [];
+    // Venda no crediário sempre sai em 2 vias: uma fica assinada com a loja.
+    const total = comCrediario ? Math.max(2, vias) : vias;
+    for (let i = 0; i < total; i++) {
+      partes.push(documentos.cupomVenda(venda, cfg, {
+        via: total > 1 ? nomes[i] || `Via ${i + 1}` : '',
+        abrirGaveta: i === 0 && corpo.gaveta !== false && pagouDinheiro && cfg.gaveta_abrir === '1',
+      }).bytes());
+    }
+    return imprimir(cfg.impressora_cupom, Buffer.concat(partes), `venda-${venda.id}`);
+  });
+
+  rota('POST', '/api/imprimir/caixa/:id', ({ params }) => {
+    const cfg = config();
+    return imprimir(cfg.impressora_cupom, documentos.fechamentoCaixa(resumoCaixa(params.id), cfg).bytes(), `caixa-${params.id}`);
+  });
+
+  rota('POST', '/api/imprimir/recebimento/:id', ({ params }) => {
+    const cfg = config();
+    const rec = crediario.buscarRecebimento(params.id);
+    return imprimir(cfg.impressora_cupom, documentos.recebimentoCrediario(rec, cfg).bytes(), `recibo-${rec.id}`);
+  });
+
+  rota('POST', '/api/imprimir/gaveta', () => {
+    const cfg = config();
+    return imprimir(cfg.impressora_cupom, Buffer.from([0x1b, 0x70, 0x00, 0x19, 0xfa]), 'gaveta');
+  });
+
+  rota('POST', '/api/imprimir/etiquetas', ({ corpo }) => {
+    const cfg = config();
+    if (!Array.isArray(corpo.itens) || !corpo.itens.length) throw erro(400, 'Nenhuma etiqueta para imprimir.');
+    const itens = corpo.itens.map((it) => ({
+      produto: buscarProduto(it.produto_id),
+      quantidade: Math.min(inteiro(it.quantidade, 'quantidade', { min: 0 }), 999),
+    }));
+    const dados = gerarEtiquetas(itens, cfg);
+    if (!dados) throw erro(400, 'Nenhuma etiqueta para imprimir.');
+    return imprimir(cfg.impressora_etiqueta, dados, 'etiquetas');
+  });
+
+  /** Prévia em texto do cupom (para conferir sem gastar papel). */
+  rota('GET', '/api/imprimir/previa/venda/:id', ({ params, query }) => {
+    const cfg = config();
+    const venda = buscarVenda(params.id);
+    const doc = query.get('tipo') === 'troca' ? documentos.cupomTroca(venda, cfg) : documentos.cupomVenda(venda, cfg);
+    return { texto: doc.texto, colunas: doc.colunas };
+  });
+
+  rota('POST', '/api/imprimir/teste', ({ corpo }) => {
+    const cfg = { ...config(), ...(corpo.config || {}) };
+    if (corpo.alvo === 'etiqueta') {
+      const exemplo = {
+        nome: 'Vestido Midi Canelado', tamanho: 'M', cor: 'Preto', referencia: '1020',
+        preco_venda: 15990, codigo: '2000000000015',
+      };
+      return imprimir(cfg.impressora_etiqueta, gerarEtiquetas([{ produto: exemplo, quantidade: 1 }], cfg), 'teste-etiqueta');
+    }
+    return imprimir(cfg.impressora_cupom, documentos.teste(cfg).bytes(), 'teste-cupom');
+  });
+
   /**
    * Resolve uma requisição; devolve { status, corpo, sessao } ou null se a rota não existir.
    * `sessao` vem preenchido (token, ou null para apagar) quando o cookie precisa mudar.
@@ -778,7 +903,18 @@ function criarApi(db) {
         if (r.acesso === 'admin' && ctx.usuario.perfil !== 'admin') {
           throw erro(403, 'Só o administrador pode fazer isso.');
         }
-        resposta.corpo = r.fn(ctx);
+        const resultado = r.fn(ctx);
+        if (resultado && typeof resultado.then === 'function') {
+          // Rota assíncrona (impressão): devolve uma Promise com a mesma forma de resposta.
+          return resultado.then(
+            (c) => ({ ...resposta, corpo: c }),
+            (e) => {
+              if (e instanceof ErroHttp) return { status: e.status, corpo: { erro: e.message } };
+              throw e;
+            }
+          );
+        }
+        resposta.corpo = resultado;
         return resposta;
       } catch (e) {
         if (e instanceof ErroHttp) return { status: e.status, corpo: { erro: e.message } };

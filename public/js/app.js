@@ -144,6 +144,8 @@
       a.classList.toggle('ativo', a.dataset.rota === nome));
     conteudo.innerHTML = '';
     conteudo.className = `tela-${nome}`;
+    // No PDV o menu fica estreito (só ícones) para sobrar espaço para a venda.
+    document.body.classList.toggle('modo-pdv', nome === 'pdv');
     try {
       await tela.abrir(conteudo);
     } catch (e) {
@@ -159,8 +161,8 @@
     try {
       const r = await api('/api/caixa/atual');
       el.innerHTML = r.caixa
-        ? `<span class="ponto ok"></span>Caixa nº ${r.caixa.id} aberto<br><small>${esc(r.caixa.operador || '')}</small>`
-        : '<span class="ponto"></span>Caixa fechado';
+        ? `<span class="ponto ok"></span><span class="status-txt">Caixa nº ${r.caixa.id} aberto<br><small>${esc(r.caixa.operador || '')} · clique para fechar</small></span>`
+        : '<span class="ponto"></span><span class="status-txt">Caixa fechado<br><small>clique para abrir</small></span>';
     } catch (e) {
       if (e.status !== 401) el.innerHTML = '<span class="ponto erro"></span>Servidor desligado';
     }

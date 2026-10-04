@@ -89,6 +89,9 @@ Telas.vendas = (() => {
         ${v.pagamentos.map((p) => `<div class="linha"><span>${U.FORMAS[p.forma] || p.forma}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</span><span>${brl(p.valor)}</span></div>`).join('')}
         ${v.troco ? `<div class="linha"><span>Troco</span><span>${brl(v.troco)}</span></div>` : ''}
       </div>
+      ${v.crediario && v.crediario.length ? `<h3>Parcelas do crediário</h3>
+        ${v.crediario.map((p) => `<div class="linha"><span>${p.numero}/${p.total_parcelas} · venc. ${p.vencimento.split('-').reverse().join('/')}</span>
+          <span>${brl(p.valor)} ${p.status === 'paga' ? '<span class="selo ok">paga</span>' : p.status === 'cancelada' ? '<span class="selo perigo">cancelada</span>' : p.valor_pago ? `<small>pago ${brl(p.valor_pago)}</small>` : ''}</span></div>`).join('')}` : ''}
       <div class="acoes">
         ${v.status === 'concluida' && U.sessao.ehAdmin() ? '<button class="btn btn-perigo-claro" id="cancelar">Cancelar venda</button>' : ''}
         <button class="btn" id="troca">🎁 Cupom de troca</button>

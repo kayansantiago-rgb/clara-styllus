@@ -2,25 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { abrirBanco } = require('../src/db');
-const { criarApi } = require('../src/api');
 const { gerarEan13Interno } = require('../src/codigos');
-
-function novaApi({ logar = true } = {}) {
-  const db = abrirBanco(':memory:');
-  const despachar = criarApi(db);
-  let token = null;
-  const chamar = (metodo, caminho, corpo) => {
-    const url = new URL(caminho, 'http://x');
-    const r = despachar(metodo, url.pathname, url.searchParams, corpo, token);
-    if (r && r.sessao !== undefined) token = r.sessao;
-    return r;
-  };
-  if (logar) {
-    chamar('POST', '/api/primeiro-acesso', { nome: 'Clara', login: 'clara', senha: '1234' });
-  }
-  return { db, chamar, sair: () => chamar('POST', '/api/logout') };
-}
+const { novaApi } = require('./ajuda');
 
 test('EAN-13 interno tem dígito verificador válido', () => {
   assert.equal(gerarEan13Interno(1), '2000000000015');

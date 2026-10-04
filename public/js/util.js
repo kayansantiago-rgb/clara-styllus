@@ -183,6 +183,7 @@ const U = (() => {
     pix: 'PIX',
     debito: 'Cartão de débito',
     credito: 'Cartão de crédito',
+    crediario: 'Crediário',
     outro: 'Outro',
   };
 

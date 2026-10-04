@@ -44,10 +44,13 @@ Telas.clientes = (() => {
   /** Abre o formulário; chama aoSalvar(cliente) depois de gravar. */
   async function formulario(c, aoSalvar) {
     let compras = [];
+    let crediario = null;
     if (c) {
       try {
         const d = await api(`/api/clientes/${c.id}`);
         compras = d.compras;
+        crediario = d.crediario;
+        c = d;
       } catch (e) { erro(e); }
     }
     c = c || {};
@@ -59,6 +62,10 @@ Telas.clientes = (() => {
         <label>E-mail<input name="email" type="email" value="${esc(c.email)}"></label>
         <label>Aniversário<input name="aniversario" type="date" value="${esc(c.aniversario)}"></label>
         <label class="col2">Observações (tamanhos, preferências…)<textarea name="observacao" rows="2">${esc(c.observacao)}</textarea></label>
+        <label class="so-admin">Limite no crediário (R$) <small>vazio = sem limite</small>
+          <input name="limite_credito" inputmode="decimal" value="${c.limite_credito != null ? U.num(c.limite_credito) : ''}"></label>
+        ${crediario && crediario.aberto ? `<div class="alerta-box col2" style="margin:0">Deve no crediário: <b>${brl(crediario.aberto)}</b>${
+  crediario.vencido ? ` · <b>${brl(crediario.vencido)} vencido</b>` : ''} — <a href="#/crediario" data-fechar>ver crediário</a></div>` : ''}
         ${compras.length ? `<div class="col2"><h3>Últimas compras</h3>${compras.map((v) =>
     `<div class="linha"><span>Nº ${v.id} · ${dataHora(v.criado_em)}${v.status === 'cancelada' ? ' (cancelada)' : ''}</span><span>${brl(v.total)}</span></div>`).join('')}
           <p><b>Total comprado: ${brl(compras.filter((v) => v.status === 'concluida').reduce((a, v) => a + v.total, 0))}</b></p></div>` : ''}
@@ -71,6 +78,10 @@ Telas.clientes = (() => {
       ev.preventDefault();
       const d = U.dadosForm(ev.target);
       if (d.cpf && !U.cpfValido(d.cpf)) return aviso('CPF inválido.', 'erro');
+      if (d.limite_credito) {
+        d.limite_credito = U.paraCentavos(d.limite_credito);
+        if (Number.isNaN(d.limite_credito)) return aviso('Limite inválido.', 'erro');
+      }
       try {
         const salvo = await api(c.id ? `/api/clientes/${c.id}` : '/api/clientes', { metodo: c.id ? 'PUT' : 'POST', corpo: d });
         aviso('Cliente salva.');
