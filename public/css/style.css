@@ -275,6 +275,91 @@ body.modo-pdv .menu:not(:hover) .status-caixa { text-align: center; padding: 10p
 .caixa-abrir h2 { margin-bottom: 6px; }
 details summary { cursor: pointer; color: var(--suave); margin: 12px 0 6px; }
 
+/* ---------------------------------------------------- fotos e alertas */
+.mini-foto { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--rosa-claro); display: inline-grid; place-items: center; font-size: 18px; vertical-align: middle; }
+.td-foto { width: 52px; }
+.foto-campo { display: flex; gap: 14px; align-items: center; background: var(--fundo); border-radius: 10px; padding: 10px; }
+.foto-previa { width: 96px; height: 96px; border-radius: 10px; overflow: hidden; background: #fff; border: 1px dashed var(--borda); display: grid; place-items: center; text-align: center; font-size: 28px; flex-shrink: 0; }
+.foto-previa img { width: 100%; height: 100%; object-fit: cover; }
+.foto-acoes { display: flex; flex-direction: column; gap: 4px; }
+.foto-acoes .acoes { margin: 4px 0; }
+.pdv-ultimo { min-height: 84px; }
+.ultimo-foto { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,.18); display: grid; place-items: center; font-size: 30px; border: 2px solid rgba(255,255,255,.5); }
+.ultimo-txt { flex: 1; }
+.sugestao { align-items: center; }
+.sugestao-txt { flex: 1; }
+.pdv-alertas { display: flex; flex-direction: column; gap: 6px; }
+.pdv-alertas:empty { display: none; }
+.pdv-alerta { border-radius: 10px; padding: 9px 14px; font-size: 14px; border-left: 5px solid; animation: aviso-entra .2s ease-out; }
+.pdv-alerta.perigo { background: #fde8e6; border-color: var(--perigo); color: #8e2a1f; }
+.pdv-alerta.alerta { background: #fff4dc; border-color: var(--alerta); color: #7a5208; }
+
+/* Venda concluída: troco gigante para ler de longe */
+.concluida { text-align: center; padding: 18px 10px 8px; border-radius: 14px; background: #eef8f2; animation: concluida-pisca .9s ease-out; }
+.concluida .sucesso-ico { width: 64px; height: 64px; font-size: 38px; background: var(--ok); color: #fff; }
+.concluida-rotulo { font-size: 14px; letter-spacing: 3px; color: var(--suave); margin-top: 6px; }
+.concluida-valor { font-size: 64px; font-weight: 800; line-height: 1.1; color: var(--texto); }
+.concluida.com-troco .concluida-valor { color: var(--ok); font-size: 76px; }
+.concluida-det { color: var(--suave); margin-top: 4px; }
+@keyframes concluida-pisca { 0% { background: #bfe8cf; transform: scale(.96); } 100% { background: #eef8f2; transform: none; } }
+
+/* Semáforo do crediário */
+.semaforo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 3px 10px 3px 8px; border-radius: 99px; white-space: nowrap; }
+.semaforo i { width: 10px; height: 10px; border-radius: 50%; }
+.semaforo.verde { background: #e2f4ea; color: #1f6b40; } .semaforo.verde i { background: var(--ok); }
+.semaforo.amarelo { background: #fff1d1; color: #7a5208; } .semaforo.amarelo i { background: #e0a106; }
+.semaforo.vermelho { background: #fde4e1; color: #8e2a1f; } .semaforo.vermelho i { background: var(--perigo); }
+.semaforo-legenda { display: inline-flex; gap: 6px; }
+.semaforo-legenda .semaforo { font-weight: 400; font-size: 12px; }
+tr.linha-vermelho td:first-child { box-shadow: inset 4px 0 var(--perigo); }
+tr.linha-amarelo td:first-child { box-shadow: inset 4px 0 #e0a106; }
+tr.linha-verde td:first-child { box-shadow: inset 4px 0 var(--ok); }
+tr.linha-vermelho td { background: #fff7f6; }
+
+/* Grade de estoque tamanho × cor */
+.grade-estoque { border-collapse: separate; border-spacing: 4px; margin: 0 auto; }
+.grade-estoque th { font-size: 13px; color: var(--suave); padding: 4px 8px; text-align: center; }
+.grade-estoque tbody th { text-align: right; color: var(--texto); }
+.grade-cel { width: 54px; height: 44px; border-radius: 8px; border: 0; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; display: inline-grid; place-items: center; }
+.grade-cel.ok { background: #e2f4ea; color: #1f6b40; }
+.grade-cel.baixo { background: #fff1d1; color: #7a5208; }
+.grade-cel.zero { background: #fde4e1; color: #8e2a1f; }
+.grade-cel.vazia { background: #f3f0f1; color: #bbb; cursor: default; }
+.grade-cel:not(:disabled):hover { outline: 2px solid var(--rosa); }
+.grade-total { text-align: center; font-weight: 600; color: var(--suave); }
+.grade-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--suave); margin-bottom: 10px; }
+.grade-legenda .grade-cel { width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+
+/* Painel inicial */
+.painel-kpis .card .var { font-size: 13px; color: var(--suave); }
+.var.sobe { color: var(--ok); } .var.desce { color: var(--perigo); }
+.painel-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+.painel-grade > .cartao { margin: 0; }
+.meta-numeros { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.meta-numeros b { font-size: 28px; }
+.meta-numeros span { color: var(--suave); }
+.meta-barra { position: relative; height: 18px; background: var(--rosa-claro); border-radius: 99px; }
+.meta-barra i { display: block; height: 100%; border-radius: 99px; background: var(--rosa); min-width: 4px; }
+.meta-marca { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--texto); }
+.meta-rodape { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; flex-wrap: wrap; gap: 6px; }
+.grafico-dias { position: relative; display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; height: 190px; align-items: end; padding-top: 22px; border-bottom: 1px solid var(--borda); }
+.grafico-dias .dia { display: flex; flex-direction: column; align-items: center; height: 100%; outline: none; }
+.grafico-dias .coluna { position: relative; flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.grafico-dias .coluna i { display: block; width: 70%; max-width: 26px; background: #d9a9bd; border-radius: 4px 4px 0 0; }
+.grafico-dias .dia.hoje .coluna i { background: var(--rosa); }
+.grafico-dias .dia:hover .coluna i, .grafico-dias .dia:focus .coluna i { background: var(--rosa-escuro); }
+.grafico-dias small { font-size: 11px; margin-top: 4px; }
+.grafico-dias .dia.hoje small { color: var(--texto); font-weight: 700; }
+.grafico-dias .coluna i { position: relative; }
+.barra-valor { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); font-size: 11px; font-style: normal; color: var(--texto); white-space: nowrap; }
+.dica-grafico { position: absolute; top: 0; width: 180px; background: #2b2326; color: #fff; font-size: 12px; padding: 6px 8px; border-radius: 6px; text-align: center; pointer-events: none; }
+.painel-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f2ecee; }
+.painel-item:last-of-type { border-bottom: 0; }
+.painel-item .pos { width: 22px; font-weight: 700; color: var(--rosa); text-align: center; }
+.painel-item-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.txt-rosa { color: var(--rosa); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
 /* -------------------------------------------------------- etiquetas */
 .qtd-input { width: 80px; text-align: center; }
 .previa-etiqueta { display: flex; justify-content: center; padding: 20px; background: #eee; border-radius: 8px; }
@@ -301,7 +386,10 @@ body:not(.admin) [data-admin], body:not(.admin) .so-admin { display: none !impor
 .modal header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .fechar { border: 0; background: none; font-size: 28px; cursor: pointer; color: var(--suave); line-height: 1; }
 
-.avisos { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+/* Avisos no topo, ao centro: não cobrem os botões da tela de venda. */
+.avisos { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 100; pointer-events: none; }
+.aviso { animation: aviso-entra .18s ease-out; }
+@keyframes aviso-entra { from { opacity: 0; transform: translateY(-8px); } }
 .aviso { padding: 12px 16px; border-radius: 10px; color: #fff; background: var(--ok); box-shadow: 0 6px 20px rgba(0,0,0,.15); max-width: 420px; }
 .aviso-erro { background: var(--perigo); }
 .aviso-alerta { background: var(--alerta); }

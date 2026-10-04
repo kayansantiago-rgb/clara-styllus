@@ -2,7 +2,7 @@
 (() => {
   const { esc, api, aviso, erro } = U;
   const conteudo = document.getElementById('conteudo');
-  const ROTAS_ADMIN = ['relatorios', 'usuarios', 'config'];
+  const ROTAS_ADMIN = ['inicio', 'relatorios', 'usuarios', 'config'];
   let telaAtual = null;
 
   // --------------------------------------------------------------- login
@@ -31,6 +31,7 @@
       </div>`;
     document.getElementById('trocar').onclick = sair;
     document.getElementById('minha-senha').onclick = trocarSenha;
+    U.config().catch(() => {}); // carrega a configuração (som do bipe etc.)
     navegar();
   }
 
@@ -134,7 +135,8 @@
   // ------------------------------------------------------------ navegação
   async function navegar() {
     if (!U.sessao.usuario) return;
-    let nome = (location.hash.replace(/^#\/?/, '').split('?')[0] || 'pdv');
+    // Sem rota escolhida: administrador abre no painel, vendedor direto no caixa.
+    let nome = (location.hash.replace(/^#\/?/, '').split('?')[0] || (U.sessao.ehAdmin() ? 'inicio' : 'pdv'));
     if (!Telas[nome] || (ROTAS_ADMIN.includes(nome) && !U.sessao.ehAdmin())) nome = 'pdv';
     const tela = Telas[nome];
     if (telaAtual && telaAtual.sair) telaAtual.sair();

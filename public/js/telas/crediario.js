@@ -5,6 +5,16 @@ Telas.crediario = (() => {
   let lista = [];
 
   const dataBr = (d) => (d ? d.split('-').reverse().join('/') : '');
+  const diasAte = (d) => Math.round((Date.parse(d + 'T00:00') - Date.parse(U.hoje() + 'T00:00')) / 864e5);
+
+  /** Semáforo: vermelho = atrasado, amarelo = vence em até 7 dias, verde = em dia. */
+  function semaforo(vencido, proximo, diasAtraso) {
+    if (vencido > 0) return { cor: 'vermelho', txt: `atrasado ${diasAtraso} dia${diasAtraso === 1 ? '' : 's'}` };
+    const n = proximo ? diasAte(proximo) : 99;
+    if (n <= 7) return { cor: 'amarelo', txt: n === 0 ? 'vence hoje' : `vence em ${n} dia${n === 1 ? '' : 's'}` };
+    return { cor: 'verde', txt: 'em dia' };
+  }
+  const selo = (s) => `<span class="semaforo ${s.cor}"><i></i>${s.txt}</span>`;
 
   async function abrir(el) {
     raiz = el;
@@ -14,14 +24,15 @@ Telas.crediario = (() => {
         <div class="ferramentas">
           <input id="q" type="search" placeholder="Buscar cliente por nome, CPF ou telefone" autofocus>
           <label class="check"><input type="checkbox" id="atraso"> Só em atraso</label>
+          <span class="semaforo-legenda">${selo({ cor: 'verde', txt: 'em dia' })}${selo({ cor: 'amarelo', txt: 'vence em 7 dias' })}${selo({ cor: 'vermelho', txt: 'atrasado' })}</span>
           <button class="btn so-admin" id="lancar">+ Lançar débito antigo</button>
         </div>
       </div>
       <div class="cards" id="resumo"></div>
       <div class="cartao tabela-rolagem">
         <table class="tabela">
-          <thead><tr><th>Cliente</th><th>Telefone</th><th class="r">Parcelas</th><th>Próx. vencimento</th>
-            <th class="r">Em atraso</th><th class="r">Saldo devedor</th><th></th></tr></thead>
+          <thead><tr><th>Situação</th><th>Cliente</th><th>Telefone</th><th class="r">Parcelas</th><th>Próx. vencimento</th>
+            <th class="r">Vencido</th><th class="r">Saldo devedor</th><th></th></tr></thead>
           <tbody id="lista"></tbody>
         </table>
       </div>`;
@@ -56,16 +67,20 @@ Telas.crediario = (() => {
       <div class="card"><small>Clientes devendo</small><b>${resumo.clientes}</b></div>
       <div class="card"><small>Clientes em atraso</small><b class="${resumo.clientes_atraso ? 'txt-perigo' : ''}">${resumo.clientes_atraso}</b></div>
       <div class="card"><small>Recebido hoje</small><b>${brl(resumo.recebido)}</b></div>`;
-    raiz.querySelector('#lista').innerHTML = lista.map((c, i) => `
-      <tr class="clicavel ${c.vencido ? 'linha-atraso' : ''}" data-i="${i}">
+    raiz.querySelector('#lista').innerHTML = lista.map((c, i) => {
+      const sem = semaforo(c.vencido, c.proximo_vencimento, c.dias_atraso);
+      return `
+      <tr class="clicavel linha-${sem.cor}" data-i="${i}">
+        <td>${selo(sem)}</td>
         <td><b>${esc(c.nome)}</b>${c.cpf ? `<br><small>${esc(U.cpf(c.cpf))}</small>` : ''}</td>
-        <td>${esc(c.telefone || '')}</td>
+        <td class="nowrap">${esc(c.telefone || '')}</td>
         <td class="r">${c.parcelas}</td>
         <td>${dataBr(c.proximo_vencimento)}</td>
-        <td class="r">${c.vencido ? `<span class="selo perigo">${brl(c.vencido)} · ${c.dias_atraso}d</span>` : '<span class="selo ok">em dia</span>'}</td>
+        <td class="r">${c.vencido ? `<b class="txt-perigo">${brl(c.vencido)}</b>` : '—'}</td>
         <td class="r"><b>${brl(c.saldo)}</b></td>
         <td class="r"><button class="btn btn-primario btn-peq" data-receber>Receber</button></td>
-      </tr>`).join('') || '<tr><td colspan="7" class="vazio">Ninguém devendo no crediário. 🎉</td></tr>';
+      </tr>`;
+    }).join('') || '<tr><td colspan="8" class="vazio">Ninguém devendo no crediário. 🎉</td></tr>';
   }
 
   // ------------------------------------------------------------- detalhe
@@ -83,6 +98,7 @@ Telas.crediario = (() => {
         <td>${dataBr(p.vencimento)}</td><td class="r">${brl(p.valor)}</td>
         <td class="r">${p.valor_pago ? brl(p.valor_pago) : ''}</td>
         <td class="r">${p.status === 'paga' ? '<span class="selo ok">paga</span>' : `<b class="${atrasada ? 'txt-perigo' : ''}">${brl(resta)}</b>`}</td>
+        <td>${p.status === 'aberta' ? selo(semaforo(atrasada ? resta : 0, p.vencimento, -diasAte(p.vencimento))) : ''}</td>
         <td>${p.status === 'aberta' && !p.venda_id && !p.valor_pago ? `<button class="mini perigo so-admin" data-cancelar-parc="${p.id}" title="Cancelar parcela lançada por engano">×</button>` : ''}</td>
       </tr>`;
     };
@@ -103,8 +119,8 @@ Telas.crediario = (() => {
       </div>
       <h3>Parcelas em aberto</h3>
       <div class="tabela-rolagem baixa"><table class="tabela">
-        <thead><tr><th>Origem</th><th class="c">Parc.</th><th>Vencimento</th><th class="r">Valor</th><th class="r">Pago</th><th class="r">Resta</th><th></th></tr></thead>
-        <tbody id="parc">${abertas.map(linhaParcela).join('') || '<tr><td colspan="7" class="vazio">Nenhuma parcela em aberto.</td></tr>'}</tbody>
+        <thead><tr><th>Origem</th><th class="c">Parc.</th><th>Vencimento</th><th class="r">Valor</th><th class="r">Pago</th><th class="r">Resta</th><th>Situação</th><th></th></tr></thead>
+        <tbody id="parc">${abertas.map(linhaParcela).join('') || '<tr><td colspan="8" class="vazio">Nenhuma parcela em aberto.</td></tr>'}</tbody>
       </table></div>
       <h3>Recebimentos</h3>
       <div class="tabela-rolagem baixa"><table class="tabela"><tbody id="recs">${d.recebimentos.map((r) => `

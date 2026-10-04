@@ -53,10 +53,9 @@ function criarServidor(db) {
               : `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
           }
           if (r.corpo && r.corpo.__arquivo) {
-            res.writeHead(200, {
-              'Content-Type': r.corpo.tipo,
-              'Content-Disposition': `attachment; filename="${r.corpo.nome}"`,
-            });
+            res.writeHead(200, r.corpo.inline
+              ? { 'Content-Type': r.corpo.tipo, 'Cache-Control': 'private, max-age=31536000' }
+              : { 'Content-Type': r.corpo.tipo, 'Content-Disposition': `attachment; filename="${r.corpo.nome}"` });
             return res.end(r.corpo.conteudo);
           }
           enviarJson(res, r.status, r.corpo);

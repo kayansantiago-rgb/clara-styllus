@@ -18,7 +18,7 @@ Telas.produtos = (() => {
       </div>
       <div class="tabela-rolagem cartao">
         <table class="tabela">
-          <thead><tr><th>Código</th><th>Produto</th><th>Tam.</th><th>Cor</th><th class="r">Custo</th>
+          <thead><tr><th></th><th>Código</th><th>Produto</th><th>Tam.</th><th>Cor</th><th class="r">Custo</th>
             <th class="r">Venda</th><th class="r">Estoque</th><th class="r">Ações</th></tr></thead>
           <tbody id="lista"></tbody>
         </table>
@@ -41,6 +41,7 @@ Telas.produtos = (() => {
     } catch (e) { return erro(e); }
     raiz.querySelector('#lista').innerHTML = lista.map((p, i) => `
       <tr class="${p.ativo ? '' : 'inativo'}">
+        <td class="td-foto">${U.miniatura(p)}</td>
         <td><code>${esc(p.codigo)}</code>${p.referencia ? `<br><small>Ref ${esc(p.referencia)}</small>` : ''}</td>
         <td><b>${esc(p.nome)}</b><br><small>${esc([p.categoria, p.marca].filter(Boolean).join(' · '))}</small></td>
         <td>${esc(p.tamanho || '')}</td>
@@ -49,11 +50,12 @@ Telas.produtos = (() => {
         <td class="r"><b>${num(p.preco_venda)}</b></td>
         <td class="r ${p.estoque <= p.estoque_minimo ? 'txt-perigo' : ''}"><b>${p.estoque}</b></td>
         <td class="r nowrap">
+          <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">🔢</button>
           <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">📦</button>
           <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">🏷️</button>
           <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">✏️</button>
         </td>
-      </tr>`).join('') || '<tr><td colspan="8" class="vazio">Nenhum produto encontrado.</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="9" class="vazio">Nenhum produto encontrado.</td></tr>';
   }
 
   function acao(ev) {
@@ -62,6 +64,7 @@ Telas.produtos = (() => {
     const p = lista[Number(b.dataset.i)];
     if (b.dataset.acao === 'editar') formulario(p);
     if (b.dataset.acao === 'estoque') estoque(p);
+    if (b.dataset.acao === 'grade') grade(p);
     if (b.dataset.acao === 'etiqueta') {
       Telas.etiquetas.adicionar(p, Math.max(1, p.estoque));
       aviso(`${Math.max(1, p.estoque)} etiqueta(s) de "${p.nome}" na fila de impressão.`);
@@ -83,6 +86,19 @@ Telas.produtos = (() => {
         <label>Preço de custo (R$)<input name="preco_custo" inputmode="decimal" value="${p.preco_custo ? num(p.preco_custo) : ''}"></label>
         <label>Preço de venda (R$) *<input name="preco_venda" inputmode="decimal" required value="${p.preco_venda ? num(p.preco_venda) : ''}"></label>
         <label>Estoque mínimo<input name="estoque_minimo" type="number" min="0" value="${p.estoque_minimo ?? 0}"></label>
+        <div class="col2 foto-campo">
+          <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : '<span>👗<br><small>sem foto</small></span>'}</div>
+          <div class="foto-acoes">
+            <b>Foto da peça</b>
+            <small>Aparece na tela de venda para a vendedora conferir se bipou a peça certa.</small>
+            <div class="acoes acoes-esq">
+              <label class="btn">📷 Escolher foto<input type="file" accept="image/*" capture="environment" id="foto-arquivo" hidden></label>
+              <button type="button" class="btn btn-perigo-claro" id="foto-remover" ${U.fotoUrl(p) ? '' : 'hidden'}>Remover</button>
+            </div>
+            ${novo ? '<small>A foto vale para todos os tamanhos e cores criados agora.</small>'
+    : `<label class="check"><input type="checkbox" id="foto-cor" checked> Usar a mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
+          </div>
+        </div>
         ${novo ? `
         <fieldset class="col2">
           <legend>Tamanho e cor</legend>
@@ -114,6 +130,30 @@ Telas.produtos = (() => {
       corpo.querySelector('#margem').textContent = c > 0 && v > 0
         ? `Margem: ${(((v - c) / v) * 100).toFixed(0)}% · Markup: ${(v / c).toFixed(2)}x` : '';
     };
+    // Foto: undefined = não mexeu; null = remover; string = nova imagem.
+    let foto;
+    const previa = corpo.querySelector('#foto-previa');
+    corpo.querySelector('#foto-arquivo').onchange = async (ev) => {
+      const arq = ev.target.files[0];
+      if (!arq) return;
+      try {
+        foto = await U.reduzirImagem(arq);
+        previa.innerHTML = `<img src="${foto}" alt="">`;
+        corpo.querySelector('#foto-remover').hidden = false;
+      } catch (e) { erro(e); }
+    };
+    corpo.querySelector('#foto-remover').onclick = () => {
+      foto = null;
+      previa.innerHTML = '<span>👗<br><small>sem foto</small></span>';
+      corpo.querySelector('#foto-remover').hidden = true;
+    };
+    const salvarFoto = async (ids) => {
+      if (foto === undefined) return;
+      for (const id of ids) {
+        await api(`/api/produtos/${id}/foto`, foto ? { metodo: 'PUT', corpo: { imagem: foto } } : { metodo: 'DELETE' });
+      }
+    };
+
     form.preco_custo.oninput = margem;
     form.preco_venda.oninput = margem;
     margem();
@@ -133,6 +173,13 @@ Telas.produtos = (() => {
             metodo: 'PUT',
             corpo: { ...base, tamanho: d.tamanho, cor: d.cor, codigo: d.codigo, ativo: !!d.ativo },
           });
+          let ids = [p.id];
+          if (foto !== undefined && corpo.querySelector('#foto-cor')?.checked) {
+            const g = await api(`/api/produtos/grade?nome=${encodeURIComponent(base.nome)}${base.referencia ? `&referencia=${encodeURIComponent(base.referencia)}` : ''}`);
+            const cor = d.cor || '—';
+            ids = [...new Set([p.id, ...Object.entries(g.celulas).filter(([k]) => k.startsWith(cor + '|')).flatMap(([, c]) => c.ids)])];
+          }
+          await salvarFoto(ids);
           aviso('Produto atualizado.');
         } else {
           const tamanhos = listaCsv(d.tamanho);
@@ -149,6 +196,7 @@ Telas.produtos = (() => {
               corpo: { ...base, ...c, codigo: d.codigo, estoque: Number(d.estoque || 0) },
             }));
           }
+          await salvarFoto(criados.map((x) => x.id));
           aviso(criados.length > 1 ? `${criados.length} produtos criados.` : 'Produto criado.');
           const qtdEtiquetas = criados.reduce((a, x) => a + x.estoque, 0);
           if (qtdEtiquetas && await U.confirmar('Etiquetas', `Mandar ${qtdEtiquetas} etiqueta(s) para a fila de impressão?`, { ok: 'Sim' })) {
@@ -158,6 +206,39 @@ Telas.produtos = (() => {
         fecharModal();
         if (raiz) carregar();
       } catch (e) { erro(e); }
+    };
+  }
+
+  /** Grade visual: tamanhos nas colunas, cores nas linhas, estoque em cada célula. */
+  async function grade(p) {
+    let g;
+    try {
+      g = await api(`/api/produtos/grade?nome=${encodeURIComponent(p.nome)}${p.referencia ? `&referencia=${encodeURIComponent(p.referencia)}` : ''}`);
+    } catch (e) { return erro(e); }
+    const totCor = (cor) => g.tamanhos.reduce((a, t) => a + (g.celulas[`${cor}|${t}`]?.estoque || 0), 0);
+    const totTam = (t) => g.cores.reduce((a, cor) => a + (g.celulas[`${cor}|${t}`]?.estoque || 0), 0);
+    const classe = (c) => (!c ? 'vazia' : c.estoque <= 0 ? 'zero' : c.estoque <= c.minimo ? 'baixo' : 'ok');
+    const corpo = abrirModal(`Grade — ${g.nome}${g.referencia ? ` (Ref ${g.referencia})` : ''}`, `
+      <div class="grade-legenda">
+        <span><i class="grade-cel ok"></i> com estoque</span><span><i class="grade-cel baixo"></i> no mínimo</span>
+        <span><i class="grade-cel zero"></i> esgotado</span><span><i class="grade-cel vazia"></i> não cadastrado</span>
+      </div>
+      <div class="tabela-rolagem">
+        <table class="grade-estoque">
+          <thead><tr><th>Cor \\ Tam.</th>${g.tamanhos.map((t) => `<th>${esc(t)}</th>`).join('')}<th>Total</th></tr></thead>
+          <tbody>${g.cores.map((cor) => `<tr><th>${esc(cor)}</th>${g.tamanhos.map((t) => {
+    const c = g.celulas[`${cor}|${t}`];
+    return `<td><button type="button" class="grade-cel ${classe(c)}" ${c && c.ids.length === 1 ? `data-id="${c.ids[0]}"` : 'disabled'}
+              title="${c ? `${c.estoque} peça(s)` : 'Não cadastrado'}">${c ? c.estoque : '·'}</button></td>`;
+  }).join('')}<td class="grade-total">${totCor(cor)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><th>Total</th>${g.tamanhos.map((t) => `<td class="grade-total">${totTam(t)}</td>`).join('')}<td class="grade-total"><b>${g.total}</b></td></tr></tfoot>
+        </table>
+      </div>
+      <p class="dica so-admin">Clique em um número para lançar entrada ou ajuste daquele tamanho/cor.</p>`, { largura: '720px' });
+    corpo.querySelector('tbody').onclick = async (ev) => {
+      const b = ev.target.closest('[data-id]');
+      if (!b || !U.sessao.ehAdmin()) return;
+      try { estoque(await api(`/api/produtos/${b.dataset.id}`)); } catch (e) { erro(e); }
     };
   }
 

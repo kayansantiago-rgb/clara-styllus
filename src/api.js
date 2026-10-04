@@ -253,6 +253,66 @@ function criarApi(db) {
     return planos(db.prepare(sql).all(...args));
   });
 
+  /** Ordem natural dos tamanhos de roupa (PP, P, M, G… e numeração). */
+  const ORDEM_TAM = ['RN', 'BB', 'PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'EG', 'EXG', 'G1', 'G2', 'G3', 'G4', 'U', 'UN', 'UNICO', 'ÚNICO'];
+  const pesoTamanho = (t) => {
+    const s = String(t || '').trim().toUpperCase();
+    const i = ORDEM_TAM.indexOf(s);
+    if (i >= 0) return i;
+    const n = parseFloat(s.replace(',', '.'));
+    return Number.isFinite(n) ? 100 + n : 1000;
+  };
+
+  rota('GET', '/api/produtos/grade', ({ query }) => {
+    const nome = texto(query.get('nome'));
+    if (!nome) throw erro(400, 'Informe o nome do produto.');
+    const ref = texto(query.get('referencia'));
+    const itens = planos(
+      db
+        .prepare(
+          `SELECT * FROM produtos WHERE ativo = 1 AND nome = ? COLLATE NOCASE
+           AND (? IS NULL OR referencia = ?)`
+        )
+        .all(nome, ref, ref)
+    );
+    const tamanhos = [...new Set(itens.map((p) => p.tamanho || '—'))].sort((a, b) => pesoTamanho(a) - pesoTamanho(b) || a.localeCompare(b));
+    const cores = [...new Set(itens.map((p) => p.cor || '—'))].sort((a, b) => a.localeCompare(b));
+    const celulas = {};
+    for (const p of itens) {
+      const k = `${p.cor || '—'}|${p.tamanho || '—'}`;
+      const c = celulas[k] || (celulas[k] = { estoque: 0, minimo: 0, ids: [] });
+      c.estoque += p.estoque;
+      c.minimo += p.estoque_minimo;
+      c.ids.push(p.id);
+    }
+    return { nome: itens[0]?.nome || nome, referencia: ref, tamanhos, cores, celulas, total: itens.reduce((a, p) => a + p.estoque, 0) };
+  });
+
+  rota('GET', '/api/produtos/:id/foto', ({ params }) => {
+    const f = db.prepare('SELECT tipo, dados FROM produto_fotos WHERE produto_id = ?').get(params.id);
+    if (!f) throw erro(404, 'Produto sem foto.');
+    return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: Buffer.from(f.dados) };
+  });
+
+  rota('PUT', '/api/produtos/:id/foto', ({ params, corpo }) => {
+    buscarProduto(params.id);
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(corpo.imagem || '');
+    if (!m) throw erro(400, 'Imagem inválida (use JPG, PNG ou WEBP).');
+    const dados = Buffer.from(m[2], 'base64');
+    if (dados.length > 1.5e6) throw erro(400, 'Imagem muito grande.');
+    transacao(db, () => {
+      db.prepare('INSERT OR REPLACE INTO produto_fotos (produto_id, tipo, dados) VALUES (?,?,?)').run(params.id, m[1], dados);
+      db.prepare('UPDATE produtos SET foto_versao = ? WHERE id = ?').run(Date.now(), params.id);
+    });
+    return buscarProduto(params.id);
+  }, 'admin');
+
+  rota('DELETE', '/api/produtos/:id/foto', ({ params }) => {
+    db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(params.id);
+    db.prepare('UPDATE produtos SET foto_versao = NULL WHERE id = ?').run(params.id);
+    return buscarProduto(params.id);
+  }, 'admin');
+
   rota('GET', '/api/produtos/codigo/:codigo', ({ params }) => {
     const p = plano(
       db.prepare('SELECT * FROM produtos WHERE codigo = ? AND ativo = 1').get(params.codigo)
@@ -775,6 +835,92 @@ function criarApi(db) {
     return {
       de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor,
       crediario: crediario.resumoGeral(de, ate),
+    };
+  }, 'admin');
+
+  // ----------------------------------------------------------------- painel
+  rota('GET', '/api/painel', () => {
+    const cfg = config();
+    const dia = (desloc) => new Date(Date.now() + desloc * 864e5).toLocaleDateString('sv-SE');
+    const hoje = dia(0);
+    const totaisDia = (d) => {
+      const t = plano(
+        db
+          .prepare(
+            `SELECT COUNT(*) AS vendas, COALESCE(SUM(total),0) AS faturamento,
+               COALESCE((SELECT SUM(i.quantidade) FROM venda_itens i JOIN vendas v2 ON v2.id = i.venda_id
+                 WHERE v2.status = 'concluida' AND date(v2.criado_em) = ?),0) AS pecas
+             FROM vendas WHERE status = 'concluida' AND date(criado_em) = ?`
+          )
+          .get(d, d)
+      );
+      t.ticket = t.vendas ? Math.round(t.faturamento / t.vendas) : 0;
+      return t;
+    };
+    const inicioMes = hoje.slice(0, 8) + '01';
+    const mes = db
+      .prepare(
+        `SELECT COALESCE(SUM(total),0) AS faturamento, COUNT(*) AS vendas FROM vendas
+         WHERE status = 'concluida' AND date(criado_em) BETWEEN ? AND ?`
+      )
+      .get(inicioMes, hoje);
+    const [a, m] = hoje.split('-').map(Number);
+    const diasNoMes = new Date(a, m, 0).getDate();
+    const diaDoMes = Number(hoje.slice(8));
+    const porDia = planos(
+      db
+        .prepare(
+          `SELECT date(criado_em) AS dia, SUM(total) AS faturamento, COUNT(*) AS vendas FROM vendas
+           WHERE status = 'concluida' AND date(criado_em) >= ? GROUP BY dia ORDER BY dia`
+        )
+        .all(dia(-13))
+    );
+    const ultimos14 = Array.from({ length: 14 }, (_, i) => {
+      const d = dia(i - 13);
+      const r = porDia.find((x) => x.dia === d);
+      return { dia: d, faturamento: r ? r.faturamento : 0, vendas: r ? r.vendas : 0 };
+    });
+    const maisVendidos = planos(
+      db
+        .prepare(
+          `SELECT i.produto_id, i.nome, SUM(i.quantidade) AS quantidade, SUM(i.total) AS total, p.foto_versao
+           FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
+           WHERE v.status = 'concluida' AND date(v.criado_em) >= ?
+           GROUP BY i.nome ORDER BY quantidade DESC, total DESC LIMIT 5`
+        )
+        .all(dia(-6))
+    );
+    // Aniversariantes de hoje até 7 dias (comparando só mês-dia).
+    const proximos = new Map(Array.from({ length: 8 }, (_, i) => [dia(i).slice(5), i]));
+    const aniversariantes = planos(
+      db.prepare(`SELECT id, nome, telefone, aniversario FROM clientes WHERE aniversario IS NOT NULL AND aniversario <> ''`).all()
+    )
+      .filter((c) => proximos.has(c.aniversario.slice(5)))
+      .map((c) => ({ ...c, em_dias: proximos.get(c.aniversario.slice(5)) }))
+      .sort((x, y) => x.em_dias - y.em_dias);
+    const vencendoHoje = planos(
+      db
+        .prepare(
+          `SELECT c.id, c.nome, c.telefone, SUM(p.valor - p.valor_pago) AS valor
+           FROM crediario_parcelas p JOIN clientes c ON c.id = p.cliente_id
+           WHERE p.status = 'aberta' AND p.vencimento = ? GROUP BY c.id ORDER BY c.nome`
+        )
+        .all(hoje)
+    );
+    const estoqueBaixo = db
+      .prepare('SELECT COUNT(*) AS n FROM produtos WHERE ativo = 1 AND estoque <= estoque_minimo')
+      .get().n;
+    const meta = cfg.meta_mensal ? Number(cfg.meta_mensal) : null;
+    return {
+      hoje: totaisDia(hoje),
+      ontem: totaisDia(dia(-1)),
+      mes: { ...mes, meta, dia: diaDoMes, dias: diasNoMes,
+        projecao: diaDoMes ? Math.round((mes.faturamento / diaDoMes) * diasNoMes) : 0 },
+      ultimos14,
+      mais_vendidos: maisVendidos,
+      aniversariantes,
+      crediario: { ...crediario.resumoGeral(hoje, hoje), vencendo_hoje: vencendoHoje },
+      estoque_baixo: estoqueBaixo,
     };
   }, 'admin');
 

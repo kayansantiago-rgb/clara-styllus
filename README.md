@@ -5,6 +5,12 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Painel Início** (administrador): vendas de hoje × ontem, meta do mês com projeção, gráfico dos
+  últimos 14 dias, mais vendidos, aniversariantes (com mensagem pronta no WhatsApp) e crediário do dia.
+- **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda.
+- **Grade de estoque** tamanho × cor, colorida (com estoque, no mínimo, esgotado).
+- **Tela de venda com alertas** (crediário vencido, última peça, caixa esquecido aberto), **som ao bipar**
+  e **troco em tamanho grande** ao concluir.
 - **Login por vendedor(a)**: cada pessoa entra com usuário e senha; a venda e o caixa ficam no nome
   de quem está logado (aparece no cupom e no relatório por vendedor). Perfis **administrador(a)**
   (tudo) e **vendedor(a)** (vende, abre/fecha caixa, consulta vendas, clientes e etiquetas).

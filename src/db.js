@@ -210,6 +210,9 @@ const CONFIG_PADRAO = {
   crediario_max_parcelas: '6',
   crediario_bloquear_atraso: '1',
   crediario_limite_padrao: '',
+  // Painel e tela de venda
+  meta_mensal: '',
+  som_bipe: '1',
 };
 
 function abrirBanco(arquivo) {
@@ -235,6 +238,14 @@ function migrar(db) {
   if (!colunas('vendas').includes('usuario_id')) {
     db.exec('ALTER TABLE vendas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
   }
+  if (!colunas('produtos').includes('foto_versao')) {
+    db.exec('ALTER TABLE produtos ADD COLUMN foto_versao INTEGER');
+  }
+  db.exec(`CREATE TABLE IF NOT EXISTS produto_fotos (
+    produto_id INTEGER PRIMARY KEY REFERENCES produtos(id),
+    tipo TEXT NOT NULL,
+    dados BLOB NOT NULL
+  )`);
   if (!colunas('clientes').includes('limite_credito')) {
     db.exec('ALTER TABLE clientes ADD COLUMN limite_credito INTEGER');
   }

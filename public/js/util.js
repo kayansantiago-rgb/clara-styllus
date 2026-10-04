@@ -195,7 +195,62 @@ const U = (() => {
     ehAdmin: () => !!usuarioAtual && usuarioAtual.perfil === 'admin',
   };
 
+  // --------------------------------------------------------------- som
+  let audio = null;
+  /** Bipe curto: 'ok' (agudo), 'erro' (grave, duplo) ou 'sucesso' (dois tons subindo). */
+  function som(tipo = 'ok') {
+    if (cacheConfig && cacheConfig.som_bipe === '0') return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const notas = { ok: [[1320, 0, 0.08]], erro: [[220, 0, 0.14], [180, 0.18, 0.2]], sucesso: [[880, 0, 0.1], [1320, 0.11, 0.16]] }[tipo];
+      for (const [freq, ini, dur] of notas) {
+        const o = audio.createOscillator();
+        const g = audio.createGain();
+        o.type = tipo === 'erro' ? 'square' : 'sine';
+        o.frequency.value = freq;
+        const t = audio.currentTime + ini;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g).connect(audio.destination);
+        o.start(t);
+        o.stop(t + dur + 0.02);
+      }
+    } catch { /* sem áudio: segue sem som */ }
+  }
+
+  // -------------------------------------------------------------- fotos
+  const fotoUrl = (p) => (p && p.foto_versao ? `/api/produtos/${p.id}/foto?v=${p.foto_versao}` : null);
+
+  /** Miniatura da peça (ou um ícone quando não tem foto). */
+  const miniatura = (p, classe = 'mini-foto') => {
+    const url = fotoUrl(p);
+    return url ? `<img class="${classe}" src="${url}" alt="" loading="lazy">` : `<span class="${classe} sem-foto">👗</span>`;
+  };
+
+  /** Lê um arquivo de imagem e devolve um JPEG reduzido (dataURL) para não pesar no banco. */
+  function reduzirImagem(arquivo, lado = 480) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const escala = Math.min(1, lado / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * escala);
+        c.height = Math.round(img.height * escala);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => reject(new Error('Não consegui abrir a imagem.'));
+      img.src = URL.createObjectURL(arquivo);
+    });
+  }
+
   return {
+    som, fotoUrl, miniatura, reduzirImagem,
     sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,

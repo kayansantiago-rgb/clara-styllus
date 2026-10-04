@@ -69,6 +69,7 @@ Telas.pdv = (() => {
         </header>
 
         <section class="pdv-esq">
+          <div class="pdv-alertas" id="alertas"></div>
           <div class="pdv-busca">
             <span class="pdv-busca-ico">⌕</span>
             <input id="busca" autocomplete="off" placeholder="Bipe o código de barras ou digite o nome do produto">
@@ -186,7 +187,7 @@ Telas.pdv = (() => {
     try {
       const c = await api(`/api/clientes/${carrinho.cliente.id}`);
       saldoCliente = c.crediario;
-      if (raiz) desenharCliente();
+      if (raiz) { desenharCliente(); desenharAlertas(); }
     } catch { /* cliente apagado: ignora */ }
   }
 
@@ -227,13 +228,40 @@ Telas.pdv = (() => {
     const ultEl = raiz.querySelector('#ultimo');
     ultEl.classList.toggle('vazio-ult', !ult);
     ultEl.innerHTML = ult
-      ? `<div><small>Último item</small><span>${esc(ult.produto.nome)}</span>
+      ? `${U.miniatura(ult.produto, 'ultimo-foto')}<div class="ultimo-txt"><small>Último item</small><span>${esc(ult.produto.nome)}</span>
            <small>${esc([ult.produto.tamanho && 'Tam ' + ult.produto.tamanho, ult.produto.cor].filter(Boolean).join(' · '))}</small></div>
          <b>${ult.quantidade} × ${brl(ult.produto.preco_venda)}</b>`
-      : `<div><small>Clara Styllus</small><span>Pronto para vender</span></div><b>${brl(0)}</b>`;
+      : `<span class="ultimo-foto sem-foto">🛍️</span><div class="ultimo-txt"><small>Clara Styllus</small><span>Pronto para vender</span></div><b>${brl(0)}</b>`;
 
     desenharCliente();
     desenharTotais();
+    desenharAlertas();
+  }
+
+  /** Faixa de avisos no topo: crediário vencido, estoque acabando, caixa aberto há muito tempo. */
+  function desenharAlertas() {
+    const el = raiz && raiz.querySelector('#alertas');
+    if (!el) return;
+    const alertas = [];
+    if (carrinho.cliente && saldoCliente && saldoCliente.vencido > 0) {
+      alertas.push(['perigo', `📒 ${esc(carrinho.cliente.nome)} tem <b>${brl(saldoCliente.vencido)}</b> vencido no crediário.`]);
+    }
+    const porProduto = new Map();
+    for (const it of carrinho.itens) {
+      const x = porProduto.get(it.produto.id) || { p: it.produto, qtd: 0 };
+      x.qtd += it.quantidade;
+      porProduto.set(it.produto.id, x);
+    }
+    for (const { p, qtd } of porProduto.values()) {
+      const nome = esc([p.nome, p.tamanho, p.cor].filter(Boolean).join(' '));
+      if (qtd > p.estoque) alertas.push(['perigo', `📦 <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.`]);
+      else if (p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `📦 <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
+    }
+    const aberto = caixa ? new Date(caixa.aberto_em.replace(' ', 'T')) : null;
+    if (aberto && Date.now() - aberto.getTime() > 12 * 36e5) {
+      alertas.push(['alerta', `💰 O caixa nº ${caixa.id} está aberto desde ${U.dataHora(caixa.aberto_em)}. Feche o caixa do dia anterior.`]);
+    }
+    el.innerHTML = alertas.map(([tipo, txt]) => `<div class="pdv-alerta ${tipo}">${txt}</div>`).join('');
   }
 
   function desenharTotais() {
@@ -258,9 +286,7 @@ Telas.pdv = (() => {
     } else {
       carrinho.itens.push({ produto, quantidade, desconto: 0 });
     }
-    if (jaNoCarrinho + quantidade > produto.estoque) {
-      aviso(`Atenção: estoque de "${produto.nome}" é ${produto.estoque}.`, 'alerta');
-    }
+    U.som(jaNoCarrinho + quantidade > produto.estoque ? 'erro' : 'ok');
     salvar();
     desenhar();
     const tabela = raiz.querySelector('.pdv-itens');
@@ -289,6 +315,7 @@ Telas.pdv = (() => {
       return true;
     }
     if (!lista.length) {
+      U.som('erro');
       aviso(`Nenhum produto encontrado para "${texto}".`, 'erro');
       return false;
     }
@@ -313,7 +340,8 @@ Telas.pdv = (() => {
     box.hidden = false;
     box.innerHTML = lista.map((p, i) => `
       <div class="sugestao ${i === selecionada ? 'sel' : ''}" data-i="${i}">
-        <span><b>${esc(p.nome)}</b> ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}
+        ${U.miniatura(p)}
+        <span class="sugestao-txt"><b>${esc(p.nome)}</b> ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}
           <small>${esc(p.codigo)}</small></span>
         <span>${brl(p.preco_venda)} <small class="${p.estoque <= 0 ? 'txt-perigo' : ''}">est. ${p.estoque}</small></span>
       </div>`).join('');
@@ -424,6 +452,7 @@ Telas.pdv = (() => {
       raiz.querySelector('#cpf').value = carrinho.cpf_nota;
       carregarSaldoCliente().then(() => {
         desenharCliente();
+        desenharAlertas();
         if (depois) depois();
       });
     };
@@ -442,7 +471,7 @@ Telas.pdv = (() => {
         saldoCliente = null;
         salvar();
         fecharModal();
-        if (raiz) desenharCliente();
+        if (raiz) { desenharCliente(); desenharAlertas(); }
       };
     }
     corpo.querySelector('#novo-cli').onclick = () => Telas.clientes.formulario(null, usar);
@@ -616,22 +645,26 @@ Telas.pdv = (() => {
 
   async function vendaConcluida(venda) {
     const cfg = await U.config();
+    U.som('sucesso');
     if (cfg.impressao_automatica === '1') Impressao.cupom(venda);
     const cred = venda.crediario || [];
     const corpo = abrirModal(`Venda nº ${venda.id} concluída`, `
-      <div class="sucesso">
+      <div class="concluida ${venda.troco ? 'com-troco' : ''}">
         <div class="sucesso-ico">✓</div>
-        <div>Total <b>${brl(venda.total)}</b></div>
-        ${venda.troco ? `<div class="troco-grande">Troco: ${brl(venda.troco)}</div>` : ''}
-        ${cred.length ? `<div class="info-cred">Crediário: ${cred.length}x — ${cred.map((p) =>
+        ${venda.troco
+    ? `<div class="concluida-rotulo">TROCO</div><div class="concluida-valor">${brl(venda.troco)}</div>
+           <div class="concluida-det">Total ${brl(venda.total)} · recebido ${brl(venda.total + venda.troco)}</div>`
+    : `<div class="concluida-rotulo">TOTAL DA VENDA</div><div class="concluida-valor">${brl(venda.total)}</div>
+           <div class="concluida-det">${venda.pagamentos.map((p) => U.FORMAS[p.forma] + (p.parcelas > 1 ? ` ${p.parcelas}x` : '')).join(' + ')}</div>`}
+      </div>
+      ${cred.length ? `<div class="info-cred">Crediário: ${cred.length}x — ${cred.map((p) =>
     `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}<br>
           <small>Peça para o cliente assinar a via da loja.</small></div>` : ''}
-      </div>
       <div class="acoes">
         <button class="btn" id="imp">🧾 Imprimir cupom</button>
         <button class="btn" id="troca">🎁 Cupom de troca</button>
-        <button class="btn btn-primario" data-fechar autofocus>Nova venda (Enter)</button>
-      </div>`, { largura: '540px', aoFechar: () => raiz && abrir(raiz) });
+        <button class="btn btn-primario btn-grande" data-fechar autofocus>Nova venda (Enter)</button>
+      </div>`, { largura: '560px', aoFechar: () => raiz && abrir(raiz) });
     corpo.querySelector('#imp').onclick = () => Impressao.cupom(venda, { gaveta: false });
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(venda);
   }

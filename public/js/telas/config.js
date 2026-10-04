@@ -29,6 +29,7 @@ Telas.config = (() => {
       dados[el.name] = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
     }
     if (dados.crediario_limite_padrao) dados.crediario_limite_padrao = String(U.paraCentavos(dados.crediario_limite_padrao) || '');
+    if (dados.meta_mensal) dados.meta_mensal = String(U.paraCentavos(dados.meta_mensal) || '');
     return dados;
   }
 
@@ -116,6 +117,9 @@ Telas.config = (() => {
         <div class="cartao">
           <h3>Regras de venda</h3>
           <div class="grade-form">
+            <label>Meta de vendas do mês (R$) <small>aparece no painel Início</small>
+              <input name="meta_mensal" inputmode="decimal" value="${c.meta_mensal ? U.num(c.meta_mensal) : ''}"></label>
+            ${check('som_bipe', 'Tocar som ao bipar produto e ao concluir a venda')}
             ${campo('desconto_maximo_pct', 'Desconto máximo por venda (%)', 'type="number" min="0" max="100"')}
             ${check('estoque_negativo', 'Permitir vender produto sem estoque')}
           </div>
