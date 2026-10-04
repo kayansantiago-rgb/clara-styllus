@@ -6,14 +6,20 @@ const { abrirBanco } = require('../src/db');
 const { criarApi } = require('../src/api');
 const { gerarEan13Interno } = require('../src/codigos');
 
-function novaApi() {
+function novaApi({ logar = true } = {}) {
   const db = abrirBanco(':memory:');
   const despachar = criarApi(db);
+  let token = null;
   const chamar = (metodo, caminho, corpo) => {
     const url = new URL(caminho, 'http://x');
-    return despachar(metodo, url.pathname, url.searchParams, corpo);
+    const r = despachar(metodo, url.pathname, url.searchParams, corpo, token);
+    if (r && r.sessao !== undefined) token = r.sessao;
+    return r;
   };
-  return { db, chamar };
+  if (logar) {
+    chamar('POST', '/api/primeiro-acesso', { nome: 'Clara', login: 'clara', senha: '1234' });
+  }
+  return { db, chamar, sair: () => chamar('POST', '/api/logout') };
 }
 
 test('EAN-13 interno tem dígito verificador válido', () => {
@@ -123,4 +129,60 @@ test('ajuste de estoque define a contagem real', () => {
   assert.equal(r.corpo.estoque, 7);
   const movs = chamar('GET', `/api/produtos/${p.id}/movimentos`).corpo;
   assert.equal(movs[0].quantidade, 3);
+});
+
+test('login: primeiro acesso cria admin, vendedor tem acesso restrito', () => {
+  const { chamar, sair } = novaApi({ logar: false });
+  assert.equal(chamar('GET', '/api/sessao').corpo.primeiro_acesso, true);
+  assert.equal(chamar('GET', '/api/produtos').status, 401);
+
+  const adm = chamar('POST', '/api/primeiro-acesso', { nome: 'Clara', login: 'Clara', senha: '1234' });
+  assert.equal(adm.corpo.usuario.perfil, 'admin');
+  assert.equal(chamar('POST', '/api/primeiro-acesso', { nome: 'X', login: 'x', senha: '1234' }).status, 409);
+
+  const p = chamar('POST', '/api/produtos', { nome: 'Top', preco_venda: 3000, estoque: 5 }).corpo;
+  const ana = chamar('POST', '/api/usuarios', { nome: 'Ana Souza', login: 'ana', senha: 'abcd' }).corpo;
+  assert.equal(ana.perfil, 'vendedor');
+  assert.equal(chamar('POST', '/api/usuarios', { nome: 'Outra', login: 'ANA', senha: 'abcd' }).status, 409);
+
+  sair();
+  assert.equal(chamar('GET', '/api/sessao').corpo.usuario, null);
+  assert.equal(chamar('POST', '/api/login', { login: 'ana', senha: 'errada' }).status, 401);
+  assert.equal(chamar('POST', '/api/login', { login: 'ana', senha: 'abcd' }).status, 200);
+
+  // Vendedor vende e a venda fica no nome dele, mas não mexe em cadastro/relatório.
+  assert.equal(chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 }).corpo.caixa.operador, 'Ana Souza');
+  const v = chamar('POST', '/api/vendas', {
+    itens: [{ produto_id: p.id, quantidade: 1 }],
+    pagamentos: [{ forma: 'pix', valor: 3000 }],
+  }).corpo;
+  assert.equal(v.vendedor, 'Ana Souza');
+  assert.equal(v.usuario_id, ana.id);
+  assert.equal(chamar('POST', '/api/produtos', { nome: 'X' }).status, 403);
+  assert.equal(chamar('GET', '/api/relatorios').status, 403);
+  assert.equal(chamar('POST', `/api/vendas/${v.id}/cancelar`, { motivo: 'x' }).status, 403);
+  assert.equal(chamar('GET', '/api/usuarios').status, 403);
+
+  // Troca de senha pelo próprio usuário.
+  assert.equal(chamar('POST', '/api/minha-senha', { senha_atual: 'abcd', nova_senha: 'nova1' }).status, 200);
+  sair();
+  assert.equal(chamar('POST', '/api/login', { login: 'ana', senha: 'nova1' }).status, 200);
+});
+
+test('usuário desativado perde o acesso e sempre sobra um admin', () => {
+  const { chamar, sair } = novaApi();
+  const ana = chamar('POST', '/api/usuarios', { nome: 'Ana', login: 'ana', senha: 'abcd' }).corpo;
+  const clara = chamar('GET', '/api/sessao').corpo.usuario;
+  assert.equal(chamar('PUT', `/api/usuarios/${clara.id}`, { perfil: 'vendedor' }).status, 409);
+  assert.equal(chamar('PUT', `/api/usuarios/${clara.id}`, { ativo: false }).status, 409);
+
+  sair();
+  chamar('POST', '/api/login', { login: 'ana', senha: 'abcd' });
+  const tokenAna = chamar('GET', '/api/sessao').corpo.usuario;
+  assert.equal(tokenAna.login, 'ana');
+  sair();
+  chamar('POST', '/api/login', { login: 'clara', senha: '1234' });
+  assert.equal(chamar('PUT', `/api/usuarios/${ana.id}`, { ativo: false }).corpo.ativo, 0);
+  sair();
+  assert.equal(chamar('POST', '/api/login', { login: 'ana', senha: 'abcd' }).status, 401);
 });

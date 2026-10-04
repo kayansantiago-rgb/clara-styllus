@@ -189,6 +189,20 @@ legend { padding: 0 6px; font-weight: 600; }
 .previa-etiqueta { display: flex; justify-content: center; padding: 20px; background: #eee; border-radius: 8px; }
 .previa-folha { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15); zoom: 2; }
 
+/* ------------------------------------------------------------ login */
+body.deslogado .menu { display: none; }
+body:not(.admin) [data-admin], body:not(.admin) .so-admin { display: none !important; }
+.login { width: 100%; }
+.login h2 { font-size: 18px; }
+.login-marca { font-family: Georgia, serif; font-size: 32px; text-align: center; color: var(--rosa-escuro); }
+.usuario-box { margin-top: auto; padding: 10px; border-top: 1px solid rgba(255,255,255,.1); font-size: 14px; }
+.usuario-box small { color: #bfb0b6; }
+.usuario-acoes { display: flex; gap: 12px; margin-top: 6px; }
+.usuario-box .link { color: #f0c3d5; font-size: 13px; white-space: nowrap; }
+.menu .status-caixa { margin-top: 0; }
+.vendedor-logado { display: flex; align-items: baseline; gap: 8px; }
+.vendedor-logado b { flex: 1; }
+
 /* ------------------------------------------------------------ modal */
 .modal-fundo { position: fixed; inset: 0; background: rgba(30, 20, 25, .45); display: grid; place-items: center; z-index: 50; padding: 20px; }
 .modal-fundo[hidden] { display: none; }

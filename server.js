@@ -44,8 +44,14 @@ function criarServidor(db) {
           return enviarJson(res, 400, { erro: 'JSON inválido.' });
         }
         try {
-          const r = despachar(req.method, url.pathname, url.searchParams, corpo);
+          const token = lerCookie(req.headers.cookie, COOKIE);
+          const r = despachar(req.method, url.pathname, url.searchParams, corpo, token);
           if (!r) return enviarJson(res, 404, { erro: 'Rota não encontrada.' });
+          if (r.sessao !== undefined) {
+            res.setHeader('Set-Cookie', r.sessao
+              ? `${COOKIE}=${r.sessao}; HttpOnly; SameSite=Strict; Path=/`
+              : `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
+          }
           if (r.corpo && r.corpo.__arquivo) {
             res.writeHead(200, {
               'Content-Type': r.corpo.tipo,
@@ -81,6 +87,16 @@ function criarServidor(db) {
       res.end(dados);
     });
   });
+}
+
+const COOKIE = 'pdv_sessao';
+
+function lerCookie(cabecalho, nome) {
+  for (const parte of String(cabecalho || '').split(';')) {
+    const [k, ...v] = parte.trim().split('=');
+    if (k === nome) return v.join('=');
+  }
+  return null;
 }
 
 function enviarJson(res, status, obj) {

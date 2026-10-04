@@ -8,7 +8,7 @@ Telas.pdv = (() => {
   let sugestoes = [];
   let selecionada = -1;
 
-  const novoCarrinho = () => ({ itens: [], desconto: '', cliente: null, cpf_nota: '', vendedor: local.ler('pdv_vendedor', '') });
+  const novoCarrinho = () => ({ itens: [], desconto: '', cliente: null, cpf_nota: '' });
   const salvar = () => local.gravar(CHAVE, carrinho);
 
   /** "10%" -> percentual sobre a base; "5,00" -> valor. Retorna centavos ou NaN. */
@@ -66,7 +66,8 @@ Telas.pdv = (() => {
             </div>
             <div id="cliente-info" class="cliente-info"></div>
             <label>CPF/CNPJ no cupom<input id="cpf" inputmode="numeric" value="${esc(carrinho.cpf_nota)}"></label>
-            <label>Vendedor(a)<input id="vendedor" value="${esc(carrinho.vendedor)}"></label>
+            <div class="vendedor-logado"><small>Vendedor(a)</small><b>${esc(U.sessao.usuario.nome)}</b>
+              <button class="link" onclick="exigirLogin()" type="button">trocar</button></div>
             <label>Desconto na venda (F7) <small>ex.: 10% ou 15,00</small>
               <input id="desconto" value="${esc(carrinho.desconto)}"></label>
           </div>
@@ -86,11 +87,6 @@ Telas.pdv = (() => {
     busca.addEventListener('keydown', teclaBusca);
     busca.addEventListener('input', U.debounce(() => sugerir(busca.value), 200));
     raiz.querySelector('#cpf').addEventListener('input', (e) => { carrinho.cpf_nota = e.target.value; salvar(); });
-    raiz.querySelector('#vendedor').addEventListener('input', (e) => {
-      carrinho.vendedor = e.target.value;
-      local.gravar('pdv_vendedor', e.target.value);
-      salvar();
-    });
     raiz.querySelector('#desconto').addEventListener('input', (e) => { carrinho.desconto = e.target.value; salvar(); desenharTotais(); });
     raiz.querySelector('#btn-cliente').onclick = escolherCliente;
     raiz.querySelector('#btn-finalizar').onclick = finalizar;
@@ -107,8 +103,8 @@ Telas.pdv = (() => {
           <h2>Caixa fechado</h2>
           <p>Para começar a vender, abra o caixa informando o troco inicial da gaveta.</p>
           <form id="f-abrir" class="form">
-            <label>Operador(a)<input name="operador" value="${esc(local.ler('pdv_vendedor', ''))}" autofocus></label>
-            <label>Troco inicial (R$)<input name="valor" inputmode="decimal" placeholder="0,00"></label>
+            <p>Operador(a): <b>${esc(U.sessao.usuario.nome)}</b></p>
+            <label>Troco inicial (R$)<input name="valor" inputmode="decimal" placeholder="0,00" autofocus></label>
             <button class="btn btn-primario btn-grande">Abrir caixa</button>
           </form>
         </div>
@@ -118,7 +114,7 @@ Telas.pdv = (() => {
       const valor = U.paraCentavos(ev.target.valor.value);
       if (Number.isNaN(valor)) return aviso('Valor inválido.', 'erro');
       try {
-        await api('/api/caixa/abrir', { metodo: 'POST', corpo: { operador: ev.target.operador.value, valor_abertura: valor } });
+        await api('/api/caixa/abrir', { metodo: 'POST', corpo: { valor_abertura: valor } });
         aviso('Caixa aberto. Boas vendas!');
         abrir(raiz);
         atualizarStatusCaixa();
@@ -449,7 +445,6 @@ Telas.pdv = (() => {
             pagamentos,
             cliente_id: carrinho.cliente ? carrinho.cliente.id : null,
             cpf_nota: carrinho.cpf_nota,
-            vendedor: carrinho.vendedor,
           },
         });
         carrinho = novoCarrinho();

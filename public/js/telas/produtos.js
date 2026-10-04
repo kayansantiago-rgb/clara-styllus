@@ -12,8 +12,8 @@ Telas.produtos = (() => {
         <div class="ferramentas">
           <input id="q" type="search" placeholder="Buscar por nome, código, referência, cor…" autofocus>
           <label class="check"><input type="checkbox" id="baixo"> Só estoque baixo</label>
-          <label class="check"><input type="checkbox" id="inativos"> Mostrar inativos</label>
-          <button class="btn btn-primario" id="novo">+ Novo produto</button>
+          <label class="check so-admin"><input type="checkbox" id="inativos"> Mostrar inativos</label>
+          <button class="btn btn-primario so-admin" id="novo">+ Novo produto</button>
         </div>
       </div>
       <div class="tabela-rolagem cartao">
@@ -49,9 +49,9 @@ Telas.produtos = (() => {
         <td class="r"><b>${num(p.preco_venda)}</b></td>
         <td class="r ${p.estoque <= p.estoque_minimo ? 'txt-perigo' : ''}"><b>${p.estoque}</b></td>
         <td class="r nowrap">
-          <button class="btn-ico" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">📦</button>
+          <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">📦</button>
           <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">🏷️</button>
-          <button class="btn-ico" data-acao="editar" data-i="${i}" title="Editar">✏️</button>
+          <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">✏️</button>
         </td>
       </tr>`).join('') || '<tr><td colspan="8" class="vazio">Nenhum produto encontrado.</td></tr>';
   }

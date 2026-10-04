@@ -5,6 +5,9 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Login por vendedor(a)**: cada pessoa entra com usuário e senha; a venda e o caixa ficam no nome
+  de quem está logado (aparece no cupom e no relatório por vendedor). Perfis **administrador(a)**
+  (tudo) e **vendedor(a)** (vende, abre/fecha caixa, consulta vendas, clientes e etiquetas).
 - **Vender (frente de caixa)**: leitor de código de barras, busca por nome, quantidade (`3*código`),
   desconto por item ou na venda (em R$ ou %), vendedor(a), cliente e CPF no cupom.
 - **Pagamento**: dinheiro (com troco), PIX, débito, crédito (parcelado) e pagamento dividido entre formas.
@@ -30,6 +33,9 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 3. **Windows**: dê dois cliques em `iniciar.bat`.
    **Linux/macOS**: rode `./iniciar.sh` (ou `npm start`).
 4. O navegador abre em <http://localhost:3456>. Deixe a janela preta aberta enquanto usar o sistema.
+5. No primeiro acesso o sistema pede para criar o **usuário administrador**. Depois, em
+   **Vendedores**, cadastre um usuário para cada vendedora. Para passar o caixa para outra pessoa,
+   use **Trocar usuário** no menu (a venda em andamento não se perde).
 
 Dica: crie um atalho do `iniciar.bat` na área de trabalho e na pasta “Inicializar” do Windows.
 

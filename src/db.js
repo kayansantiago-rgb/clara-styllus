@@ -5,6 +5,22 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS usuarios (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome TEXT NOT NULL,
+  login TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  senha_hash TEXT NOT NULL,
+  perfil TEXT NOT NULL DEFAULT 'vendedor' CHECK (perfil IN ('admin','vendedor')),
+  ativo INTEGER NOT NULL DEFAULT 1,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS sessoes (
+  token TEXT PRIMARY KEY,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+  expira_em TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS config (
   chave TEXT PRIMARY KEY,
   valor TEXT
@@ -148,10 +164,24 @@ function abrirBanco(arquivo) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
 
+  migrar(db);
+
   const inserir = db.prepare('INSERT OR IGNORE INTO config (chave, valor) VALUES (?, ?)');
   for (const [chave, valor] of Object.entries(CONFIG_PADRAO)) inserir.run(chave, valor);
 
   return db;
+}
+
+/** Ajustes em bancos criados por versões anteriores. */
+function migrar(db) {
+  const colunas = (tabela) => db.prepare(`PRAGMA table_info(${tabela})`).all().map((c) => c.name);
+  if (!colunas('vendas').includes('usuario_id')) {
+    db.exec('ALTER TABLE vendas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
+  }
+  if (!colunas('caixas').includes('usuario_id')) {
+    db.exec('ALTER TABLE caixas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
+  }
+  db.exec("DELETE FROM sessoes WHERE expira_em < datetime('now','localtime')");
 }
 
 /** Executa fn dentro de uma transação; desfaz tudo se lançar erro. */

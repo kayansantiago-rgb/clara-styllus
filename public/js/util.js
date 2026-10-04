@@ -12,6 +12,9 @@ const U = (() => {
       throw new Error('Sem conexão com o servidor do PDV. Ele está aberto?');
     }
     const dados = await res.json().catch(() => ({}));
+    if (res.status === 401 && !caminho.startsWith('/api/login') && window.exigirLogin) {
+      window.exigirLogin();
+    }
     if (!res.ok) {
       const e = new Error(dados.erro || `Erro ${res.status}`);
       e.status = res.status;
@@ -183,7 +186,16 @@ const U = (() => {
     outro: 'Outro',
   };
 
+  // ----------------------------------------------------- usuário logado
+  let usuarioAtual = null;
+  const sessao = {
+    get usuario() { return usuarioAtual; },
+    definir(u) { usuarioAtual = u; },
+    ehAdmin: () => !!usuarioAtual && usuarioAtual.perfil === 'admin',
+  };
+
   return {
+    sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,
     dadosForm, FORMAS,

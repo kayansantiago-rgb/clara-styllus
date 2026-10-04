@@ -5,6 +5,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { transacao } = require('./db');
 const { gerarEan13Interno } = require('./codigos');
+const { hashSenha, conferirSenha, novoToken } = require('./auth');
+
+const HORAS_SESSAO = 14;
 
 const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito', 'outro'];
 
@@ -42,12 +45,13 @@ const planos = (rs) => rs.map(plano);
 
 function criarApi(db) {
   const rotas = [];
-  const rota = (metodo, padrao, fn) => {
+  /** acesso: 'publico' (sem login), 'logado' (qualquer usuário) ou 'admin'. */
+  const rota = (metodo, padrao, fn, acesso = 'logado') => {
     const nomes = [];
     const re = new RegExp(
       '^' + padrao.replace(/:(\w+)/g, (_, n) => (nomes.push(n), '([^/]+)')) + '$'
     );
-    rotas.push({ metodo, re, nomes, fn });
+    rotas.push({ metodo, re, nomes, fn, acesso });
   };
 
   const config = () => {
@@ -58,6 +62,136 @@ function criarApi(db) {
 
   const caixaAberto = () =>
     plano(db.prepare('SELECT * FROM caixas WHERE fechado_em IS NULL ORDER BY id DESC LIMIT 1').get());
+
+  // ---------------------------------------------------------- usuários
+  const publico = (u) => u && { id: u.id, nome: u.nome, login: u.login, perfil: u.perfil, ativo: u.ativo };
+  const temUsuarios = () => !!db.prepare('SELECT 1 FROM usuarios LIMIT 1').get();
+
+  const usuarioDoToken = (token) => {
+    if (!token) return null;
+    return plano(
+      db
+        .prepare(
+          `SELECT u.* FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
+           WHERE s.token = ? AND u.ativo = 1 AND s.expira_em > datetime('now','localtime')`
+        )
+        .get(token)
+    );
+  };
+
+  const abrirSessao = (ctx, usuario) => {
+    const token = novoToken();
+    db.prepare(
+      `INSERT INTO sessoes (token, usuario_id, expira_em)
+       VALUES (?, ?, datetime('now','localtime','+${HORAS_SESSAO} hours'))`
+    ).run(token, usuario.id);
+    ctx.definirSessao(token);
+    return { usuario: publico(usuario) };
+  };
+
+  const lerUsuario = (c, novo) => {
+    const u = {};
+    if (novo || 'nome' in c) {
+      u.nome = texto(c.nome, 60);
+      if (!u.nome) throw erro(400, 'Informe o nome.');
+    }
+    if (novo) {
+      u.login = texto(c.login, 40);
+      if (!u.login || !/^[\w.@-]+$/.test(u.login)) {
+        throw erro(400, 'Usuário inválido: use letras, números, ponto ou traço, sem espaços.');
+      }
+      u.login = u.login.toLowerCase();
+    }
+    if (novo || 'perfil' in c) {
+      u.perfil = c.perfil === 'admin' ? 'admin' : 'vendedor';
+    }
+    if ('ativo' in c) u.ativo = c.ativo ? 1 : 0;
+    if (novo || (c.senha !== undefined && c.senha !== '')) {
+      const senha = String(c.senha ?? '');
+      if (senha.length < 4) throw erro(400, 'A senha precisa ter pelo menos 4 caracteres.');
+      u.senha_hash = hashSenha(senha);
+    }
+    return u;
+  };
+
+  const adminsAtivos = (excetoId) =>
+    db.prepare(`SELECT COUNT(*) AS n FROM usuarios WHERE perfil = 'admin' AND ativo = 1 AND id <> ?`)
+      .get(excetoId ?? 0).n;
+
+  rota('GET', '/api/sessao', ({ usuario }) => ({
+    usuario: publico(usuario),
+    primeiro_acesso: !temUsuarios(),
+    loja_nome: config().loja_nome,
+  }), 'publico');
+
+  rota('POST', '/api/primeiro-acesso', (ctx) => {
+    if (temUsuarios()) throw erro(409, 'O sistema já tem usuários cadastrados.');
+    const u = lerUsuario({ ...ctx.corpo, perfil: 'admin' }, true);
+    const r = db
+      .prepare('INSERT INTO usuarios (nome, login, senha_hash, perfil) VALUES (?,?,?,?)')
+      .run(u.nome, u.login, u.senha_hash, 'admin');
+    return abrirSessao(ctx, { ...u, id: Number(r.lastInsertRowid), ativo: 1 });
+  }, 'publico');
+
+  rota('POST', '/api/login', (ctx) => {
+    const login = texto(ctx.corpo.login, 40);
+    const u = login && plano(db.prepare('SELECT * FROM usuarios WHERE login = ?').get(login));
+    if (!u || !u.ativo || !conferirSenha(ctx.corpo.senha ?? '', u.senha_hash)) {
+      throw erro(401, 'Usuário ou senha incorretos.');
+    }
+    return abrirSessao(ctx, u);
+  }, 'publico');
+
+  rota('POST', '/api/logout', (ctx) => {
+    if (ctx.token) db.prepare('DELETE FROM sessoes WHERE token = ?').run(ctx.token);
+    ctx.definirSessao(null);
+    return { ok: true };
+  }, 'publico');
+
+  rota('POST', '/api/minha-senha', ({ usuario, corpo }) => {
+    if (!conferirSenha(corpo.senha_atual ?? '', usuario.senha_hash)) {
+      throw erro(400, 'Senha atual incorreta.');
+    }
+    const { senha_hash: hash } = lerUsuario({ senha: corpo.nova_senha }, false);
+    if (!hash) throw erro(400, 'Informe a nova senha.');
+    db.prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?').run(hash, usuario.id);
+    return { ok: true };
+  });
+
+  rota('GET', '/api/usuarios', () =>
+    planos(db.prepare('SELECT * FROM usuarios ORDER BY ativo DESC, nome').all()).map(publico), 'admin');
+
+  rota('POST', '/api/usuarios', ({ corpo }) => {
+    const u = lerUsuario(corpo, true);
+    if (db.prepare('SELECT 1 FROM usuarios WHERE login = ?').get(u.login)) {
+      throw erro(409, `Já existe o usuário "${u.login}".`);
+    }
+    const r = db
+      .prepare('INSERT INTO usuarios (nome, login, senha_hash, perfil) VALUES (?,?,?,?)')
+      .run(u.nome, u.login, u.senha_hash, u.perfil);
+    return publico(plano(db.prepare('SELECT * FROM usuarios WHERE id = ?').get(r.lastInsertRowid)));
+  }, 'admin');
+
+  rota('PUT', '/api/usuarios/:id', ({ params, corpo }) => {
+    const atual = plano(db.prepare('SELECT * FROM usuarios WHERE id = ?').get(params.id));
+    if (!atual) throw erro(404, 'Usuário não encontrado.');
+    const u = lerUsuario(corpo, false);
+    const deixaDeSerAdmin = atual.perfil === 'admin' && atual.ativo &&
+      ((u.perfil && u.perfil !== 'admin') || u.ativo === 0);
+    if (deixaDeSerAdmin && adminsAtivos(atual.id) === 0) {
+      throw erro(409, 'É preciso ter pelo menos um administrador ativo.');
+    }
+    const chaves = Object.keys(u);
+    if (chaves.length) {
+      db.prepare(`UPDATE usuarios SET ${chaves.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`)
+        .run(...chaves.map((c) => u[c]), atual.id);
+    }
+    // Desativado ou senha trocada: derruba as sessões abertas desse usuário.
+    if (u.ativo === 0 || u.senha_hash) {
+      db.prepare('DELETE FROM sessoes WHERE usuario_id = ?').run(atual.id);
+    }
+    return publico(plano(db.prepare('SELECT * FROM usuarios WHERE id = ?').get(atual.id)));
+  }, 'admin');
 
   // ---------------------------------------------------------------- config
   rota('GET', '/api/config', () => config());
@@ -71,7 +205,7 @@ function criarApi(db) {
       }
     });
     return config();
-  });
+  }, 'admin');
 
   // -------------------------------------------------------------- produtos
   const lerProduto = (corpo, parcial = false) => {
@@ -162,7 +296,7 @@ function criarApi(db) {
       }
       return buscarProduto(id);
     });
-  });
+  }, 'admin');
 
   rota('PUT', '/api/produtos/:id', ({ params, corpo }) => {
     buscarProduto(params.id);
@@ -182,13 +316,13 @@ function criarApi(db) {
       ).run(...chaves.map((c) => p[c]), params.id);
     }
     return buscarProduto(params.id);
-  });
+  }, 'admin');
 
   rota('DELETE', '/api/produtos/:id', ({ params }) => {
     buscarProduto(params.id);
     db.prepare('UPDATE produtos SET ativo = 0 WHERE id = ?').run(params.id);
     return { ok: true };
-  });
+  }, 'admin');
 
   rota('POST', '/api/produtos/:id/estoque', ({ params, corpo }) => {
     const produto = buscarProduto(params.id);
@@ -209,7 +343,7 @@ function criarApi(db) {
       ).run(params.id, tipo, delta, motivo);
       return buscarProduto(params.id);
     });
-  });
+  }, 'admin');
 
   // -------------------------------------------------------------- clientes
   const lerCliente = (c) => {
@@ -333,12 +467,12 @@ function criarApi(db) {
 
   rota('GET', '/api/caixas/:id', ({ params }) => resumoCaixa(params.id));
 
-  rota('POST', '/api/caixa/abrir', ({ corpo }) => {
+  rota('POST', '/api/caixa/abrir', ({ corpo, usuario }) => {
     if (caixaAberto()) throw erro(409, 'Já existe um caixa aberto.');
     const valor = inteiro(corpo.valor_abertura, 'valor_abertura', { min: 0, padrao: 0 });
     const r = db
-      .prepare('INSERT INTO caixas (operador, valor_abertura) VALUES (?, ?)')
-      .run(texto(corpo.operador), valor);
+      .prepare('INSERT INTO caixas (operador, usuario_id, valor_abertura) VALUES (?, ?, ?)')
+      .run(usuario.nome, usuario.id, valor);
     return resumoCaixa(r.lastInsertRowid);
   });
 
@@ -382,7 +516,7 @@ function criarApi(db) {
     return v;
   };
 
-  rota('POST', '/api/vendas', ({ corpo }) => {
+  rota('POST', '/api/vendas', ({ corpo, usuario }) => {
     corpo = corpo || {};
     const cfg = config();
     const caixa = caixaAberto();
@@ -460,10 +594,10 @@ function criarApi(db) {
 
       const r = db
         .prepare(
-          `INSERT INTO vendas (caixa_id, cliente_id, cpf_nota, vendedor, subtotal, desconto, total, troco)
-           VALUES (?,?,?,?,?,?,?,?)`
+          `INSERT INTO vendas (caixa_id, cliente_id, cpf_nota, vendedor, usuario_id, subtotal, desconto,
+             total, troco) VALUES (?,?,?,?,?,?,?,?,?)`
         )
-        .run(caixa.id, clienteId, soDigitos(corpo.cpf_nota), texto(corpo.vendedor),
+        .run(caixa.id, clienteId, soDigitos(corpo.cpf_nota), usuario.nome, usuario.id,
           bruto, descontoTotal, total, troco);
       const vendaId = Number(r.lastInsertRowid);
 
@@ -538,7 +672,7 @@ function criarApi(db) {
       }
       return buscarVenda(venda.id);
     });
-  });
+  }, 'admin');
 
   // ------------------------------------------------------------ relatórios
   rota('GET', '/api/relatorios', ({ query }) => {
@@ -604,7 +738,7 @@ function criarApi(db) {
         .all(de, ate)
     );
     return { de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor };
-  });
+  }, 'admin');
 
   // ---------------------------------------------------------------- backup
   rota('GET', '/api/backup', () => {
@@ -619,18 +753,33 @@ function criarApi(db) {
       tipo: 'application/octet-stream',
       conteudo,
     };
-  });
+  }, 'admin');
 
   /** Resolve uma requisição; devolve { status, corpo } ou null se a rota não existir. */
-  return function despachar(metodo, caminho, query, corpo) {
+  /**
+   * Resolve uma requisição; devolve { status, corpo, sessao } ou null se a rota não existir.
+   * `sessao` vem preenchido (token, ou null para apagar) quando o cookie precisa mudar.
+   */
+  return function despachar(metodo, caminho, query, corpo, token) {
     for (const r of rotas) {
       if (r.metodo !== metodo) continue;
       const m = caminho.match(r.re);
       if (!m) continue;
       const params = {};
       r.nomes.forEach((n, i) => (params[n] = decodeURIComponent(m[i + 1])));
+      const resposta = { status: 200 };
+      const ctx = {
+        params, query, corpo: corpo || {}, token,
+        usuario: usuarioDoToken(token),
+        definirSessao: (t) => (resposta.sessao = t),
+      };
       try {
-        return { status: 200, corpo: r.fn({ params, query, corpo: corpo || {} }) };
+        if (r.acesso !== 'publico' && !ctx.usuario) throw erro(401, 'Faça login para continuar.');
+        if (r.acesso === 'admin' && ctx.usuario.perfil !== 'admin') {
+          throw erro(403, 'Só o administrador pode fazer isso.');
+        }
+        resposta.corpo = r.fn(ctx);
+        return resposta;
       } catch (e) {
         if (e instanceof ErroHttp) return { status: e.status, corpo: { erro: e.message } };
         throw e;

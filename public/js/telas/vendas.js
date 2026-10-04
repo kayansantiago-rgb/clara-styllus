@@ -90,7 +90,7 @@ Telas.vendas = (() => {
         ${v.troco ? `<div class="linha"><span>Troco</span><span>${brl(v.troco)}</span></div>` : ''}
       </div>
       <div class="acoes">
-        ${v.status === 'concluida' ? '<button class="btn btn-perigo-claro" id="cancelar">Cancelar venda</button>' : ''}
+        ${v.status === 'concluida' && U.sessao.ehAdmin() ? '<button class="btn btn-perigo-claro" id="cancelar">Cancelar venda</button>' : ''}
         <button class="btn" id="troca">🎁 Cupom de troca</button>
         <button class="btn btn-primario" id="cupom">🧾 Reimprimir cupom</button>
       </div>`, { largura: '760px' });
