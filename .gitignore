@@ -3,3 +3,5 @@ dados/*.db
 dados/*.db-*
 backups/
 .DS_Store
+dist/
+instalador/.cache/

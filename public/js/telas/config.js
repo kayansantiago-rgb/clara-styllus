@@ -60,8 +60,8 @@ Telas.config = (() => {
       </form>
       <div class="cartao">
         <h3>Backup</h3>
-        <p>Todos os dados ficam no arquivo <code>dados/clara-styllus.db</code>, dentro da pasta do sistema.
-          Faça backup com frequência e guarde em um pendrive ou na nuvem.</p>
+        <p>Os dados ficam em <code>C:\\ProgramData\\ClaraStyllus\\dados</code> (instalado pelo instalador)
+          ou na pasta <code>dados</code> do sistema. Faça backup com frequência e guarde em um pendrive ou na nuvem.</p>
         <a class="btn" href="/api/backup" download>💾 Baixar backup agora</a>
       </div>`;
 

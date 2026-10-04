@@ -25,22 +25,44 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   por vendedor(a), mais vendidos e estoque baixo.
 - **Backup**: download do banco de dados com um clique.
 
-## Instalação
+## Instalação no computador da loja (Windows 10/11, 64 bits)
 
-1. Instale o **Node.js 22.13 ou mais novo** (versão LTS): <https://nodejs.org>.
-   Não é preciso instalar mais nada: o sistema não tem dependências externas.
-2. Copie esta pasta para o computador da loja (ex.: `C:\ClaraStyllus`).
-3. **Windows**: dê dois cliques em `iniciar.bat`.
-   **Linux/macOS**: rode `./iniciar.sh` (ou `npm start`).
-4. O navegador abre em <http://localhost:3456>. Deixe a janela preta aberta enquanto usar o sistema.
-5. No primeiro acesso o sistema pede para criar o **usuário administrador**. Depois, em
-   **Vendedores**, cadastre um usuário para cada vendedora. Para passar o caixa para outra pessoa,
-   use **Trocar usuário** no menu (a venda em andamento não se perde).
+1. Baixe o **`ClaraStyllus-PDV-Setup-<versão>.exe`** (aba *Actions* → última execução de
+   “Instalador Windows” → *Artifacts*, ou na página *Releases* quando houver uma versão publicada).
+2. Dê dois cliques e siga o assistente. Como o instalador não tem assinatura digital paga, o Windows
+   pode mostrar “O Windows protegeu o computador”: clique em **Mais informações → Executar assim mesmo**.
+3. Pronto: abra pelo ícone **Clara Styllus PDV** da área de trabalho. No primeiro acesso, crie o
+   usuário administrador e depois cadastre as vendedoras em **Vendedores**.
 
-Dica: crie um atalho do `iniciar.bat` na área de trabalho e na pasta “Inicializar” do Windows.
+O instalador já inclui tudo (não precisa instalar Node.js nem nada mais) e:
 
-Os dados ficam em `dados/clara-styllus.db`. Variáveis opcionais: `PORTA` (padrão 3456),
-`BANCO` (caminho do arquivo do banco) e `HOST` (use `0.0.0.0` para acessar de outro computador da rede).
+- instala o sistema em `C:\Program Files\Clara Styllus PDV`;
+- cria o serviço do Windows **Clara Styllus PDV**, que liga sozinho junto com o computador
+  (sem janela preta aberta) e se reinicia caso pare;
+- guarda os dados em `C:\ProgramData\ClaraStyllus\dados` e os logs em `...\logs`;
+- abre o PDV como aplicativo (janela própria do Edge/Chrome, sem barra de endereço);
+- **atualizar** = rodar o instalador da versão nova por cima. Os dados são mantidos e, antes,
+  é feita uma cópia em `C:\ProgramData\ClaraStyllus\backups`;
+- **desinstalar** pelo menu Iniciar ou em *Configurações → Aplicativos*. Ele pergunta se deve apagar os
+  dados (o padrão é manter).
+
+Depois de cadastrar o primeiro usuário, em **Vendedores** cadastre um usuário para cada vendedora.
+Para passar o caixa para outra pessoa, use **Trocar usuário** no menu (a venda em andamento não se perde).
+
+### Gerar o instalador
+
+Ele é gerado automaticamente pelo GitHub Actions a cada envio (`.github/workflows/instalador.yml`).
+Para publicar uma versão: altere `version` no `package.json` e crie a tag (`git tag v1.0.0 && git push --tags`).
+Para gerar localmente (Linux/WSL com `nsis` instalado): `bash instalador/build.sh` → `dist/`.
+
+### Rodar sem instalar (desenvolvimento)
+
+1. Instale o **Node.js 22.13 ou mais novo**: <https://nodejs.org>.
+2. **Windows**: dois cliques em `iniciar.bat`. **Linux/macOS**: `./iniciar.sh` (ou `npm start`).
+3. Abra <http://localhost:3456>. Os dados ficam em `dados/clara-styllus.db`.
+
+Variáveis opcionais: `PORTA` (padrão 3456), `BANCO` (caminho do arquivo do banco) e `HOST`
+(use `0.0.0.0` para acessar de outro computador da rede).
 
 ## Impressão
 
@@ -86,8 +108,8 @@ transmitida em até 24 h. A integração pode ser feita depois via ACBr ou uma A
 
 ## Backup
 
-Em *Configurações → Baixar backup agora* você baixa uma cópia do banco. Para restaurar, feche o
-sistema, apague os arquivos `dados/clara-styllus.db-wal` e `-shm` (se existirem) e substitua
+Em *Configurações → Baixar backup agora* você baixa uma cópia do banco. Para restaurar, pare o
+serviço “Clara Styllus PDV” (em *Serviços* do Windows), apague os arquivos `dados/clara-styllus.db-wal` e `-shm` (se existirem) e substitua
 `dados/clara-styllus.db` pelo arquivo do backup (renomeado).
 
 ## Desenvolvimento
