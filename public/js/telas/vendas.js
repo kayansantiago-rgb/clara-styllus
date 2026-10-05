@@ -1,30 +1,95 @@
-/* Consulta de vendas, reimpressão e cancelamento. */
+/* Consulta de vendas, reimpressão, troca, cancelamento e exclusão. */
 Telas.vendas = (() => {
   const { esc, brl, num, api, aviso, erro, abrirModal, fecharModal, dataHora } = U;
   let raiz;
+  let vendas = [];
+  let periodo = 'hoje';
+  let filtroForma = '';
+
+  const ICONE_FORMA = { dinheiro: 'dinheiro', pix: 'pix', debito: 'cartao', credito: 'cartao', crediario: 'caderno', vale: 'vale', outro: 'carteira' };
+  const FILTROS_FORMA = [['', 'Todas'], ['dinheiro', 'Dinheiro'], ['pix', 'PIX'], ['cartao', 'Cartão'], ['crediario', 'Crediário'], ['vale', 'Vale-troca']];
+  const PERIODOS = [['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7d', '7 dias'], ['mes', 'Este mês'], ['outro', 'Escolher datas']];
+
+  const CURTO = { debito: 'Débito', credito: 'Crédito', crediario: 'Crediário', vale: 'Vale-troca', dinheiro: 'Dinheiro', pix: 'PIX', outro: 'Outro' };
+  const nomeForma = (f) => CURTO[f] || U.FORMAS[f] || f;
+  const iso = (d) => d.toLocaleDateString('sv-SE');
+  function intervalo(p) {
+    const hoje = new Date();
+    const dia = (n) => { const d = new Date(hoje); d.setDate(d.getDate() + n); return iso(d); };
+    if (p === 'ontem') return [dia(-1), dia(-1)];
+    if (p === '7d') return [dia(-6), dia(0)];
+    if (p === 'mes') return [iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1)), dia(0)];
+    return [dia(0), dia(0)];
+  }
+
+  const iniciais = (nome) => String(nome || '').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  const hora = (dt) => (dt.split(' ')[1] || '').slice(0, 5);
+  const formasDe = (v) => (v.formas || '').split(',').filter(Boolean);
+
+  function chipForma(forma, extra = '') {
+    return `<span class="chip-forma forma-${esc(forma)}">${Icone(ICONE_FORMA[forma] || 'carteira')}${esc(nomeForma(forma))}${extra}</span>`;
+  }
 
   async function abrir(el) {
     raiz = el;
-    const hoje = U.hoje();
+    const [de, ate] = intervalo(periodo);
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <h1>Vendas</h1>
-        <div class="ferramentas">
-          <label>De <input type="date" id="de" value="${hoje}"></label>
-          <label>Até <input type="date" id="ate" value="${hoje}"></label>
-          <input id="num" placeholder="Nº da venda (ou bipe o cupom)">
+        <div>
+          <h1>Vendas</h1>
+          <p class="subtitulo">Histórico do caixa: reimprimir cupom, fazer troca ou cancelar.</p>
         </div>
+        <div class="busca-ico">${Icone('codigo')}
+          <input id="num" placeholder="Nº da venda ou bipe o cupom" autocomplete="off"></div>
       </div>
-      <div class="resumo-linha" id="resumo"></div>
-      <div class="tabela-rolagem cartao">
-        <table class="tabela">
-          <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Vendedor(a)</th><th class="r">Peças</th>
-            <th>Pagamento</th><th class="r">Total</th><th>Situação</th><th class="so-admin"></th></tr></thead>
-          <tbody id="lista"></tbody>
-        </table>
-      </div>`;
+
+      <div class="vd-filtros">
+        <div class="segmentos" id="periodos">
+          ${PERIODOS.map(([k, t]) => `<button class="segmento ${k === periodo ? 'sel' : ''}" data-periodo="${k}">${t}</button>`).join('')}
+        </div>
+        <div class="vd-datas" id="datas" ${periodo === 'outro' ? '' : 'hidden'}>
+          <input type="date" id="de" value="${de}"><span>até</span><input type="date" id="ate" value="${ate}">
+        </div>
+        <div class="busca-ico vd-filtro-txt">${Icone('busca')}
+          <input id="filtro" type="search" placeholder="Filtrar por cliente ou vendedor(a)" autocomplete="off"></div>
+      </div>
+
+      <div class="vd-kpis" id="kpis"></div>
+
+      <div class="vd-barra-filtros">
+        <div class="chips-filtro" id="formas">
+          ${FILTROS_FORMA.map(([k, t]) => `<button class="chip-filtro ${k === filtroForma ? 'sel' : ''}" data-forma="${k}">${k ? Icone(ICONE_FORMA[k] || 'cartao') : ''}${t}</button>`).join('')}
+        </div>
+        <label class="interruptor vd-canceladas"><input type="checkbox" id="canceladas" checked><span class="trilho"></span>
+          <span class="txt"><b>Mostrar canceladas</b></span></label>
+      </div>
+
+      <div id="lista" class="vd-lista"></div>`;
+
+    raiz.querySelector('#periodos').onclick = (ev) => {
+      const b = ev.target.closest('[data-periodo]');
+      if (!b) return;
+      periodo = b.dataset.periodo;
+      raiz.querySelectorAll('.segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      raiz.querySelector('#datas').hidden = periodo !== 'outro';
+      if (periodo !== 'outro') {
+        const [d1, d2] = intervalo(periodo);
+        raiz.querySelector('#de').value = d1;
+        raiz.querySelector('#ate').value = d2;
+      }
+      carregar();
+    };
     raiz.querySelector('#de').onchange = carregar;
     raiz.querySelector('#ate').onchange = carregar;
+    raiz.querySelector('#filtro').addEventListener('input', U.debounce(desenhar, 150));
+    raiz.querySelector('#canceladas').onchange = desenhar;
+    raiz.querySelector('#formas').onclick = (ev) => {
+      const b = ev.target.closest('[data-forma]');
+      if (!b) return;
+      filtroForma = b.dataset.forma;
+      raiz.querySelectorAll('.chip-filtro').forEach((x) => x.classList.toggle('sel', x === b));
+      desenhar();
+    };
     raiz.querySelector('#num').addEventListener('keydown', (ev) => {
       if (ev.key !== 'Enter') return;
       const id = ev.target.value.replace(/\D/g, '');
@@ -34,8 +99,12 @@ Telas.vendas = (() => {
     raiz.querySelector('#lista').onclick = (ev) => {
       const exc = ev.target.closest('[data-excluir]');
       if (exc) return excluir(exc.dataset.excluir);
-      const tr = ev.target.closest('[data-id]');
-      if (tr) detalhe(tr.dataset.id);
+      const linha = ev.target.closest('[data-id]');
+      if (linha) detalhe(linha.dataset.id);
+    };
+    raiz.querySelector('#lista').onkeydown = (ev) => {
+      const linha = ev.target.closest('[data-id]');
+      if (linha && ev.key === 'Enter') detalhe(linha.dataset.id);
     };
     await carregar();
   }
@@ -43,27 +112,94 @@ Telas.vendas = (() => {
   async function carregar() {
     const de = raiz.querySelector('#de').value;
     const ate = raiz.querySelector('#ate').value;
-    let vendas;
     try {
       vendas = await api(`/api/vendas?de=${de}&ate=${ate}`);
     } catch (e) { return erro(e); }
-    const ok = vendas.filter((v) => v.status === 'concluida');
-    raiz.querySelector('#resumo').innerHTML = `
-      <span>${ok.length} venda(s)</span>
-      <span>${ok.reduce((a, v) => a + (v.pecas || 0), 0)} peça(s)</span>
-      <span>Total <b>${brl(ok.reduce((a, v) => a + v.total, 0))}</b></span>`;
-    raiz.querySelector('#lista').innerHTML = vendas.map((v) => `
-      <tr data-id="${v.id}" class="clicavel ${v.status === 'cancelada' ? 'inativo' : ''}">
-        <td><b>${v.id}</b></td>
-        <td>${dataHora(v.criado_em)}</td>
-        <td>${esc(v.cliente_nome || '')}</td>
-        <td>${esc(v.vendedor || '')}</td>
-        <td class="r">${v.pecas || 0}</td>
-        <td>${esc((v.formas || '').split(',').map((f) => U.FORMAS[f] || f).join(', '))}</td>
-        <td class="r"><b>${num(v.total)}</b></td>
-        <td>${v.status === 'cancelada' ? '<span class="selo perigo">Cancelada</span>' : '<span class="selo ok">Concluída</span>'}</td>
-        <td class="r so-admin"><button class="btn-ico perigo" data-excluir="${v.id}" title="Excluir venda">${Icone('lixeira')}</button></td>
-      </tr>`).join('') || '<tr><td colspan="9" class="vazio">Nenhuma venda no período.</td></tr>';
+    desenhar();
+  }
+
+  function filtradas() {
+    const q = raiz.querySelector('#filtro').value.trim().toLowerCase();
+    const comCanceladas = raiz.querySelector('#canceladas').checked;
+    return vendas.filter((v) => {
+      if (!comCanceladas && v.status === 'cancelada') return false;
+      if (q && !`${v.cliente_nome || ''} ${v.vendedor || ''} ${v.id}`.toLowerCase().includes(q)) return false;
+      if (filtroForma) {
+        const f = formasDe(v);
+        if (filtroForma === 'cartao' ? !f.some((x) => x === 'debito' || x === 'credito') : !f.includes(filtroForma)) return false;
+      }
+      return true;
+    });
+  }
+
+  function desenhar() {
+    if (!raiz) return;
+    const lista = filtradas();
+    const ok = lista.filter((v) => v.status === 'concluida');
+    const total = ok.reduce((a, v) => a + v.total, 0);
+    const pecas = ok.reduce((a, v) => a + (v.pecas || 0), 0);
+    const canceladas = lista.length - ok.length;
+
+    // Quanto entrou por forma de pagamento (venda com mais de uma forma conta em cada uma).
+    const porForma = {};
+    for (const v of ok) for (const f of formasDe(v)) porForma[f] = (porForma[f] || 0) + 1;
+    const formasOrd = Object.entries(porForma).sort((a, b) => b[1] - a[1]);
+    const somaF = formasOrd.reduce((a, [, n]) => a + n, 0) || 1;
+
+    raiz.querySelector('#kpis').innerHTML = `
+      <div class="vd-kpi destaque"><span>${Icone('carteira')} Faturamento</span><b>${brl(total)}</b>
+        <small>${canceladas ? `${canceladas} cancelada(s) fora da conta` : 'vendas concluídas'}</small></div>
+      <div class="vd-kpi"><span>${Icone('recibo')} Vendas</span><b>${ok.length}</b><small>${pecas} peça(s)</small></div>
+      <div class="vd-kpi"><span>${Icone('grafico')} Ticket médio</span><b>${brl(ok.length ? Math.round(total / ok.length) : 0)}</b>
+        <small>${ok.length ? `${(pecas / ok.length).toFixed(1).replace('.', ',')} peça(s) por venda` : '—'}</small></div>
+      <div class="vd-kpi vd-kpi-formas"><span>${Icone('cartao')} Como pagaram</span>
+        ${formasOrd.length ? `<div class="vd-barra-formas">${formasOrd.map(([f, n]) =>
+    `<i class="forma-${esc(f)}" style="flex:${n}" title="${esc(nomeForma(f))}: ${n}"></i>`).join('')}</div>
+          <div class="vd-legenda">${formasOrd.slice(0, 4).map(([f, n]) =>
+    `<span><i class="forma-${esc(f)}"></i>${esc(nomeForma(f))} ${Math.round((n / somaF) * 100)}%</span>`).join('')}</div>`
+    : '<small>sem vendas no período</small>'}</div>`;
+
+    const el = raiz.querySelector('#lista');
+    if (!lista.length) {
+      el.innerHTML = `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('recibo')}</div>
+        <b>Nenhuma venda encontrada</b><br><small>Mude o período ou os filtros acima.</small></div>`;
+      return;
+    }
+    // Agrupa por dia, do mais recente para o mais antigo.
+    const dias = new Map();
+    for (const v of lista) {
+      const d = v.criado_em.split(' ')[0];
+      if (!dias.has(d)) dias.set(d, []);
+      dias.get(d).push(v);
+    }
+    const hojeIso = U.hoje();
+    const ontemIso = intervalo('ontem')[0];
+    el.innerHTML = [...dias.entries()].map(([d, vs]) => {
+      const okDia = vs.filter((v) => v.status === 'concluida');
+      const data = new Date(d + 'T12:00');
+      const nomeDia = d === hojeIso ? 'Hoje' : d === ontemIso ? 'Ontem'
+        : data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+      return `<section class="vd-dia">
+        <header><b>${esc(nomeDia.charAt(0).toUpperCase() + nomeDia.slice(1))}</b>
+          <span>${okDia.length} venda(s) · <b>${brl(okDia.reduce((a, v) => a + v.total, 0))}</b></span></header>
+        ${vs.map(linha).join('')}
+      </section>`;
+    }).join('');
+  }
+
+  function linha(v) {
+    const cancelada = v.status === 'cancelada';
+    return `<div class="vd-venda ${cancelada ? 'cancelada' : ''}" data-id="${v.id}" tabindex="0">
+      <div class="vd-hora"><b>${hora(v.criado_em)}</b><small>nº ${v.id}</small></div>
+      <div class="vd-cliente">
+        <span class="avatar ${v.cliente_nome ? '' : 'avatar-vazio'}">${v.cliente_nome ? esc(iniciais(v.cliente_nome)) : Icone('usuario')}</span>
+        <span><b>${esc(v.cliente_nome || 'Cliente não identificada')}</b><small>por ${esc(v.vendedor || '—')}</small></span>
+      </div>
+      <div class="vd-formas">${formasDe(v).map((f) => chipForma(f)).join('')}</div>
+      <div class="vd-pecas">${v.pecas || 0} <small>peça${v.pecas === 1 ? '' : 's'}</small></div>
+      <div class="vd-total">${cancelada ? '<span class="selo perigo">Cancelada</span>' : ''}<b>${brl(v.total)}</b></div>
+      <div class="vd-acoes so-admin"><button class="btn-ico perigo" data-excluir="${v.id}" title="Excluir venda">${Icone('lixeira')}</button></div>
+    </div>`;
   }
 
   async function detalhe(id) {
@@ -71,37 +207,49 @@ Telas.vendas = (() => {
     try {
       v = await api(`/api/vendas/${id}`);
     } catch (e) { return erro(e); }
+    const cancelada = v.status === 'cancelada';
+    const pecas = v.itens.reduce((a, it) => a + it.quantidade, 0);
     const corpo = abrirModal(`Venda nº ${v.id}`, `
-      <div class="info-grade">
-        <div><small>Data</small>${dataHora(v.criado_em)}</div>
-        <div><small>Vendedor(a)</small>${esc(v.vendedor || '—')}</div>
-        <div><small>Cliente</small>${esc(v.cliente_nome || '—')}</div>
-        <div><small>CPF/CNPJ</small>${esc(U.cpf(v.cpf_nota) || '—')}</div>
+      <div class="vd-det-topo ${cancelada ? 'cancelada' : ''}">
+        <div>
+          <small>${dataHora(v.criado_em)}</small>
+          <b>${brl(v.total)}</b>
+          <span>${pecas} peça(s) · ${v.pagamentos.map((p) => chipForma(p.forma, p.parcelas > 1 ? ` ${p.parcelas}x` : '')).join(' ')}</span>
+        </div>
+        ${cancelada ? '<span class="selo perigo">Cancelada</span>' : `<span class="selo ok">${Icone('check')} Concluída</span>`}
       </div>
-      ${v.status === 'cancelada' ? `<div class="alerta-box">Cancelada em ${dataHora(v.cancelada_em)} — ${esc(v.motivo_cancelamento)}</div>` : ''}
-      <table class="tabela">
-        <thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Desc.</th><th class="r">Total</th></tr></thead>
-        <tbody>${v.itens.map((it) => `<tr><td>${esc(it.nome)} ${esc([it.tamanho, it.cor].filter(Boolean).join(' · '))}<br><small>${esc(it.codigo)}</small></td>
-          <td class="r">${it.quantidade}</td><td class="r">${num(it.preco_unitario)}</td>
-          <td class="r">${it.desconto ? num(it.desconto) : ''}</td><td class="r">${num(it.total)}</td></tr>`).join('')}</tbody>
-      </table>
-      <div class="totais-venda">
+      ${cancelada ? `<div class="alerta-box">Cancelada em ${dataHora(v.cancelada_em)} — ${esc(v.motivo_cancelamento)}</div>` : ''}
+      <div class="vd-det-info">
+        <div><small>Cliente</small><b>${esc(v.cliente_nome || '—')}</b></div>
+        <div><small>Vendedor(a)</small><b>${esc(v.vendedor || '—')}</b></div>
+        <div><small>CPF/CNPJ no cupom</small><b>${esc(U.cpf(v.cpf_nota) || '—')}</b></div>
+      </div>
+      <div class="vd-det-itens">
+        ${v.itens.map((it) => `<div class="vd-item">
+          ${U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao })}
+          <span class="vd-item-txt"><b>${esc(it.nome)}</b><small>${esc([it.tamanho && 'Tam ' + it.tamanho, it.cor, it.codigo].filter(Boolean).join(' · '))}</small></span>
+          <span class="vd-item-qtd">${it.quantidade} × ${num(it.preco_unitario)}${it.desconto ? `<small>desc. ${num(it.desconto)}</small>` : ''}</span>
+          <b>${num(it.total)}</b>
+        </div>`).join('')}
+      </div>
+      <div class="vd-det-totais">
         <div class="linha"><span>Subtotal</span><span>${brl(v.subtotal)}</span></div>
-        <div class="linha"><span>Descontos</span><span>-${brl(v.desconto)}</span></div>
-        <div class="linha total"><span>Total</span><span>${brl(v.total)}</span></div>
-        ${v.pagamentos.map((p) => `<div class="linha"><span>${U.FORMAS[p.forma] || p.forma}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</span><span>${brl(p.valor)}</span></div>`).join('')}
+        ${v.desconto ? `<div class="linha"><span>Descontos</span><span>−${brl(v.desconto)}</span></div>` : ''}
+        ${v.pagamentos.map((p) => `<div class="linha"><span>${esc(U.FORMAS[p.forma] || p.forma)}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}${p.referencia ? ` <small>${esc(p.referencia)}</small>` : ''}</span><span>${brl(p.valor)}</span></div>`).join('')}
         ${v.troco ? `<div class="linha"><span>Troco</span><span>${brl(v.troco)}</span></div>` : ''}
+        <div class="linha total"><span>Total</span><span>${brl(v.total)}</span></div>
       </div>
-      ${v.crediario && v.crediario.length ? `<h3>Parcelas do crediário</h3>
-        ${v.crediario.map((p) => `<div class="linha"><span>${p.numero}/${p.total_parcelas} · venc. ${p.vencimento.split('-').reverse().join('/')}</span>
-          <span>${brl(p.valor)} ${p.status === 'paga' ? '<span class="selo ok">paga</span>' : p.status === 'cancelada' ? '<span class="selo perigo">cancelada</span>' : p.valor_pago ? `<small>pago ${brl(p.valor_pago)}</small>` : ''}</span></div>`).join('')}` : ''}
-      <div class="acoes">
-        ${U.sessao.ehAdmin() ? `<button class="btn btn-fantasma btn-perigo-claro" id="excluir" style="margin-right:auto">${Icone('lixeira')} Excluir venda</button>` : ''}
-        ${v.status === 'concluida' && U.sessao.ehAdmin() ? '<button class="btn btn-perigo-claro" id="cancelar">Cancelar venda</button>' : ''}
-        ${v.status === 'concluida' ? `<button class="btn" id="devolver">${Icone('troca')} Troca / devolução</button>` : ''}
+      ${v.crediario && v.crediario.length ? `<h3 class="titulo-ico">${Icone('caderno')} Parcelas do crediário</h3>
+        <div class="vd-parcelas">${v.crediario.map((p) => `<div class="linha"><span>${p.numero}/${p.total_parcelas} · venc. ${p.vencimento.split('-').reverse().join('/')}</span>
+          <span>${brl(p.valor)} ${p.status === 'paga' ? '<span class="selo ok">paga</span>' : p.status === 'cancelada' ? '<span class="selo perigo">cancelada</span>' : p.valor_pago ? `<small>pago ${brl(p.valor_pago)}</small>` : ''}</span></div>`).join('')}</div>` : ''}
+      <div class="acoes vd-det-acoes">
+        ${U.sessao.ehAdmin() ? `<button class="btn btn-fantasma btn-perigo-claro" id="excluir">${Icone('lixeira')} Excluir</button>` : ''}
+        ${!cancelada && U.sessao.ehAdmin() ? `<button class="btn btn-fantasma btn-perigo-claro" id="cancelar">${Icone('fechar')} Cancelar venda</button>` : ''}
+        <span class="espaco"></span>
+        ${!cancelada ? `<button class="btn" id="devolver">${Icone('troca')} Troca / devolução</button>` : ''}
         <button class="btn" id="troca">${Icone('presente')} Cupom de troca</button>
         <button class="btn btn-primario" id="cupom">${Icone('impressora')} Reimprimir cupom</button>
-      </div>`, { largura: '760px' });
+      </div>`, { largura: '860px' });
     corpo.querySelector('#cupom').onclick = () => Impressao.cupom(v);
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(v);
     const dev = corpo.querySelector('#devolver');

@@ -750,7 +750,12 @@ function criarApi(db, opcoes = {}) {
         .get(id)
     );
     if (!v) throw erro(404, 'Venda não encontrada.');
-    v.itens = planos(db.prepare('SELECT * FROM venda_itens WHERE venda_id = ? ORDER BY id').all(id));
+    v.itens = planos(
+      db.prepare(
+        `SELECT vi.*, p.foto_versao FROM venda_itens vi LEFT JOIN produtos p ON p.id = vi.produto_id
+         WHERE vi.venda_id = ? ORDER BY vi.id`
+      ).all(id)
+    );
     v.pagamentos = planos(
       db.prepare('SELECT * FROM venda_pagamentos WHERE venda_id = ? ORDER BY id').all(id)
     );
@@ -925,7 +930,7 @@ function criarApi(db, opcoes = {}) {
              (SELECT GROUP_CONCAT(DISTINCT forma) FROM venda_pagamentos p WHERE p.venda_id = v.id) AS formas
            FROM vendas v LEFT JOIN clientes c ON c.id = v.cliente_id
            ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-           ORDER BY v.id DESC LIMIT 500`
+           ORDER BY v.criado_em DESC, v.id DESC LIMIT 500`
         )
         .all(...args)
     );
