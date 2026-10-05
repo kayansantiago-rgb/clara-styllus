@@ -5,28 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Clara Styllus · PDV</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23a14d6f'/><text x='16' y='22' font-family='Georgia' font-size='16' fill='white' text-anchor='middle'>CS</text></svg>">
+  <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <aside class="menu">
     <div class="marca">
-      <span class="marca-nome">Clara Styllus</span>
-      <span class="marca-sub">Ponto de venda</span>
+      <span class="marca-logo">CS</span>
+      <span class="marca-txt"><span class="marca-nome">Clara Styllus</span><span class="marca-sub">Ponto de venda</span></span>
     </div>
     <nav>
-      <a href="#/inicio" data-rota="inicio" data-admin><span class="ico">🏠</span>Início</a>
-      <a href="#/pdv" data-rota="pdv"><span class="ico">🛍️</span>Vender <kbd>F1</kbd></a>
-      <a href="#/produtos" data-rota="produtos"><span class="ico">👗</span>Produtos</a>
-      <a href="#/etiquetas" data-rota="etiquetas"><span class="ico">🏷️</span>Etiquetas</a>
-      <a href="#/inventario" data-rota="inventario"><span class="ico">📋</span>Inventário</a>
-      <a href="#/vendas" data-rota="vendas"><span class="ico">🧾</span>Vendas</a>
-      <a href="#/condicional" data-rota="condicional"><span class="ico">👜</span>Condicional</a>
-      <a href="#/crediario" data-rota="crediario"><span class="ico">📒</span>Crediário</a>
-      <a href="#/clientes" data-rota="clientes"><span class="ico">👤</span>Clientes</a>
-      <a href="#/caixa" data-rota="caixa"><span class="ico">💰</span>Caixa</a>
-      <a href="#/relatorios" data-rota="relatorios" data-admin><span class="ico">📊</span>Relatórios</a>
-      <a href="#/usuarios" data-rota="usuarios" data-admin><span class="ico">🔑</span>Vendedores</a>
-      <a href="#/config" data-rota="config" data-admin><span class="ico">⚙️</span>Configurações</a>
+      <a href="#/inicio" data-rota="inicio" data-admin><i data-icone="inicio"></i>Início</a>
+      <a href="#/pdv" data-rota="pdv"><i data-icone="sacola"></i>Vender <kbd>F1</kbd></a>
+      <div class="menu-titulo">Loja</div>
+      <a href="#/produtos" data-rota="produtos"><i data-icone="roupa"></i>Produtos</a>
+      <a href="#/etiquetas" data-rota="etiquetas"><i data-icone="etiqueta"></i>Etiquetas</a>
+      <a href="#/inventario" data-rota="inventario"><i data-icone="prancheta"></i>Inventário</a>
+      <div class="menu-titulo">Vendas</div>
+      <a href="#/vendas" data-rota="vendas"><i data-icone="recibo"></i>Vendas</a>
+      <a href="#/condicional" data-rota="condicional"><i data-icone="bolsa"></i>Condicional</a>
+      <a href="#/crediario" data-rota="crediario"><i data-icone="caderno"></i>Crediário</a>
+      <a href="#/clientes" data-rota="clientes"><i data-icone="clientes"></i>Clientes</a>
+      <a href="#/caixa" data-rota="caixa"><i data-icone="carteira"></i>Caixa</a>
+      <div class="menu-titulo" data-admin>Gestão</div>
+      <a href="#/relatorios" data-rota="relatorios" data-admin><i data-icone="grafico"></i>Relatórios</a>
+      <a href="#/usuarios" data-rota="usuarios" data-admin><i data-icone="chave"></i>Vendedores</a>
+      <a href="#/config" data-rota="config" data-admin><i data-icone="ajustes"></i>Configurações</a>
     </nav>
     <div class="usuario-box" id="usuario-box"></div>
     <a class="status-caixa" id="status-caixa" href="#/caixa" title="Abrir / fechar o caixa"></a>
@@ -36,13 +40,15 @@
 
   <div id="modal-fundo" class="modal-fundo" hidden>
     <div class="modal" role="dialog" aria-modal="true">
-      <header><h2 id="modal-titulo"></h2><button class="fechar" data-fechar aria-label="Fechar">×</button></header>
+      <header><h2 id="modal-titulo"></h2><button class="fechar" data-fechar aria-label="Fechar"><i data-icone="fechar"></i></button></header>
       <div id="modal-corpo"></div>
     </div>
   </div>
   <div id="avisos" class="avisos" aria-live="polite"></div>
   <iframe id="frame-impressao" title="impressão" tabindex="-1"></iframe>
 
+  <script src="/js/icones.js"></script>
+  <script>Icone.aplicar();</script>
   <script src="/js/barcode.js"></script>
   <script src="/js/util.js"></script>
   <script src="/js/impressao.js"></script>

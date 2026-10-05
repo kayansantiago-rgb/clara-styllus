@@ -45,12 +45,12 @@ Telas.usuarios = (() => {
     const novo = !u;
     u = u || { perfil: 'vendedor', ativo: 1 };
     const corpo = abrirModal(novo ? 'Novo vendedor(a)' : `Editar ${u.nome}`, `
-      <form class="form">
+      <form class="form" autocomplete="off">
         <label>Nome (aparece no cupom e nos relatórios)<input name="nome" required value="${esc(u.nome)}" autofocus></label>
         <label>Usuário (para entrar)<input name="login" required value="${esc(u.login)}" ${novo ? '' : 'disabled'}
           autocomplete="off" placeholder="Ex.: ana"></label>
         <label>${novo ? 'Senha' : 'Nova senha <small>(deixe vazio para não mudar)</small>'}
-          <input name="senha" type="password" minlength="4" ${novo ? 'required' : ''} autocomplete="new-password"></label>
+          ${U.campoSenha('senha', `minlength="4" ${novo ? 'required' : ''}`)}</label>
         <label>Perfil<select name="perfil">
           <option value="vendedor" ${u.perfil === 'vendedor' ? 'selected' : ''}>Vendedor(a)</option>
           <option value="admin" ${u.perfil === 'admin' ? 'selected' : ''}>Administrador(a)</option>
@@ -61,6 +61,7 @@ Telas.usuarios = (() => {
           <button class="btn btn-primario">Salvar</button>
         </div>
       </form>`, { largura: '460px' });
+    U.ligarOlhos(corpo);
     corpo.querySelector('form').onsubmit = async (ev) => {
       ev.preventDefault();
       const d = U.dadosForm(ev.target);

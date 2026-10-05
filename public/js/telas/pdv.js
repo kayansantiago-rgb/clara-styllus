@@ -3,11 +3,11 @@ Telas.pdv = (() => {
   const { esc, brl, num, api, aviso, erro, abrirModal, fecharModal, local } = U;
   const CHAVE = 'pdv_carrinho';
   const FORMAS_RAPIDAS = [
-    ['dinheiro', '💵', 'Dinheiro'],
-    ['pix', '⚡', 'PIX'],
-    ['debito', '💳', 'Débito'],
-    ['credito', '💳', 'Crédito'],
-    ['crediario', '📒', 'Crediário'],
+    ['dinheiro', 'dinheiro', 'Dinheiro'],
+    ['pix', 'pix', 'PIX'],
+    ['debito', 'cartao', 'Débito'],
+    ['credito', 'cartao', 'Crédito'],
+    ['crediario', 'caderno', 'Crediário'],
   ];
   let raiz;
   let carrinho;
@@ -58,23 +58,24 @@ Telas.pdv = (() => {
       <div class="pdv2">
         <header class="pdv-topo">
           <div class="pdv-caixa"><span class="ponto ok"></span>
-            <b>Caixa nº ${caixa.id}</b><span>aberto às ${esc(hora)} por ${esc(caixa.operador || '')}</span></div>
+            <div><b>Caixa nº ${caixa.id}</b><small>aberto às ${esc(hora)} · ${esc(caixa.operador || '')}</small></div></div>
           <div class="pdv-topo-acoes">
-            <button class="btn btn-topo" id="t-sangria" title="Retirar dinheiro da gaveta">➖ Sangria</button>
-            <button class="btn btn-topo" id="t-suprimento" title="Colocar troco na gaveta">➕ Suprimento</button>
-            <button class="btn btn-topo" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">🔁 Troca</button>
-            <button class="btn btn-topo" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">👜 Condicional</button>
-            <button class="btn btn-topo" id="t-gaveta" title="Abrir a gaveta">🗄️ Gaveta</button>
-            <button class="btn btn-topo" id="t-tela" title="Tela cheia (F11)">⛶</button>
-            <button class="btn btn-topo btn-topo-perigo" id="t-fechar">🔒 Fechar caixa</button>
-            <span class="pdv-relogio" id="relogio"></span>
+            <button class="btn btn-topo" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')} Troca</button>
+            <button class="btn btn-topo" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')} Condicional</button>
+            <span class="topo-sep"></span>
+            <button class="btn btn-topo" id="t-sangria" title="Retirar dinheiro da gaveta">${Icone('retirar')} Sangria</button>
+            <button class="btn btn-topo" id="t-suprimento" title="Colocar troco na gaveta">${Icone('colocar')} Suprimento</button>
+            <button class="btn btn-topo" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')} Gaveta</button>
+            <button class="btn btn-topo" id="t-tela" title="Tela cheia (F11)">${Icone('telaCheia')}</button>
+            <button class="btn btn-topo btn-topo-perigo" id="t-fechar">${Icone('cadeado')} Fechar caixa</button>
           </div>
+          <span class="pdv-relogio" id="relogio"></span>
         </header>
 
         <section class="pdv-esq">
           <div class="pdv-alertas" id="alertas"></div>
           <div class="pdv-busca">
-            <span class="pdv-busca-ico">⌕</span>
+            <span class="pdv-busca-ico">${Icone('codigo')}</span>
             <input id="busca" autocomplete="off" placeholder="Bipe o código de barras ou digite o nome do produto">
             <kbd>F2</kbd>
             <div id="sugestoes" class="sugestoes" hidden></div>
@@ -103,7 +104,7 @@ Telas.pdv = (() => {
 
           <div class="pdv-bloco">
             <button class="pdv-cliente" id="btn-cliente">
-              <span class="pdv-cliente-ico">👤</span>
+              <span class="pdv-cliente-ico">${Icone('usuario')}</span>
               <span id="cliente-info" class="pdv-cliente-txt"></span>
               <kbd>F6</kbd>
             </button>
@@ -117,7 +118,7 @@ Telas.pdv = (() => {
 
           <div class="pdv-pagar">
             ${FORMAS_RAPIDAS.map(([k, ico, nome]) =>
-    `<button class="pdv-forma" data-forma="${k}"><span>${ico}</span>${nome}</button>`).join('')}
+    `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}${nome}</button>`).join('')}
           </div>
           <button class="btn btn-primario btn-grande pdv-finalizar" id="btn-finalizar">Finalizar venda <kbd>F4</kbd></button>
           <button class="btn btn-perigo-claro" id="btn-limpar">Cancelar venda <kbd>F9</kbd></button>
@@ -170,7 +171,7 @@ Telas.pdv = (() => {
       if (!el.isConnected) return pararRelogio();
       const d = new Date();
       el.innerHTML = `<b>${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>
-        ${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}`;
+        <span>${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>`;
     };
     tic();
     relogio = setInterval(tic, 15000);
@@ -221,16 +222,16 @@ Telas.pdv = (() => {
         return `<tr data-i="${i}" class="${i === carrinho.itens.length - 1 ? 'recente' : ''}">
           <td class="num-item">${i + 1}</td>
           <td><b>${esc(p.nome)}</b><br><small>${esc(det)} ${det ? '·' : ''} ${esc(p.codigo)}</small></td>
-          <td class="c qtd"><button class="mini" data-acao="menos">−</button><span>${it.quantidade}</span><button class="mini" data-acao="mais">+</button></td>
+          <td class="c qtd"><span class="qtd-ctrl"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span></td>
           <td class="r">${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${num(p.preco_anterior)}</small><br><span class="preco-por">${num(p.preco_venda)}</span>` : num(p.preco_venda)}</td>
-          <td class="r"><button class="link" data-acao="desc">${it.desconto ? '-' + num(it.desconto) : 'dar'}</button></td>
+          <td class="r"><button class="link" data-acao="desc">${it.desconto ? '-' + num(it.desconto) : 'aplicar'}</button></td>
           <td class="r"><b>${num(totalItem(it))}</b></td>
-          <td><button class="mini perigo" data-acao="remover" title="Remover">×</button></td>
+          <td><button class="mini perigo" data-acao="remover" title="Remover">${Icone('lixeira')}</button></td>
         </tr>`;
       }).join('')
       : `<tr><td colspan="7" class="vazio pdv-vazio">
-          <div class="pdv-vazio-ico">🛍️</div>
-          <b>Caixa livre</b><br>Bipe a etiqueta da peça para começar a venda.</td></tr>`;
+          <div class="pdv-vazio-ico">${Icone('sacola')}</div>
+          <b>Caixa livre</b><br>Bipe a etiqueta da peça ou digite o nome para começar a venda.</td></tr>`;
 
     const ult = carrinho.itens[carrinho.itens.length - 1];
     const ultEl = raiz.querySelector('#ultimo');
@@ -239,7 +240,7 @@ Telas.pdv = (() => {
       ? `${U.miniatura(ult.produto, 'ultimo-foto')}<div class="ultimo-txt"><small>Último item</small><span>${esc(ult.produto.nome)}</span>
            <small>${esc([ult.produto.tamanho && 'Tam ' + ult.produto.tamanho, ult.produto.cor].filter(Boolean).join(' · '))}</small></div>
          <b>${ult.quantidade} × ${brl(ult.produto.preco_venda)}</b>`
-      : `<span class="ultimo-foto sem-foto">🛍️</span><div class="ultimo-txt"><small>Clara Styllus</small><span>Pronto para vender</span></div><b>${brl(0)}</b>`;
+      : `<span class="ultimo-foto sem-foto">${Icone('sacola')}</span><div class="ultimo-txt"><small>Último item</small><span>Nenhuma peça ainda</span><small>As peças bipadas aparecem aqui</small></div><b>${brl(0)}</b>`;
 
     desenharCliente();
     desenharTotais();

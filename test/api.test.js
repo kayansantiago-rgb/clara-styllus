@@ -144,6 +144,7 @@ test('login: primeiro acesso cria admin, vendedor tem acesso restrito', () => {
   assert.equal(chamar('POST', '/api/produtos', { nome: 'X' }).status, 403);
   assert.equal(chamar('GET', '/api/relatorios').status, 403);
   assert.equal(chamar('POST', `/api/vendas/${v.id}/cancelar`, { motivo: 'x' }).status, 403);
+  assert.equal(chamar('DELETE', `/api/vendas/${v.id}`).status, 403);
   assert.equal(chamar('GET', '/api/usuarios').status, 403);
 
   // Troca de senha pelo próprio usuário.
@@ -168,4 +169,30 @@ test('usuário desativado perde o acesso e sempre sobra um admin', () => {
   assert.equal(chamar('PUT', `/api/usuarios/${ana.id}`, { ativo: false }).corpo.ativo, 0);
   sair();
   assert.equal(chamar('POST', '/api/login', { login: 'ana', senha: 'abcd' }).status, 401);
+});
+
+test('administrador exclui venda: devolve estoque e some do caixa e da lista', () => {
+  const { chamar } = novaApi();
+  const p = chamar('POST', '/api/produtos', { nome: 'Saia', preco_venda: 5000, estoque: 4 }).corpo;
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  const vender = () => chamar('POST', '/api/vendas', {
+    itens: [{ produto_id: p.id, quantidade: 2 }],
+    pagamentos: [{ forma: 'dinheiro', valor: 10000 }],
+  }).corpo;
+  const a = vender();
+  const b = vender();
+  assert.equal(chamar('GET', `/api/produtos/${p.id}`).corpo.estoque, 0);
+
+  // Venda ativa: excluir devolve as peças.
+  assert.equal(chamar('DELETE', `/api/vendas/${a.id}`).status, 200);
+  assert.equal(chamar('GET', `/api/vendas/${a.id}`).status, 404);
+  assert.equal(chamar('GET', `/api/produtos/${p.id}`).corpo.estoque, 2);
+  assert.equal(chamar('GET', '/api/caixa/atual').corpo.dinheiro_esperado, 10000);
+
+  // Venda já cancelada: o estoque já voltou, não soma de novo.
+  chamar('POST', `/api/vendas/${b.id}/cancelar`, { motivo: 'teste' });
+  assert.equal(chamar('DELETE', `/api/vendas/${b.id}`).status, 200);
+  assert.equal(chamar('GET', `/api/produtos/${p.id}`).corpo.estoque, 4);
+  assert.equal(chamar('GET', '/api/vendas').corpo.length, 0);
+  assert.equal(chamar('DELETE', `/api/vendas/${b.id}`).status, 404);
 });

@@ -965,6 +965,42 @@ function criarApi(db, opcoes = {}) {
     });
   }, 'admin');
 
+  /**
+   * Exclui a venda de vez (só administrador): venda lançada por engano ou de teste.
+   * Se ainda não estava cancelada, devolve antes o estoque, os vales usados e cancela o crediário.
+   */
+  rota('DELETE', '/api/vendas/:id', ({ params }) => {
+    const venda = buscarVenda(params.id);
+    if (db.prepare('SELECT 1 FROM trocas WHERE venda_id = ?').get(venda.id)) {
+      throw erro(409, 'Esta venda teve troca/devolução e não pode ser excluída.');
+    }
+    return transacao(db, () => {
+      if (venda.status !== 'cancelada') {
+        crediario.cancelarDaVenda(venda.id); // recusa se já tem parcela recebida
+        for (const p of venda.pagamentos.filter((x) => x.forma === 'vale' && x.referencia)) {
+          db.prepare(`UPDATE vales SET saldo = saldo + ?, status = 'ativo' WHERE codigo = ?`).run(p.valor, p.referencia);
+        }
+        for (const it of venda.itens) {
+          if (db.prepare('SELECT servico FROM produtos WHERE id = ?').get(it.produto_id)?.servico) continue;
+          db.prepare('UPDATE produtos SET estoque = estoque + ? WHERE id = ?').run(it.quantidade, it.produto_id);
+          db.prepare(
+            `INSERT INTO estoque_movimentos (produto_id, tipo, quantidade, motivo) VALUES (?, 'exclusao', ?, ?)`
+          ).run(it.produto_id, it.quantidade, `Venda #${venda.id} excluída`);
+        }
+      }
+      db.prepare(
+        `DELETE FROM crediario_recebimento_parcelas
+         WHERE parcela_id IN (SELECT id FROM crediario_parcelas WHERE venda_id = ?)`
+      ).run(venda.id);
+      db.prepare('DELETE FROM crediario_parcelas WHERE venda_id = ?').run(venda.id);
+      db.prepare('UPDATE estoque_movimentos SET venda_id = NULL WHERE venda_id = ?').run(venda.id);
+      db.prepare('DELETE FROM venda_pagamentos WHERE venda_id = ?').run(venda.id);
+      db.prepare('DELETE FROM venda_itens WHERE venda_id = ?').run(venda.id);
+      db.prepare('DELETE FROM vendas WHERE id = ?').run(venda.id);
+      return { ok: true };
+    });
+  }, 'admin');
+
   // ------------------------------------------------------- trocas e condicional
   const trocas = instalarTrocas({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, buscarVenda });
   const condicional = instalarCondicional({ db, rota, erro, inteiro, texto, plano, planos, transacao, config });

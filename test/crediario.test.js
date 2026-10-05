@@ -87,6 +87,21 @@ test('recebimento abate parcelas mais antigas, entra no caixa e pode ser estorna
   assert.equal(chamar('GET', '/api/crediario').corpo.length, 0);
 });
 
+test('excluir venda no crediário: recusa com parcela recebida, apaga as parcelas depois do estorno', () => {
+  const { chamar, produto, cliente } = preparar();
+  const v = chamar('POST', '/api/vendas', {
+    cliente_id: cliente.id,
+    itens: [{ produto_id: produto.id, quantidade: 1 }],
+    pagamentos: [{ forma: 'crediario', valor: 30000, parcelas: 3 }],
+  }).corpo;
+  const rec = chamar('POST', `/api/crediario/clientes/${cliente.id}/receber`, { valor: 10000, forma: 'pix' }).corpo;
+  assert.equal(chamar('DELETE', `/api/vendas/${v.id}`).status, 409);
+  chamar('POST', `/api/crediario/recebimentos/${rec.id}/estornar`);
+  assert.equal(chamar('DELETE', `/api/vendas/${v.id}`).status, 200);
+  assert.equal(chamar('GET', '/api/crediario').corpo.length, 0);
+  assert.equal(chamar('GET', `/api/crediario/clientes/${cliente.id}`).status, 200);
+});
+
 test('débito manual (caderno antigo), atraso bloqueia nova venda fiada', () => {
   const { chamar, produto, cliente } = preparar();
   const ontem = new Date(Date.now() - 864e5).toLocaleDateString('sv-SE');

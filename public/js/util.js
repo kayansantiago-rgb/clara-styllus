@@ -226,7 +226,7 @@ const U = (() => {
   /** Miniatura da peça (ou um ícone quando não tem foto). */
   const miniatura = (p, classe = 'mini-foto') => {
     const url = fotoUrl(p);
-    return url ? `<img class="${classe}" src="${url}" alt="" loading="lazy">` : `<span class="${classe} sem-foto">👗</span>`;
+    return url ? `<img class="${classe}" src="${url}" alt="" loading="lazy">` : `<span class="${classe} sem-foto">${Icone('roupa')}</span>`;
   };
 
   /** Lê um arquivo de imagem e devolve um JPEG reduzido (dataURL) para não pesar no banco. */

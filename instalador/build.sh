@@ -42,6 +42,7 @@ Clara Styllus PDV $VERSAO
 Componentes de terceiros incluídos:
 - Node.js $NODE_VERSAO (licença MIT e outras; veja node\\LICENSE) — https://nodejs.org
 - WinSW $WINSW_VERSAO (licença MIT) — https://github.com/winsw/winsw
+- Fontes Inter e Playfair Display (SIL Open Font License 1.1; veja app\\public\\fonts)
 TXT
 
 SAIDA="$DIST/ClaraStyllus-PDV-Setup-$VERSAO.exe"

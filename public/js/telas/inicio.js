@@ -57,8 +57,8 @@ Telas.inicio = (() => {
 
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <div><h1>${saudacao()}, ${esc(nome)}!</h1><p class="dica" style="text-transform:capitalize">${hojeTxt}</p></div>
-        <div class="ferramentas"><a class="btn btn-primario btn-grande" href="#/pdv">🛍️ Ir para o caixa</a></div>
+        <div><h1>${saudacao()}, ${esc(nome)}!</h1><p class="dica">${hojeTxt.charAt(0).toUpperCase() + hojeTxt.slice(1)}</p></div>
+        <div class="ferramentas"><a class="btn btn-primario btn-grande" href="#/pdv">${Icone('sacola')} Ir para o caixa</a></div>
       </div>
 
       ${condAtrasadas.length ? `<div class="pdv-alerta alerta painel-alerta">👜 ${condAtrasadas.length} condicional(is) passou do prazo de devolução:
@@ -95,7 +95,7 @@ Telas.inicio = (() => {
         </div>
 
         <div class="cartao">
-          <h3>🏆 Mais vendidos da semana</h3>
+          <h3 class="titulo-ico">${Icone('grafico')} Mais vendidos da semana</h3>
           ${r.mais_vendidos.map((p, i) => `
             <div class="painel-item"><span class="pos">${i + 1}</span>${U.miniatura({ id: p.produto_id, foto_versao: p.foto_versao })}
               <span class="painel-item-txt"><b>${esc(p.nome)}</b><small>${p.quantidade} peça(s) · ${brl(p.total)}</small></span></div>`).join('')
@@ -103,7 +103,7 @@ Telas.inicio = (() => {
         </div>
 
         <div class="cartao">
-          <h3>🎂 Aniversariantes</h3>
+          <h3 class="titulo-ico">${Icone('presente')} Aniversariantes</h3>
           ${r.aniversariantes.map((c) => {
     const link = whats(c.telefone, `Feliz aniversário, ${c.nome.split(' ')[0]}! 🎉 A Clara Styllus deseja um dia lindo. Passa aqui na loja que temos um presente para você!`);
     return `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b>
@@ -113,7 +113,7 @@ Telas.inicio = (() => {
         </div>
 
         <div class="cartao">
-          <h3>📒 Crediário</h3>
+          <h3 class="titulo-ico">${Icone('caderno')} Crediário</h3>
           <div class="cards cards-mini">
             <div class="card"><small>A receber</small><b>${brl(r.crediario.a_receber)}</b></div>
             <div class="card"><small>Vencido</small><b class="${r.crediario.vencido ? 'txt-perigo' : ''}">${brl(r.crediario.vencido)}</b></div>
@@ -127,7 +127,7 @@ Telas.inicio = (() => {
         </div>
 
         <div class="cartao">
-          <h3>📦 Estoque</h3>
+          <h3 class="titulo-ico">${Icone('caixa')} Estoque</h3>
           ${r.estoque_baixo
     ? `<p><b class="txt-perigo">${r.estoque_baixo}</b> produto(s) no estoque mínimo ou esgotados.</p><a href="#/relatorios">Ver lista para repor →</a>`
     : '<p>Tudo certo com o estoque. ✅</p>'}

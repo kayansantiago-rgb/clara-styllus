@@ -13,9 +13,9 @@ Telas.produtos = (() => {
           <input id="q" type="search" placeholder="Buscar por nome, código, referência, cor…" autofocus>
           <label class="check"><input type="checkbox" id="baixo"> Só estoque baixo</label>
           <label class="check so-admin"><input type="checkbox" id="inativos"> Mostrar inativos</label>
-          <button class="btn so-admin" id="entrada" title="Somar estoque bipando as peças que chegaram">📦 Entrada por bipagem</button>
-          <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">🔥 Liquidação</button>
-          <button class="btn btn-primario so-admin" id="novo">+ Novo produto</button>
+          <button class="btn so-admin" id="entrada" title="Somar estoque bipando as peças que chegaram">${Icone('codigo')} Entrada por bipagem</button>
+          <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">${Icone('fogo')} Liquidação</button>
+          <button class="btn btn-primario so-admin" id="novo">${Icone('mais')} Novo produto</button>
         </div>
       </div>
       <div class="tabela-rolagem cartao">
@@ -52,12 +52,12 @@ Telas.produtos = (() => {
         <td>${esc(p.cor || '')}</td>
         <td class="r">${num(p.preco_custo)}</td>
         <td class="r">${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${num(p.preco_anterior)}</small><br><b class="preco-por">${num(p.preco_venda)}</b>` : `<b>${num(p.preco_venda)}</b>`}</td>
-        <td class="r ${p.estoque <= p.estoque_minimo ? 'txt-perigo' : ''}"><b>${p.estoque}</b></td>
+        <td class="r ${!p.servico && p.estoque <= p.estoque_minimo ? 'txt-perigo' : ''}">${p.servico ? '<small>serviço</small>' : `<b>${p.estoque}</b>`}</td>
         <td class="r nowrap">
-          <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">🔢</button>
-          <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">📦</button>
-          <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">🏷️</button>
-          <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">✏️</button>
+          <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">${Icone('grade')}</button>
+          <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">${Icone('caixa')}</button>
+          <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">${Icone('etiqueta')}</button>
+          <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">${Icone('lapis')}</button>
         </td>
       </tr>`).join('') || '<tr><td colspan="9" class="vazio">Nenhum produto encontrado.</td></tr>';
   }
@@ -102,7 +102,7 @@ Telas.produtos = (() => {
     let corIniciais = [];
     if (novo && opcoes.base) {
       const b = opcoes.base;
-      p = { nome: b.nome, referencia: b.referencia, categoria: b.categoria, marca: b.marca, ncm: b.ncm,
+      p = { nome: b.nome, referencia: b.referencia, categoria: b.categoria, marca: b.marca,
         preco_custo: b.preco_custo, preco_venda: b.preco_venda, preco_anterior: b.preco_anterior, estoque_minimo: b.estoque_minimo };
       try {
         const g = await api(`/api/produtos/grade?nome=${encodeURIComponent(b.nome)}${b.referencia ? `&referencia=${encodeURIComponent(b.referencia)}` : ''}`);
@@ -115,54 +115,88 @@ Telas.produtos = (() => {
       } catch (e) { erro(e); }
     }
     p = p || {};
+    const semFoto = `<span class="foto-vazia">${Icone('imagem')}<small>sem foto</small></span>`;
+    const moeda = (nome, valor, extra = '') =>
+      `<div class="campo-moeda"><span>R$</span><input name="${nome}" inputmode="decimal" value="${valor ? num(valor) : ''}" ${extra}></div>`;
     const corpo = abrirModal(novo ? (opcoes.base ? `Adicionar tamanhos/cores — ${p.nome}` : 'Novo produto') : `Editar produto`, `
-      <form class="form grade-form" id="f-prod">
-        <label class="col2">Nome *<input name="nome" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado"></label>
-        <label>Referência<input name="referencia" value="${esc(p.referencia)}"></label>
-        <label>Categoria<input name="categoria" value="${esc(p.categoria)}" placeholder="Vestido, Blusa, Calça…"></label>
-        <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}"></label>
-        <label>NCM<input name="ncm" value="${esc(p.ncm)}" inputmode="numeric" placeholder="Para nota fiscal (opcional)"></label>
-        <label>Preço de custo (R$)<input name="preco_custo" inputmode="decimal" value="${p.preco_custo ? num(p.preco_custo) : ''}"></label>
-        <label>Preço de venda (R$) *<input name="preco_venda" inputmode="decimal" value="${p.preco_venda ? num(p.preco_venda) : ''}">
-          <span class="sugestao-preco" id="sugestao-preco" hidden></span></label>
-        <label class="so-admin">Preço "De" — liquidação (R$) <small>vazio = sem liquidação</small>
-          <input name="preco_anterior" inputmode="decimal" value="${p.preco_anterior ? num(p.preco_anterior) : ''}" placeholder="Preço antigo, sai riscado na etiqueta"></label>
-        <label>Estoque mínimo<input name="estoque_minimo" type="number" min="0" value="${p.estoque_minimo ?? 0}"></label>
-        <div class="col2 foto-campo">
-          <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : '<span>👗<br><small>sem foto</small></span>'}</div>
-          <div class="foto-acoes">
-            <b>Foto da peça</b>
-            <small>Aparece na tela de venda para a vendedora conferir se bipou a peça certa.</small>
-            <div class="acoes acoes-esq">
-              <label class="btn">📷 Escolher foto<input type="file" accept="image/*" capture="environment" id="foto-arquivo" hidden></label>
-              <button type="button" class="btn btn-perigo-claro" id="foto-remover" ${U.fotoUrl(p) ? '' : 'hidden'}>Remover</button>
+      <form class="fp" id="f-prod" autocomplete="off">
+        <div class="fp-corpo">
+          <aside class="fp-lateral">
+            <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : semFoto}</div>
+            <div class="fp-foto-acoes">
+              <label class="btn btn-claro">${Icone('camera')} ${U.fotoUrl(p) ? 'Trocar foto' : 'Escolher foto'}<input type="file" accept="image/*" capture="environment" id="foto-arquivo" hidden></label>
+              <button type="button" class="btn btn-fantasma btn-perigo-claro" id="foto-remover" ${U.fotoUrl(p) ? '' : 'hidden'}>${Icone('lixeira')}</button>
             </div>
-            ${novo ? '<small>A foto vale para todos os tamanhos e cores criados agora.</small>'
-    : `<label class="check"><input type="checkbox" id="foto-cor" checked> Usar a mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
+            <small class="fp-ajuda">A foto aparece no caixa para conferir se bipou a peça certa.${novo ? ' Vale para todos os tamanhos e cores criados agora.' : ''}</small>
+            ${novo ? '' : `<label class="check fp-ajuda"><input type="checkbox" id="foto-cor" checked> Usar a mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
+            <div class="fp-margem" id="margem-box" hidden>
+              <small>Margem de lucro</small>
+              <b id="margem-pct"></b>
+              <span id="margem"></span>
+            </div>
+          </aside>
+
+          <div class="fp-principal">
+            <section class="fp-secao">
+              <h3>Informações da peça</h3>
+              <label>Nome da peça *<input name="nome" class="campo-destaque" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado"></label>
+              <div class="fp-grid3">
+                <label>Categoria<input name="categoria" value="${esc(p.categoria)}" placeholder="Vestido, blusa, calça…" list="lista-categorias"></label>
+                <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}" placeholder="Opcional"></label>
+                <label>Referência<input name="referencia" value="${esc(p.referencia)}" placeholder="Cód. do fornecedor"></label>
+              </div>
+            </section>
+
+            <section class="fp-secao">
+              <h3>Preço e estoque</h3>
+              <div class="fp-grid3">
+                <label>Preço de custo${moeda('preco_custo', p.preco_custo, 'placeholder="0,00"')}</label>
+                <label>Preço de venda *${moeda('preco_venda', p.preco_venda, 'placeholder="0,00" class="campo-destaque"')}</label>
+                <label>Estoque mínimo<input name="estoque_minimo" type="number" min="0" value="${p.estoque_minimo ?? 0}" title="Avisa quando o estoque chegar neste número"></label>
+              </div>
+              <span class="sugestao-preco" id="sugestao-preco" hidden></span>
+              <label class="so-admin fp-liquidacao">Preço “De” — liquidação <small>deixe vazio se a peça não estiver em promoção · sai riscado na etiqueta</small>
+                ${moeda('preco_anterior', p.preco_anterior, 'placeholder="Preço antigo"')}</label>
+            </section>
+
+            ${novo ? '' : `
+            <section class="fp-secao">
+              <h3>Variação</h3>
+              <div class="fp-grid3">
+                <label>Tamanho<input name="tamanho" value="${esc(p.tamanho)}"></label>
+                <label>Cor<input name="cor" value="${esc(p.cor)}"></label>
+                <label>Código de barras<input name="codigo" required value="${esc(p.codigo)}"></label>
+              </div>
+              <label class="interruptor"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}><span class="trilho"></span>
+                <span class="txt"><b>Produto ativo</b><small>Desligado, a peça some do caixa e das buscas.</small></span></label>
+            </section>`}
           </div>
         </div>
+
         ${novo ? `
-        <fieldset class="col2">
-          <legend>Tamanhos, cores e quantidades</legend>
-          <div id="grade-editor"></div>
-          <label class="check"><input type="checkbox" id="criar-zeradas" checked> Cadastrar também as combinações com quantidade 0 (para repor depois)</label>
+        <section class="fp-secao fp-grade">
+          <h3>Tamanhos, cores e quantidades</h3>
           <p class="dica">Cada combinação vira um produto com seu próprio código de barras. Peças sem etiqueta do fornecedor
             recebem um código da loja automaticamente.</p>
-        </fieldset>` : `
-        <label>Tamanho<input name="tamanho" value="${esc(p.tamanho)}"></label>
-        <label>Cor<input name="cor" value="${esc(p.cor)}"></label>
-        <label class="col2">Código de barras<input name="codigo" required value="${esc(p.codigo)}"></label>
-        <label class="check col2"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}> Produto ativo (aparece no PDV)</label>`}
-        <div class="col2 opcoes-produto">
-          <label class="check"><input type="checkbox" name="atalho" ${p.atalho ? 'checked' : ''}> ⚡ Mostrar como <b>botão rápido</b> no caixa (sacola, embrulho…)</label>
-          <label class="check"><input type="checkbox" name="servico" ${p.servico ? 'checked' : ''}> 🧵 É <b>serviço</b>: não controla estoque (ajuste de barra…). Com preço 0, o valor é perguntado na hora.</label>
-        </div>
-        <div class="acoes col2">
-          <span class="margem" id="margem"></span>
+          <div id="grade-editor"></div>
+          <label class="check"><input type="checkbox" id="criar-zeradas" checked> Cadastrar também as combinações com quantidade 0 (para repor depois)</label>
+        </section>` : ''}
+
+        <section class="fp-opcoes">
+          <label class="interruptor"><input type="checkbox" name="atalho" ${p.atalho ? 'checked' : ''}><span class="trilho"></span>
+            <span class="txt"><b>Botão rápido no caixa</b><small>Para sacola, embrulho e itens vendidos toda hora.</small></span></label>
+          <label class="interruptor"><input type="checkbox" name="servico" ${p.servico ? 'checked' : ''}><span class="trilho"></span>
+            <span class="txt"><b>É um serviço</b><small>Não controla estoque (ajuste de barra…). Com preço 0, o valor é perguntado na hora.</small></span></label>
+        </section>
+
+        <datalist id="lista-categorias">${['Vestido', 'Blusa', 'Camisa', 'Calça', 'Saia', 'Short', 'Macacão', 'Conjunto', 'Body', 'Cropped', 'Jaqueta', 'Casaco', 'Moda praia', 'Lingerie', 'Acessório', 'Bolsa', 'Calçado']
+    .map((c) => `<option value="${c}">`).join('')}</datalist>
+
+        <div class="fp-rodape">
           <button type="button" class="btn" data-fechar>Cancelar</button>
-          <button class="btn btn-primario">Salvar</button>
+          <button class="btn btn-primario">${Icone('check')} ${novo ? 'Cadastrar produto' : 'Salvar alterações'}</button>
         </div>
-      </form>`, { largura: novo ? '920px' : '760px' });
+      </form>`, { largura: novo ? '980px' : '860px' });
 
     const form = corpo.querySelector('form');
     const editor = novo
@@ -171,8 +205,14 @@ Telas.produtos = (() => {
     const margem = () => {
       const c = U.paraCentavos(form.preco_custo.value);
       const v = U.paraCentavos(form.preco_venda.value);
-      corpo.querySelector('#margem').textContent = c > 0 && v > 0
-        ? `Margem: ${(((v - c) / v) * 100).toFixed(0)}% · Markup: ${(v / c).toFixed(2)}x` : '';
+      const temMargem = c > 0 && v > 0;
+      corpo.querySelector('#margem-box').hidden = !temMargem;
+      if (temMargem) {
+        const pct = ((v - c) / v) * 100;
+        corpo.querySelector('#margem-pct').textContent = `${pct.toFixed(0)}%`;
+        corpo.querySelector('#margem-pct').className = pct < 30 ? 'txt-perigo' : '';
+        corpo.querySelector('#margem').textContent = `Lucro de ${U.brl(v - c)} por peça · markup ${(v / c).toFixed(2).replace('.', ',')}x`;
+      }
       // Sugestão pelo markup padrão da loja (Configurações → Regras de venda).
       const sug = precoSugerido(c, cfg);
       const el = corpo.querySelector('#sugestao-preco');
@@ -196,7 +236,7 @@ Telas.produtos = (() => {
     };
     corpo.querySelector('#foto-remover').onclick = () => {
       foto = null;
-      previa.innerHTML = '<span>👗<br><small>sem foto</small></span>';
+      previa.innerHTML = semFoto;
       corpo.querySelector('#foto-remover').hidden = true;
     };
     const salvarFoto = async (ids) => {
@@ -220,7 +260,7 @@ Telas.produtos = (() => {
       ev.preventDefault();
       const d = U.dadosForm(form);
       const base = {
-        nome: d.nome, referencia: d.referencia, categoria: d.categoria, marca: d.marca, ncm: d.ncm,
+        nome: d.nome, referencia: d.referencia, categoria: d.categoria, marca: d.marca,
         preco_custo: U.paraCentavos(d.preco_custo), preco_venda: U.paraCentavos(d.preco_venda),
         estoque_minimo: Number(d.estoque_minimo || 0),
       };

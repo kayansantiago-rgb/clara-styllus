@@ -5,6 +5,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Visual moderno**: menu com ícones, fontes próprias (funcionam sem internet), tela de venda e cadastro
+  de produto redesenhados.
+- **Login sem senha salva**: o navegador não oferece para guardar a senha; cada pessoa digita a sua ao entrar
+  (o ícone do olho mostra o que foi digitado).
 - **Troca com vale-troca**: bipe o cupom (V123) ou use 🔁 Troca no caixa, escolha as peças que voltam e sai um
   vale impresso com código de barras (valor pago, já com desconto). O vale paga outra compra e o saldo que sobrar continua valendo.
 - **Valor rápido no pagamento**: "valor exato" e notas (R$ 50, 100, 200…) com um clique.
@@ -13,7 +17,7 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Condicional (malinha)**: bipe as peças, escolha a cliente e clique em 👜 Condicional. As peças saem do estoque,
   o comprovante sai em 2 vias e, ao fechar, o que ela ficou vai direto para o caixa.
 - **Lucro real**: vendas − trocas − custo − taxas − despesas (aluguel, luz…, com repetição mensal) nos Relatórios.
-- **Tela cheia** no caixa (botão ⛶ ou atalho "Caixa (tela cheia)" criado pelo instalador).
+- **Tela cheia** no caixa (botão de tela cheia ou atalho "Caixa (tela cheia)" criado pelo instalador).
 - **Cadastro em grade**: escolha os tamanhos (botões prontos: PP–GG, 34–46…) e as cores, e digite a quantidade
   de cada combinação numa tabela. No **modo bipar**, cada bipe da etiqueta do fornecedor soma +1 na combinação
   e guarda o código dela. Dá para **adicionar tamanhos/cores** a um produto que já existe.
@@ -50,7 +54,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   em ZPL/EPL nas térmicas de etiqueta (Zebra, Elgin, Argox…) ou em folha A4 adesiva.
 - **Caixa**: abrir e fechar direto da tela de venda; sangria, suprimento, abertura da gaveta, fechamento com conferência do dinheiro e
   impressão do resumo.
-- **Vendas**: consulta, reimpressão e cancelamento (devolve as peças ao estoque).
+- **Vendas**: consulta, reimpressão e cancelamento (devolve as peças ao estoque). O administrador também
+  pode **excluir** uma venda de vez (lançada errado ou de teste): se não estava cancelada, as peças voltam
+  para o estoque e os vales usados voltam a valer; não é possível excluir venda com troca ou com parcela do
+  crediário já recebida.
 - **Clientes**: cadastro, aniversário, observações e histórico de compras.
 - **Relatórios**: faturamento, ticket médio, lucro bruto, vendas por dia, por forma de pagamento,
   por vendedor(a), mais vendidos e estoque baixo.
@@ -157,8 +164,7 @@ no varejo é a **NFC-e**, que precisa ser autorizada pela SEFAZ do estado. Para 
 
 - certificado digital **A1** da empresa;
 - **CSC** (código de segurança do contribuinte), gerado no portal da SEFAZ;
-- inscrição estadual habilitada para NFC-e e NCM/CFOP/CST corretos em cada produto
-  (o cadastro já tem o campo NCM).
+- inscrição estadual habilitada para NFC-e e NCM/CFOP/CST corretos em cada produto.
 
 A NFC-e tem **modo de contingência offline**: a nota é emitida sem internet e precisa ser
 transmitida em até 24 h. A integração pode ser feita depois via ACBr ou uma API de emissão

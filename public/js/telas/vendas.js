@@ -19,7 +19,7 @@ Telas.vendas = (() => {
       <div class="tabela-rolagem cartao">
         <table class="tabela">
           <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Vendedor(a)</th><th class="r">Peças</th>
-            <th>Pagamento</th><th class="r">Total</th><th>Situação</th></tr></thead>
+            <th>Pagamento</th><th class="r">Total</th><th>Situação</th><th class="so-admin"></th></tr></thead>
           <tbody id="lista"></tbody>
         </table>
       </div>`;
@@ -32,6 +32,8 @@ Telas.vendas = (() => {
       if (id) detalhe(id);
     });
     raiz.querySelector('#lista').onclick = (ev) => {
+      const exc = ev.target.closest('[data-excluir]');
+      if (exc) return excluir(exc.dataset.excluir);
       const tr = ev.target.closest('[data-id]');
       if (tr) detalhe(tr.dataset.id);
     };
@@ -60,7 +62,8 @@ Telas.vendas = (() => {
         <td>${esc((v.formas || '').split(',').map((f) => U.FORMAS[f] || f).join(', '))}</td>
         <td class="r"><b>${num(v.total)}</b></td>
         <td>${v.status === 'cancelada' ? '<span class="selo perigo">Cancelada</span>' : '<span class="selo ok">Concluída</span>'}</td>
-      </tr>`).join('') || '<tr><td colspan="8" class="vazio">Nenhuma venda no período.</td></tr>';
+        <td class="r so-admin"><button class="btn-ico perigo" data-excluir="${v.id}" title="Excluir venda">${Icone('lixeira')}</button></td>
+      </tr>`).join('') || '<tr><td colspan="9" class="vazio">Nenhuma venda no período.</td></tr>';
   }
 
   async function detalhe(id) {
@@ -93,15 +96,18 @@ Telas.vendas = (() => {
         ${v.crediario.map((p) => `<div class="linha"><span>${p.numero}/${p.total_parcelas} · venc. ${p.vencimento.split('-').reverse().join('/')}</span>
           <span>${brl(p.valor)} ${p.status === 'paga' ? '<span class="selo ok">paga</span>' : p.status === 'cancelada' ? '<span class="selo perigo">cancelada</span>' : p.valor_pago ? `<small>pago ${brl(p.valor_pago)}</small>` : ''}</span></div>`).join('')}` : ''}
       <div class="acoes">
+        ${U.sessao.ehAdmin() ? `<button class="btn btn-fantasma btn-perigo-claro" id="excluir" style="margin-right:auto">${Icone('lixeira')} Excluir venda</button>` : ''}
         ${v.status === 'concluida' && U.sessao.ehAdmin() ? '<button class="btn btn-perigo-claro" id="cancelar">Cancelar venda</button>' : ''}
-        ${v.status === 'concluida' ? '<button class="btn" id="devolver">🔁 Troca / devolução</button>' : ''}
-        <button class="btn" id="troca">🎁 Cupom de troca</button>
-        <button class="btn btn-primario" id="cupom">🧾 Reimprimir cupom</button>
+        ${v.status === 'concluida' ? `<button class="btn" id="devolver">${Icone('troca')} Troca / devolução</button>` : ''}
+        <button class="btn" id="troca">${Icone('presente')} Cupom de troca</button>
+        <button class="btn btn-primario" id="cupom">${Icone('impressora')} Reimprimir cupom</button>
       </div>`, { largura: '760px' });
     corpo.querySelector('#cupom').onclick = () => Impressao.cupom(v);
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(v);
     const dev = corpo.querySelector('#devolver');
     if (dev) dev.onclick = () => Trocas.abrirVenda(v.id);
+    const btnExcluir = corpo.querySelector('#excluir');
+    if (btnExcluir) btnExcluir.onclick = () => excluir(v.id);
     const btnCancelar = corpo.querySelector('#cancelar');
     if (btnCancelar) {
       btnCancelar.onclick = async () => {
@@ -115,6 +121,20 @@ Telas.vendas = (() => {
         } catch (e) { erro(e); }
       };
     }
+  }
+
+  /** Excluir de vez (só administrador): para venda lançada errado ou de teste. */
+  async function excluir(id) {
+    const ok = await U.confirmar('Excluir venda', `A venda nº ${id} será apagada do sistema e não aparecerá mais nos relatórios
+      nem no caixa. Se ela não estava cancelada, as peças voltam para o estoque. Essa ação não pode ser desfeita.`,
+    { ok: 'Excluir venda', perigo: true });
+    if (!ok) return;
+    try {
+      await api(`/api/vendas/${id}`, { metodo: 'DELETE' });
+      aviso(`Venda nº ${id} excluída.`);
+      fecharModal();
+      if (raiz) carregar();
+    } catch (e) { erro(e); }
   }
 
   return { abrir, detalhe, sair: () => { raiz = null; } };

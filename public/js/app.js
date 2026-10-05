@@ -19,16 +19,20 @@
     entrar(s.usuario);
   }
 
+  const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+
   function entrar(usuario) {
     U.sessao.definir(usuario);
+    pararRelogioLogin();
     document.body.classList.remove('deslogado');
     document.body.classList.toggle('admin', usuario.perfil === 'admin');
     document.getElementById('usuario-box').innerHTML = `
-      <div><b>${esc(usuario.nome)}</b><br><small>${usuario.perfil === 'admin' ? 'Administrador(a)' : 'Vendedor(a)'}</small></div>
-      <div class="usuario-acoes">
-        <button class="link" id="trocar">Trocar usuário</button>
-        <button class="link" id="minha-senha">Minha senha</button>
-      </div>`;
+      <span class="avatar" title="${esc(usuario.nome)}">${esc(iniciais(usuario.nome))}</span>
+      <span class="usuario-txt"><b>${esc(usuario.nome)}</b><small>${usuario.perfil === 'admin' ? 'Administrador(a)' : 'Vendedor(a)'}</small></span>
+      <span class="usuario-acoes">
+        <button class="btn-ico" id="minha-senha" title="Trocar minha senha">${Icone('chave')}</button>
+        <button class="btn-ico perigo" id="trocar" title="Sair / trocar usuário">${Icone('sair')}</button>
+      </span>`;
     document.getElementById('trocar').onclick = sair;
     document.getElementById('minha-senha').onclick = trocarSenha;
     U.config().catch(() => {}); // carrega a configuração (som do bipe etc.)
@@ -51,53 +55,112 @@
   }
   window.exigirLogin = exigirLogin;
 
-  function telaLogin(s) {
+  /**
+   * Campo de senha que o navegador NÃO oferece para salvar: é um campo de texto com os
+   * caracteres mascarados por CSS (o gerenciador de senhas só age em type="password").
+   */
+  const campoSenha = (nome, attrs = '') => `
+    <div class="campo-ico">${Icone('cadeado')}
+      <input name="${nome}" class="campo-senha" type="text" autocomplete="off" autocapitalize="off"
+        spellcheck="false" data-lpignore="true" data-form-type="other" ${attrs}>
+      <button type="button" class="olho" tabindex="-1" title="Mostrar / esconder">${Icone('olho')}</button>
+    </div>`;
+
+  function ligarOlhos(raiz) {
+    raiz.querySelectorAll('.olho').forEach((b) => {
+      b.onclick = () => {
+        const inp = b.parentElement.querySelector('input');
+        const mostrar = inp.classList.toggle('mostrar');
+        b.innerHTML = Icone(mostrar ? 'olhoFechado' : 'olho');
+        inp.focus();
+      };
+    });
+  }
+  U.campoSenha = (nome, attrs) => campoSenha(nome, attrs);
+  U.ligarOlhos = ligarOlhos;
+
+  let relogioLogin = null;
+  const pararRelogioLogin = () => { clearInterval(relogioLogin); relogioLogin = null; };
+
+  function moldeLogin(s, formulario) {
+    pararRelogioLogin();
     document.body.classList.add('deslogado');
-    const ultimo = U.local.ler('ultimo_login', '');
     conteudo.className = 'tela-login';
     conteudo.innerHTML = `
-      <div class="centro">
-        <form class="cartao cartao-estreito form login" id="f-login">
-          <div class="login-marca">${esc(s.loja_nome || 'Clara Styllus')}</div>
-          <p class="dica">Entre com seu usuário para vender.</p>
-          <label>Usuário<input name="login" autocomplete="username" value="${esc(ultimo)}" required></label>
-          <label>Senha<input name="senha" type="password" autocomplete="current-password" required></label>
-          <button class="btn btn-primario btn-grande">Entrar</button>
-        </form>
+      <div class="login-tela">
+        <section class="login-arte">
+          <span class="marca-logo">CS</span>
+          <div class="login-arte-meio">
+            <h1>${esc(s.loja_nome || 'Clara Styllus')}</h1>
+            <p>Ponto de venda da loja: vendas, estoque, crediário e caixa no mesmo lugar.</p>
+          </div>
+          <div class="login-relogio" id="login-relogio"></div>
+        </section>
+        <section class="login-lado">${formulario}</section>
       </div>`;
-    const form = conteudo.querySelector('form');
+    const rel = conteudo.querySelector('#login-relogio');
+    const tic = () => {
+      const d = new Date();
+      rel.innerHTML = `<b>${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>
+        <span>${d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>`;
+    };
+    tic();
+    relogioLogin = setInterval(tic, 10000);
+    ligarOlhos(conteudo);
+    return conteudo.querySelector('form');
+  }
+
+  function telaLogin(s) {
+    const ultimo = U.local.ler('ultimo_login', '');
+    const form = moldeLogin(s, `
+      <form class="login" id="f-login" autocomplete="off">
+        <div>
+          <h2>Entrar</h2>
+          <p class="dica">Use o seu usuário e senha para abrir o caixa.</p>
+        </div>
+        <div class="login-erro" id="login-erro" hidden></div>
+        <label>Usuário
+          <div class="campo-ico">${Icone('usuario')}
+            <input name="login" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(ultimo)}" required placeholder="Ex.: clara">
+          </div></label>
+        <label>Senha ${campoSenha('senha', 'required placeholder="Sua senha"')}</label>
+        <button class="btn btn-primario btn-grande">Entrar</button>
+        <div class="login-rodape"><span class="ponto ok"></span> Funciona sem internet · os dados ficam neste computador</div>
+      </form>`);
     (ultimo ? form.senha : form.login).focus();
     form.onsubmit = async (ev) => {
       ev.preventDefault();
+      const caixaErro = form.querySelector('#login-erro');
+      const dados = U.dadosForm(form);
+      form.senha.value = ''; // não deixa a senha na tela
       try {
-        const r = await api('/api/login', { metodo: 'POST', corpo: U.dadosForm(form) });
+        const r = await api('/api/login', { metodo: 'POST', corpo: dados });
         U.local.gravar('ultimo_login', r.usuario.login);
         entrar(r.usuario);
       } catch (e) {
-        erro(e);
-        form.senha.value = '';
+        caixaErro.textContent = e.message;
+        caixaErro.hidden = false;
+        form.classList.remove('tremer');
+        void form.offsetWidth;
+        form.classList.add('tremer');
         form.senha.focus();
       }
     };
   }
 
   function telaPrimeiroAcesso(s) {
-    document.body.classList.add('deslogado');
-    conteudo.className = 'tela-login';
-    conteudo.innerHTML = `
-      <div class="centro">
-        <form class="cartao cartao-estreito form login" id="f-primeiro">
-          <div class="login-marca">${esc(s.loja_nome || 'Clara Styllus')}</div>
-          <h2>Bem-vinda! Crie o usuário administrador</h2>
-          <p class="dica">O administrador cadastra os vendedores, produtos, vê relatórios e muda configurações.</p>
-          <label>Nome<input name="nome" required autofocus placeholder="Ex.: Clara"></label>
-          <label>Usuário (para entrar)<input name="login" required autocomplete="username" placeholder="Ex.: clara"></label>
-          <label>Senha<input name="senha" type="password" minlength="4" required autocomplete="new-password"></label>
-          <label>Repita a senha<input name="senha2" type="password" minlength="4" required autocomplete="new-password"></label>
-          <button class="btn btn-primario btn-grande">Criar e entrar</button>
-        </form>
-      </div>`;
-    const form = conteudo.querySelector('form');
+    const form = moldeLogin(s, `
+      <form class="login" id="f-primeiro" autocomplete="off">
+        <div>
+          <h2>Primeiro acesso</h2>
+          <p class="dica">Crie o usuário administrador. Ele cadastra os vendedores e os produtos, vê os relatórios e muda as configurações.</p>
+        </div>
+        <label>Nome<input name="nome" required placeholder="Ex.: Clara"></label>
+        <label>Usuário (para entrar)<input name="login" required autocomplete="off" autocapitalize="off" placeholder="Ex.: clara"></label>
+        <label>Senha ${campoSenha('senha', 'minlength="4" required placeholder="Mínimo 4 caracteres"')}</label>
+        <label>Repita a senha ${campoSenha('senha2', 'minlength="4" required')}</label>
+        <button class="btn btn-primario btn-grande">Criar e entrar</button>
+      </form>`);
     form.nome.focus();
     form.onsubmit = async (ev) => {
       ev.preventDefault();
@@ -114,12 +177,14 @@
 
   function trocarSenha() {
     const corpo = U.abrirModal('Minha senha', `
-      <form class="form">
-        <label>Senha atual<input name="senha_atual" type="password" required autofocus autocomplete="current-password"></label>
-        <label>Nova senha<input name="nova_senha" type="password" minlength="4" required autocomplete="new-password"></label>
-        <label>Repita a nova senha<input name="nova2" type="password" minlength="4" required autocomplete="new-password"></label>
+      <form class="form" autocomplete="off">
+        <label>Senha atual ${campoSenha('senha_atual', 'required')}</label>
+        <label>Nova senha ${campoSenha('nova_senha', 'minlength="4" required')}</label>
+        <label>Repita a nova senha ${campoSenha('nova2', 'minlength="4" required')}</label>
         <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Salvar</button></div>
       </form>`, { largura: '420px' });
+    ligarOlhos(corpo);
+    corpo.querySelector('input').focus();
     corpo.querySelector('form').onsubmit = async (ev) => {
       ev.preventDefault();
       const d = U.dadosForm(ev.target);
@@ -163,8 +228,8 @@
     try {
       const r = await api('/api/caixa/atual');
       el.innerHTML = r.caixa
-        ? `<span class="ponto ok"></span><span class="status-txt">Caixa nº ${r.caixa.id} aberto<br><small>${esc(r.caixa.operador || '')} · clique para fechar</small></span>`
-        : '<span class="ponto"></span><span class="status-txt">Caixa fechado<br><small>clique para abrir</small></span>';
+        ? `<span class="ponto ok"></span><span class="status-txt"><b>Caixa nº ${r.caixa.id} aberto</b><br><small>${esc(r.caixa.operador || '')}</small></span>`
+        : '<span class="ponto"></span><span class="status-txt"><b>Caixa fechado</b><br><small>clique para abrir</small></span>';
     } catch (e) {
       if (e.status !== 401) el.innerHTML = '<span class="ponto erro"></span>Servidor desligado';
     }
