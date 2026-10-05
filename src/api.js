@@ -308,6 +308,27 @@ function criarApi(db, opcoes = {}) {
   rota('GET', '/api/produtos/atalhos', () =>
     planos(db.prepare('SELECT * FROM produtos WHERE ativo = 1 AND atalho = 1 ORDER BY nome LIMIT 12').all()));
 
+  /** Vitrine do caixa: peças mais vendidas nos últimos 30 dias (com estoque); completa com as mais novas. */
+  rota('GET', '/api/produtos/populares', ({ query }) => {
+    const limite = Math.min(24, Math.max(4, Number(query.get('limite')) || 12));
+    const top = planos(db.prepare(
+      `SELECT p.*, SUM(i.quantidade) AS vendidas FROM venda_itens i
+       JOIN vendas v ON v.id = i.venda_id JOIN produtos p ON p.id = i.produto_id
+       WHERE v.status = 'concluida' AND v.criado_em >= datetime('now','localtime','-30 days')
+         AND p.ativo = 1 AND p.atalho = 0 AND (p.estoque > 0 OR p.servico = 1)
+       GROUP BY p.id ORDER BY vendidas DESC LIMIT ?`
+    ).all(limite));
+    if (top.length < limite) {
+      const ids = top.map((p) => p.id);
+      const novos = planos(db.prepare(
+        `SELECT * FROM produtos WHERE ativo = 1 AND atalho = 0 AND estoque > 0
+         ${ids.length ? `AND id NOT IN (${ids.map(() => '?').join(',')})` : ''} ORDER BY id DESC LIMIT ?`
+      ).all(...ids, limite - top.length));
+      top.push(...novos);
+    }
+    return top;
+  });
+
   rota('GET', '/api/produtos/atributos', () => {
     const distintos = (col) => db
       .prepare(`SELECT ${col} AS v, COUNT(*) AS n FROM produtos WHERE ativo = 1 AND ${col} IS NOT NULL AND ${col} <> ''

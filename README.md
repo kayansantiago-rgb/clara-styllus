@@ -165,7 +165,8 @@ impressora comum). A impressão direta usa o .NET Framework que já vem no Windo
 | F7 | Desconto na venda |
 | F8 | Remover o último item |
 | F9 | Cancelar a venda |
-| 1–6 | Escolher a forma de pagamento (na tela de pagamento) |
+| Alt + 1…7 | Escolher a forma de pagamento (na tela de pagamento; os números sozinhos digitam o valor) |
+| Enter | Confirmar a venda depois de ver o troco |
 | Esc | Fechar janela |
 
 ## Sobre o cupom fiscal (NFC-e)

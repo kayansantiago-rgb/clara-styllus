@@ -55,77 +55,75 @@ Telas.pdv = (() => {
 
     const hora = caixa.aberto_em.split(' ')[1]?.slice(0, 5) || '';
     raiz.innerHTML = `
-      <div class="pdv2">
-        <header class="pdv-topo">
-          <div class="pdv-caixa"><span class="ponto ok"></span>
-            <div><b>Caixa nº ${caixa.id}</b><small>aberto às ${esc(hora)} · ${esc(caixa.operador || '')}</small></div></div>
-          <div class="pdv-topo-acoes">
-            <button class="btn btn-topo" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')} Troca</button>
-            <button class="btn btn-topo" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')} Condicional</button>
-            <span class="topo-sep"></span>
-            <button class="btn btn-topo" id="t-sangria" title="Retirar dinheiro da gaveta">${Icone('retirar')} Sangria</button>
-            <button class="btn btn-topo" id="t-suprimento" title="Colocar troco na gaveta">${Icone('colocar')} Suprimento</button>
-            <button class="btn btn-topo" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')} Gaveta</button>
-            <button class="btn btn-topo" id="t-tela" title="Tela cheia (F11)">${Icone('telaCheia')}</button>
-            <button class="btn btn-topo btn-topo-perigo" id="t-fechar">${Icone('cadeado')} Fechar caixa</button>
+      <div class="pdv3">
+        <header class="p3-topo">
+          <div class="p3-caixa" title="Caixa aberto às ${esc(hora)} por ${esc(caixa.operador || '')}">
+            <span class="ponto ok"></span><div><b>Caixa ${caixa.id}</b><small>${esc(hora)} · ${esc((caixa.operador || '').split(' ')[0])}</small></div>
+          </div>
+          <div class="pdv-busca p3-busca">
+            <span class="pdv-busca-ico">${Icone('codigo')}</span>
+            <input id="busca" autocomplete="off" placeholder="Bipe a etiqueta ou digite o nome da peça">
+            <kbd>F2</kbd>
+            <div id="sugestoes" class="sugestoes" hidden></div>
+          </div>
+          <div class="p3-acoes">
+            <button class="btn btn-topo" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')}<span>Troca</span></button>
+            <button class="btn btn-topo" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')}<span>Condicional</span></button>
+            <button class="btn btn-topo" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')}<span>Gaveta</span></button>
+            <div class="p3-mais">
+              <button class="btn btn-topo" id="t-mais" title="Mais opções do caixa">${Icone('ajustes')}<span>Caixa</span></button>
+              <div class="p3-menu" id="menu-caixa" hidden>
+                <button id="t-sangria">${Icone('retirar')} Sangria <small>retirar dinheiro</small></button>
+                <button id="t-suprimento">${Icone('colocar')} Suprimento <small>colocar troco</small></button>
+                <button id="t-tela">${Icone('telaCheia')} Tela cheia <small>F11</small></button>
+                <hr>
+                <button id="t-fechar" class="perigo">${Icone('cadeado')} Fechar caixa</button>
+              </div>
+            </div>
           </div>
           <span class="pdv-relogio" id="relogio"></span>
         </header>
 
-        <section class="pdv-esq">
+        <section class="p3-esq">
           <div class="pdv-alertas" id="alertas"></div>
-          <div class="pdv-busca">
-            <span class="pdv-busca-ico">${Icone('codigo')}</span>
-            <input id="busca" autocomplete="off" placeholder="Bipe o código de barras ou digite o nome do produto">
-            <kbd>F2</kbd>
-            <div id="sugestoes" class="sugestoes" hidden></div>
+          <div class="pdv-ultimo p3-ultimo" id="ultimo"></div>
+          <div class="p3-secao" id="secao-atalhos">
+            <h4>${Icone('raio')} Botões rápidos</h4>
+            <div class="pdv-atalhos" id="atalhos"></div>
           </div>
-          <div class="pdv-ultimo" id="ultimo"></div>
-          <div class="pdv-atalhos" id="atalhos"></div>
-          <div class="pdv-itens">
-            <div class="pdv-itens-cab"><b>Peças da venda</b><span id="itens-cont"></span></div>
-            <div class="pdv-lista" id="itens"></div>
+          <div class="p3-secao p3-secao-vitrine">
+            <h4>${Icone('estrela')} Mais vendidas <small>clique para adicionar</small></h4>
+            <div class="p3-vitrine" id="vitrine"></div>
           </div>
         </section>
 
-        <aside class="pdv-dir">
-          <div class="pdv-total">
-            <div class="pdv-total-rotulo">TOTAL A PAGAR</div>
-            <div class="pdv-total-valor" id="t-total"></div>
-            <div class="pdv-total-det">
-              <span><b id="t-pecas"></b> peças</span>
-              <span>Subtotal <b id="t-sub"></b></span>
-              <span>Desc. <b id="t-desc"></b></span>
-            </div>
+        <aside class="p3-carrinho">
+          <div class="p3-car-cab">
+            <div><b>Venda atual</b><span id="itens-cont"></span></div>
+            <button class="btn btn-fantasma btn-peq" id="btn-limpar" title="Cancelar esta venda">${Icone('lixeira')} Limpar <kbd>F9</kbd></button>
           </div>
-
-          <div class="pdv-bloco">
-            <button class="pdv-cliente" id="btn-cliente">
-              <span class="pdv-cliente-ico">${Icone('usuario')}</span>
-              <span id="cliente-info" class="pdv-cliente-txt"></span>
-              <kbd>F6</kbd>
-            </button>
-            <div class="pdv-campos">
-              <label>CPF/CNPJ no cupom<input id="cpf" inputmode="numeric" value="${esc(carrinho.cpf_nota)}"></label>
-              <label>Desconto (F7)<input id="desconto" placeholder="10% ou 15,00" value="${esc(carrinho.desconto)}"></label>
-            </div>
-            <div class="vendedor-logado"><small>Vendedor(a)</small><b>${esc(U.sessao.usuario.nome)}</b>
-              <button class="link" onclick="exigirLogin()" type="button">trocar</button></div>
+          <button class="pdv-cliente" id="btn-cliente">
+            <span class="pdv-cliente-ico">${Icone('usuario')}</span>
+            <span id="cliente-info" class="pdv-cliente-txt"></span>
+            <kbd>F6</kbd>
+          </button>
+          <div class="pdv-lista" id="itens"></div>
+          <div class="p3-extras">
+            <label>${Icone('etiqueta')}<input id="desconto" placeholder="Desconto: 10% ou 15,00" value="${esc(carrinho.desconto)}"><kbd>F7</kbd></label>
+            <label>${Icone('recibo')}<input id="cpf" inputmode="numeric" placeholder="CPF/CNPJ na nota" value="${esc(carrinho.cpf_nota)}"></label>
           </div>
-
+          <div class="p3-totais">
+            <div class="linha"><span>Subtotal · <b id="t-pecas"></b> peça(s)</span><span id="t-sub"></span></div>
+            <div class="linha p3-desc"><span>Descontos</span><span id="t-desc"></span></div>
+            <div class="p3-total"><span>Total</span><b id="t-total"></b></div>
+          </div>
           <div class="pdv-pagar">
-            ${FORMAS_RAPIDAS.map(([k, ico, nome]) =>
-    `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}${nome}</button>`).join('')}
+            ${FORMAS_RAPIDAS.map(([k, ico, nome]) => `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}${nome}</button>`).join('')}
           </div>
-          <button class="btn btn-primario btn-grande pdv-finalizar" id="btn-finalizar">Finalizar venda <kbd>F4</kbd></button>
-          <button class="btn btn-perigo-claro" id="btn-limpar">Cancelar venda <kbd>F9</kbd></button>
+          <button class="btn btn-primario pdv-finalizar" id="btn-finalizar">${Icone('check')} Finalizar venda <kbd>F4</kbd></button>
+          <div class="vendedor-logado"><small>Vendedor(a)</small><b>${esc(U.sessao.usuario.nome)}</b>
+            <button class="link" onclick="exigirLogin()" type="button">trocar</button></div>
         </aside>
-
-        <footer class="pdv-rodape">
-          <span><kbd>F2</kbd> buscar</span><span><kbd>F4</kbd> finalizar</span><span><kbd>F6</kbd> cliente</span>
-          <span><kbd>F7</kbd> desconto</span><span><kbd>F8</kbd> remove último</span><span><kbd>F9</kbd> cancela venda</span>
-          <span><b>3*</b>código = 3 unidades</span>
-        </footer>
       </div>`;
 
     const busca = raiz.querySelector('#busca');
@@ -149,7 +147,12 @@ Telas.pdv = (() => {
     raiz.querySelector('#t-troca').onclick = () => Trocas.perguntarVenda();
     raiz.querySelector('#t-condicional').onclick = () => enviarCondicional();
     raiz.querySelector('#t-tela').onclick = alternarTelaCheia;
+    const menu = raiz.querySelector('#menu-caixa');
+    raiz.querySelector('#t-mais').onclick = (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; };
+    menu.onclick = () => { menu.hidden = true; };
+    raiz.addEventListener('click', (ev) => { if (!ev.target.closest('.p3-mais')) menu.hidden = true; });
     carregarAtalhos();
+    carregarVitrine();
     raiz.querySelector('#t-fechar').onclick = async () => {
       if (carrinho.itens.length && !(await U.confirmar('Fechar caixa',
         'Há uma venda em andamento. Ela continua guardada e volta quando o caixa for aberto de novo. Fechar mesmo assim?',
@@ -221,23 +224,24 @@ Telas.pdv = (() => {
         const det = [p.tamanho && `Tam ${p.tamanho}`, p.cor].filter(Boolean).join(' · ');
         const liq = p.preco_anterior > p.preco_venda;
         return `<div class="pdv-item ${i === carrinho.itens.length - 1 ? 'recente' : ''}" data-i="${i}">
-          <span class="pdv-item-num">${i + 1}</span>
           ${U.miniatura(p, 'pdv-item-foto')}
           <div class="pdv-item-txt">
-            <b>${esc(p.nome)}</b>
-            <small>${det ? `<span class="pdv-tag">${esc(det)}</span>` : ''}<span class="pdv-cod">${esc(p.codigo)}</span></small>
+            <b title="${esc(p.nome)}">${esc(p.nome)}</b>
+            <small>${det ? `<span class="pdv-tag">${esc(det)}</span>` : ''}${liq ? `<s>${num(p.preco_anterior)}</s> ` : ''}${num(p.preco_venda)} cada</small>
           </div>
-          <div class="pdv-item-preco">${liq ? `<small class="preco-de">${num(p.preco_anterior)}</small><span class="preco-por">${num(p.preco_venda)}</span>` : `<span>${num(p.preco_venda)}</span>`}<small>unid.</small></div>
-          <span class="qtd-ctrl"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>
-          <button class="pdv-desc ${it.desconto ? 'tem' : ''}" data-acao="desc" title="Desconto nesta peça">${it.desconto ? `−${num(it.desconto)}` : `${Icone('etiqueta')} desconto`}</button>
           <b class="pdv-item-total">${num(totalItem(it))}</b>
-          <button class="mini perigo" data-acao="remover" title="Remover">${Icone('lixeira')}</button>
+          <div class="pdv-item-acoes">
+            <span class="qtd-ctrl"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>
+            <button class="pdv-desc ${it.desconto ? 'tem' : ''}" data-acao="desc" title="Desconto nesta peça">${it.desconto ? `−${num(it.desconto)}` : `${Icone('etiqueta')} desconto`}</button>
+            <button class="mini perigo" data-acao="remover" title="Tirar da venda">${Icone('lixeira')}</button>
+          </div>
         </div>`;
       }).join('')
-      : `<div class="vazio pdv-vazio">
+      : `<div class="p3-vazio">
           <div class="pdv-vazio-ico">${Icone('sacola')}</div>
-          <b>Caixa livre</b><br>Bipe a etiqueta da peça ou digite o nome para começar a venda.
-          <div class="pdv-vazio-dicas"><span><kbd>F2</kbd> buscar</span><span><kbd>3*</kbd>código = 3 peças</span><span><kbd>F6</kbd> cliente</span></div></div>`;
+          <b>Nenhuma peça ainda</b>
+          <small>Bipe a etiqueta, digite o nome ou clique numa peça ao lado.</small>
+          <div class="pdv-vazio-dicas"><span><kbd>3*</kbd>código = 3 peças</span><span><kbd>F8</kbd> tira a última</span></div></div>`;
     const recente = lista.querySelector('.recente');
     if (recente) recente.scrollIntoView({ block: 'nearest' });
 
@@ -310,6 +314,7 @@ Telas.pdv = (() => {
     try { lista = await api('/api/produtos/atalhos'); } catch { /* sem atalhos */ }
     const el = raiz && raiz.querySelector('#atalhos');
     if (!el) return;
+    raiz.querySelector('#secao-atalhos').hidden = !lista.length;
     el.innerHTML = lista.map((p, i) => `<button class="pdv-atalho" data-i="${i}" title="${esc(p.nome)}">
       ${U.miniatura(p)}<span>${esc(p.nome)}<small>${p.servico && !p.preco_venda ? 'preço na hora' : brl(p.preco_venda)}</small></span></button>`).join('');
     el.onclick = async (ev) => {
@@ -323,6 +328,26 @@ Telas.pdv = (() => {
         if (!(c >= 0) || Number.isNaN(c)) return aviso('Valor inválido.', 'erro');
         adicionar({ ...p, preco_venda: c }, 1, c);
       } else adicionar(p, 1);
+      raiz.querySelector('#busca').focus();
+    };
+  }
+
+  /** Vitrine com as peças mais vendidas (toque para adicionar). */
+  async function carregarVitrine() {
+    let lista = [];
+    try { lista = await api('/api/produtos/populares?limite=12'); } catch { /* sem vitrine */ }
+    const el = raiz && raiz.querySelector('#vitrine');
+    if (!el) return;
+    el.innerHTML = lista.length ? lista.map((p, i) => `<button class="p3-peca" data-i="${i}" title="${esc(p.nome)}">
+        ${U.miniatura(p, 'p3-peca-foto')}
+        <span class="p3-peca-txt"><b>${esc(p.nome)}</b><small>${esc([p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small></span>
+        <span class="p3-peca-preco">${p.preco_anterior > p.preco_venda ? `<s>${num(p.preco_anterior)}</s>` : ''}<b>${brl(p.preco_venda)}</b><small>${p.servico ? 'serviço' : `${p.estoque} em estoque`}</small></span>
+      </button>`).join('')
+      : '<div class="p3-vitrine-vazia">As peças mais vendidas aparecem aqui depois das primeiras vendas.</div>';
+    el.onclick = (ev) => {
+      const b = ev.target.closest('[data-i]');
+      if (!b) return;
+      adicionar(lista[Number(b.dataset.i)], 1);
       raiz.querySelector('#busca').focus();
     };
   }
@@ -347,9 +372,7 @@ Telas.pdv = (() => {
     }
     U.som(!produto.servico && jaNoCarrinho + quantidade > produto.estoque ? 'erro' : 'ok');
     salvar();
-    desenhar();
-    const tabela = raiz.querySelector('.pdv-itens');
-    tabela.scrollTop = tabela.scrollHeight;
+    desenhar(); // a peça adicionada vai para o fim da lista e fica visível
   }
 
   async function lerEntrada(valor) {
@@ -583,7 +606,7 @@ Telas.pdv = (() => {
           <div class="pag2-rotulo">Forma de pagamento</div>
           <div class="formas formas-7">
             ${formas.map(([k, v], i) =>
-    `<button class="forma ${k === forma ? 'sel' : ''}" data-forma="${k}">${Icone(ICONES_PAG[k] || 'carteira')}<span>${NOMES_PAG[k] || v}</span><kbd>${i + 1}</kbd></button>`).join('')}
+    `<button class="forma ${k === forma ? 'sel' : ''}" data-forma="${k}">${Icone(ICONES_PAG[k] || 'carteira')}<span>${NOMES_PAG[k] || v}</span><kbd title="Atalho: Alt + ${i + 1}">Alt+${i + 1}</kbd></button>`).join('')}
           </div>
           <form id="f-pag" class="pag2-form">
             <label class="pag2-valor"><span id="pag-rotulo">Valor recebido</span><div class="campo-moeda"><span>R$</span><input id="pag-valor" inputmode="decimal" autocomplete="off" autofocus></div></label>
@@ -752,10 +775,11 @@ Telas.pdv = (() => {
     valorEl.addEventListener('input', infoCrediario);
     parcEl.addEventListener('change', infoCrediario);
     vencEl.addEventListener('change', infoCrediario);
-    valorEl.addEventListener('keydown', (e) => {
-      const n = Number(e.key);
-      if (!e.ctrlKey && n >= 1 && n <= formas.length && valorEl.selectionStart === 0 && valorEl.selectionEnd === valorEl.value.length) {
-        // Com o valor todo selecionado, as teclas 1–6 escolhem a forma de pagamento.
+    // Alt + 1…7 escolhe a forma de pagamento. Os números sozinhos sempre digitam o valor
+    // (antes, com o valor selecionado, o "2" de R$ 200 trocava para PIX).
+    corpo.querySelector('.pag2').addEventListener('keydown', (e) => {
+      const n = Number(e.code && e.code.startsWith('Digit') ? e.code.slice(5) : e.code && e.code.startsWith('Numpad') ? e.code.slice(6) : NaN);
+      if (e.altKey && !e.ctrlKey && n >= 1 && n <= formas.length) {
         e.preventDefault();
         escolherForma(formas[n - 1][0]);
       }
