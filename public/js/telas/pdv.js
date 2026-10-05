@@ -601,7 +601,7 @@ Telas.pdv = (() => {
           <div class="pag2-total"><small>Total da venda</small><b>${brl(t.total)}</b><span>${t.pecas} peça${t.pecas === 1 ? '' : 's'}${t.bruto - t.total ? ` · desconto ${brl(t.bruto - t.total)}` : ''}</span></div>
           <div id="lista-pag" class="lista-pag"></div>
           <div class="pag-resumo" id="pag-resumo"></div>
-          <button class="btn btn-primario btn-grande pag2-concluir" id="concluir" disabled>${Icone('check')} Concluir venda</button>
+          <button class="btn btn-primario btn-grande pag2-concluir" id="concluir" disabled>${Icone('check')} Confirmar venda <kbd>Enter</kbd></button>
           <button class="btn btn-fantasma" data-fechar>Voltar <kbd>Esc</kbd></button>
         </aside>
       </div>`, { largura: '920px' });
@@ -731,7 +731,8 @@ Telas.pdv = (() => {
       const r = restante();
       corpo.querySelector('#pag-resumo').innerHTML = r > 0
         ? `<div class="pag2-falta"><span>Falta receber</span><b>${brl(r)}</b></div>`
-        : `<div class="pag2-troco ${r < 0 ? 'tem' : ''}"><span>${r < 0 ? 'Troco' : 'Pago'}</span><b>${r < 0 ? brl(-r) : 'Tudo certo ✓'}</b></div>`;
+        : `<div class="pag2-troco ${r < 0 ? 'tem' : ''}"><span>${r < 0 ? 'Troco para a cliente' : 'Pago'}</span><b>${r < 0 ? brl(-r) : 'Valor certo ✓'}</b>
+            <small>Confira e clique em <b>Confirmar venda</b>. Se a cliente desistir, clique em Voltar — nada é registrado.</small></div>`;
       corpo.querySelector('#concluir').disabled = r > 0;
       valorEl.value = r > 0 ? num(r) : '';
       valorEl.select();
@@ -785,7 +786,14 @@ Telas.pdv = (() => {
       }
       if (forma === 'vale' && restante() > 0) escolherForma('dinheiro'); // completa o resto em outra forma
       atualizar();
-      if (restante() <= 0) concluir();
+      // Não conclui sozinho: mostra o troco e espera a confirmação (a cliente ainda pode desistir).
+      if (restante() <= 0) {
+        const btn = corpo.querySelector('#concluir');
+        btn.classList.remove('pronto');
+        void btn.offsetWidth;
+        btn.classList.add('pronto');
+        btn.focus();
+      }
     };
 
     let enviando = false;

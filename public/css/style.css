@@ -871,8 +871,8 @@ label.check.fp-ajuda { font-size: 12.5px; align-items: flex-start; }
 .pag2-falta { background: #fff3f2; color: #a32c21; }
 .pag2-troco { background: #e9f7ef; color: #1d6e4a; }
 .pag2-falta span, .pag2-troco span { font-size: 13px; font-weight: 600; }
-.pag2-falta b, .pag2-troco b { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
-.pag2-troco.tem b { font-size: 30px; }
+.pag2-falta > b, .pag2-troco > b { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
+.pag2-troco.tem > b { font-size: 34px; }
 .pag2-concluir { margin-top: auto; min-height: 56px; border-radius: 14px; }
 .pag2-concluir:not(:disabled) { background: linear-gradient(135deg, #2f9e6a, #1f7a50); border: 0; box-shadow: 0 8px 20px rgba(35,132,90,.3); }
 .pag2-concluir:not(:disabled):hover { background: linear-gradient(135deg, #2a8f60, #1a6b46); }
@@ -900,3 +900,10 @@ label.check.fp-ajuda { font-size: 12.5px; align-items: flex-start; }
 .status-impressao .i { width: 16px; height: 16px; }
 .btn-primario kbd { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.25); }
 .pag2-dica { font-size: 12.5px; color: var(--suave); background: var(--fundo); border-radius: 10px; padding: 8px 12px; margin-top: -6px; }
+.pag2-troco { flex-wrap: wrap; row-gap: 6px; }
+.pag2-troco small { flex-basis: 100%; font-size: 12px; color: #3f7a5d; line-height: 1.4; }
+.pag2-troco small b { font-weight: 650; }
+.pag2-concluir kbd { margin-left: 6px; }
+.pag2-concluir.pronto { animation: pronto-pulsa 1.6s ease-out 2; }
+.pag2-concluir:focus-visible { box-shadow: 0 0 0 4px rgba(35,132,90,.25), 0 8px 20px rgba(35,132,90,.3); }
+@keyframes pronto-pulsa { 0% { box-shadow: 0 0 0 0 rgba(35,132,90,.45); } 70% { box-shadow: 0 0 0 14px rgba(35,132,90,0); } 100% { box-shadow: 0 8px 20px rgba(35,132,90,.3); } }
