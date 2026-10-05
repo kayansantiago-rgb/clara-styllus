@@ -586,12 +586,13 @@ Telas.pdv = (() => {
     `<button class="forma ${k === forma ? 'sel' : ''}" data-forma="${k}">${Icone(ICONES_PAG[k] || 'carteira')}<span>${NOMES_PAG[k] || v}</span><kbd>${i + 1}</kbd></button>`).join('')}
           </div>
           <form id="f-pag" class="pag2-form">
-            <label class="pag2-valor">Valor recebido<div class="campo-moeda"><span>R$</span><input id="pag-valor" inputmode="decimal" autocomplete="off" autofocus></div></label>
+            <label class="pag2-valor"><span id="pag-rotulo">Valor recebido</span><div class="campo-moeda"><span>R$</span><input id="pag-valor" inputmode="decimal" autocomplete="off" autofocus></div></label>
             <label id="lbl-parc" hidden>Parcelas<select id="pag-parc"></select></label>
             <label id="lbl-venc" hidden>1º vencimento<input type="date" id="pag-venc" value="${vencPadrao}"></label>
             <label id="lbl-vale" hidden>Código do vale<input id="pag-vale" autocomplete="off" placeholder="Bipe o vale-troca"></label>
             <button class="btn btn-claro pag2-add">${Icone('mais')} Adicionar <kbd>Enter</kbd></button>
           </form>
+          <div class="pag2-dica" id="pag-dica" hidden></div>
           <div class="valores-rapidos" id="rapidos"></div>
           <div id="info-vale" class="info-cred" hidden></div>
           <div id="info-cred" class="info-cred" hidden></div>
@@ -704,6 +705,14 @@ Telas.pdv = (() => {
       corpo.querySelector('#lbl-parc').hidden = f !== 'credito' && f !== 'crediario';
       corpo.querySelector('#lbl-venc').hidden = f !== 'crediario';
       corpo.querySelector('#lbl-vale').hidden = f !== 'vale';
+      // Só dinheiro tem "valor recebido" (troco). Nas outras formas o valor é o que falta pagar;
+      // muda só para dividir a venda em duas formas (ex.: parte no PIX, parte no cartão).
+      const nome = NOMES_PAG[f] || U.FORMAS[f];
+      corpo.querySelector('#pag-rotulo').textContent = f === 'dinheiro' ? 'Valor recebido em dinheiro' : `Valor no ${nome.toLowerCase() === 'pix' ? 'PIX' : nome.toLowerCase()}`;
+      const dica = corpo.querySelector('#pag-dica');
+      dica.hidden = f === 'dinheiro';
+      dica.textContent = f === 'vale' ? 'O valor vem do saldo do vale.' : 'Já vem com o valor exato. Só mude se a cliente for dividir o pagamento em duas formas.';
+      if (f !== 'dinheiro' && restante() > 0) valorEl.value = num(restante());
       preencherParcelas();
       infoCrediario();
       infoVale();
