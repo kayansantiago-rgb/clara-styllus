@@ -219,6 +219,18 @@ const CONFIG_PADRAO = {
   taxa_credito_2a6: '',
   taxa_credito_7a12: '',
   taxa_pix: '',
+  // Preço sugerido no cadastro
+  markup_padrao: '',
+  arredondar_preco: '90',
+  // Backup automático
+  backup_auto: '1',
+  backup_pasta: '',
+  backup_pasta_extra: '',
+  backup_manter: '30',
+  backup_ultimo: '',
+  backup_ultimo_arquivo: '',
+  backup_ultimo_motivo: '',
+  backup_ultimo_erro: '',
 };
 
 function abrirBanco(arquivo) {
@@ -243,6 +255,12 @@ function migrar(db) {
   const colunas = (tabela) => db.prepare(`PRAGMA table_info(${tabela})`).all().map((c) => c.name);
   if (!colunas('vendas').includes('usuario_id')) {
     db.exec('ALTER TABLE vendas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
+  }
+  if (!colunas('produtos').includes('preco_anterior')) {
+    db.exec('ALTER TABLE produtos ADD COLUMN preco_anterior INTEGER');
+  }
+  if (!colunas('venda_itens').includes('preco_anterior')) {
+    db.exec('ALTER TABLE venda_itens ADD COLUMN preco_anterior INTEGER');
   }
   if (!colunas('venda_pagamentos').includes('taxa')) {
     db.exec('ALTER TABLE venda_pagamentos ADD COLUMN taxa INTEGER');

@@ -9,6 +9,7 @@ const { hashSenha, conferirSenha, novoToken } = require('./auth');
 const { instalarCrediario } = require('./crediario');
 const { instalarInventario } = require('./inventario');
 const taxas = require('./taxas');
+const { criarBackup } = require('./backup');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
@@ -49,7 +50,25 @@ function soDigitos(v) {
 const plano = (r) => (r ? { ...r } : r);
 const planos = (rs) => rs.map(plano);
 
-function criarApi(db) {
+/**
+ * Arredonda um preço (centavos) para terminar em ,90 / ,99 / ,00.
+ * Para cima no preço sugerido; para baixo na liquidação (o desconto nunca fica menor que o anunciado).
+ */
+function arredondarPreco(centavos, modo, sentido = 'cima') {
+  if (!modo || !centavos) return centavos;
+  const final = { 90: 90, 99: 99, '00': 0 }[modo];
+  if (final === undefined) return centavos;
+  let r = Math.floor(centavos / 100) * 100 + final;
+  if (sentido === 'cima' && r < centavos) r += 100;
+  if (sentido === 'baixo' && r > centavos) r -= 100;
+  return Math.max(r, 0);
+}
+
+/**
+ * @param {object} [opcoes]
+ * @param {string} [opcoes.pastaBackup] pasta padrão dos backups automáticos
+ */
+function criarApi(db, opcoes = {}) {
   const rotas = [];
   /** acesso: 'publico' (sem login), 'logado' (qualquer usuário) ou 'admin'. */
   const rota = (metodo, padrao, fn, acesso = 'logado') => {
@@ -65,6 +84,15 @@ function criarApi(db) {
     for (const r of db.prepare('SELECT chave, valor FROM config').all()) c[r.chave] = r.valor;
     return c;
   };
+
+  const salvarConfig = (valores) => {
+    const up = db.prepare('INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor');
+    for (const [k, v] of Object.entries(valores)) up.run(k, v == null ? '' : String(v));
+  };
+  const backup = criarBackup({
+    db, config, salvarConfig,
+    pastaPadrao: opcoes.pastaBackup || path.join(os.tmpdir(), 'clara-styllus-backups'),
+  });
 
   const caixaAberto = () =>
     plano(db.prepare('SELECT * FROM caixas WHERE fechado_em IS NULL ORDER BY id DESC LIMIT 1').get());
@@ -223,6 +251,11 @@ function criarApi(db) {
       if (!parcial || c in corpo) p[c] = inteiro(corpo[c], c, { min: 0, padrao: 0 });
     }
     if ('ativo' in corpo) p.ativo = corpo.ativo ? 1 : 0;
+    if (!parcial || 'preco_anterior' in corpo) {
+      // Preço "De" (liquidação): só faz sentido se for maior que o preço atual.
+      const ant = inteiro(corpo.preco_anterior, 'preco_anterior', { min: 0, padrao: 0 });
+      p.preco_anterior = ant > 0 ? ant : null;
+    }
     if (!parcial && !p.nome) throw erro(400, 'Informe o nome do produto.');
     if (parcial && 'nome' in p && !p.nome) throw erro(400, 'Informe o nome do produto.');
     return p;
@@ -345,11 +378,12 @@ function criarApi(db) {
       const r = db
         .prepare(
           `INSERT INTO produtos (codigo, referencia, nome, categoria, marca, tamanho, cor,
-             preco_custo, preco_venda, estoque, estoque_minimo, ncm)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+             preco_custo, preco_venda, estoque, estoque_minimo, ncm, preco_anterior)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
         )
         .run(provisorio, p.referencia, p.nome, p.categoria, p.marca, p.tamanho, p.cor,
-          p.preco_custo, p.preco_venda, estoqueInicial, p.estoque_minimo, p.ncm);
+          p.preco_custo, p.preco_venda, estoqueInicial, p.estoque_minimo, p.ncm,
+          p.preco_anterior && p.preco_anterior > p.preco_venda ? p.preco_anterior : null);
       const id = Number(r.lastInsertRowid);
       if (!p.codigo) {
         db.prepare('UPDATE produtos SET codigo = ? WHERE id = ?').run(gerarEan13Interno(id), id);
@@ -382,6 +416,42 @@ function criarApi(db) {
       ).run(...chaves.map((c) => p[c]), params.id);
     }
     return buscarProduto(params.id);
+  }, 'admin');
+
+  /**
+   * Liquidação em lote: guarda o preço atual como "De" e aplica o desconto no preço de venda.
+   * Se o produto já está em liquidação, o desconto é calculado sobre o preço "De" original.
+   */
+  rota('POST', '/api/produtos/liquidacao', ({ corpo }) => {
+    const ids = Array.isArray(corpo.ids) ? corpo.ids.map(Number).filter(Number.isInteger) : [];
+    if (!ids.length) throw erro(400, 'Nenhum produto selecionado.');
+    const pct = Number(String(corpo.percentual ?? '').replace(',', '.'));
+    if (!(pct > 0 && pct < 100)) throw erro(400, 'Informe um desconto entre 1% e 99%.');
+    const modo = corpo.arredondar ?? config().arredondar_preco;
+    return transacao(db, () => ids.map((id) => {
+      const p = buscarProduto(id);
+      const original = p.preco_anterior && p.preco_anterior > p.preco_venda ? p.preco_anterior : p.preco_venda;
+      let novo = arredondarPreco(Math.round(original * (1 - pct / 100)), modo, 'baixo');
+      if (novo <= 0 || novo >= original) novo = Math.round(original * (1 - pct / 100));
+      db.prepare(`UPDATE produtos SET preco_anterior = ?, preco_venda = ?, atualizado_em = datetime('now','localtime') WHERE id = ?`)
+        .run(original, novo, id);
+      return buscarProduto(id);
+    }));
+  }, 'admin');
+
+  /** Encerra a liquidação: volta o preço "De" para preço de venda. */
+  rota('POST', '/api/produtos/liquidacao/encerrar', ({ corpo }) => {
+    const ids = Array.isArray(corpo.ids) ? corpo.ids.map(Number).filter(Number.isInteger) : [];
+    if (!ids.length) throw erro(400, 'Nenhum produto selecionado.');
+    return transacao(db, () => ids.map((id) => {
+      const p = buscarProduto(id);
+      if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
+        db.prepare(`UPDATE produtos SET preco_venda = preco_anterior, preco_anterior = NULL, atualizado_em = datetime('now','localtime') WHERE id = ?`).run(id);
+      } else if (p.preco_anterior) {
+        db.prepare('UPDATE produtos SET preco_anterior = NULL WHERE id = ?').run(id);
+      }
+      return buscarProduto(id);
+    }));
   }, 'admin');
 
   rota('DELETE', '/api/produtos/:id', ({ params }) => {
@@ -579,7 +649,17 @@ function criarApi(db) {
       `UPDATE caixas SET fechado_em = datetime('now','localtime'), valor_informado = ?,
          observacao = ? WHERE id = ?`
     ).run(informado, texto(corpo.observacao, 1000), c.id);
-    return resumoCaixa(c.id);
+    const resumo = resumoCaixa(c.id);
+    // Backup automático ao fechar o caixa (não impede o fechamento se falhar).
+    if (config().backup_auto !== '0') {
+      try {
+        const b = backup.fazer('fechamento de caixa');
+        resumo.backup = { ok: true, arquivo: b.arquivo, aviso: b.aviso };
+      } catch (e) {
+        resumo.backup = { ok: false, aviso: `Backup automático falhou: ${e.message}` };
+      }
+    }
+    return resumo;
   });
 
   // ---------------------------------------------------------------- vendas
@@ -695,7 +775,7 @@ function criarApi(db) {
 
       const insItem = db.prepare(
         `INSERT INTO venda_itens (venda_id, produto_id, codigo, nome, tamanho, cor, quantidade,
-           preco_unitario, desconto, total) VALUES (?,?,?,?,?,?,?,?,?,?)`
+           preco_unitario, desconto, total, preco_anterior) VALUES (?,?,?,?,?,?,?,?,?,?,?)`
       );
       const baixa = db.prepare('UPDATE produtos SET estoque = estoque - ? WHERE id = ?');
       const mov = db.prepare(
@@ -705,7 +785,8 @@ function criarApi(db) {
       for (const it of itens) {
         const p = it.prod;
         insItem.run(vendaId, p.id, p.codigo, p.nome, p.tamanho, p.cor, it.quantidade,
-          p.preco_venda, it.desconto, it.total);
+          p.preco_venda, it.desconto, it.total,
+          p.preco_anterior && p.preco_anterior > p.preco_venda ? p.preco_anterior : null);
         baixa.run(it.quantidade, p.id);
         mov.run(p.id, -it.quantidade, `Venda #${vendaId}`, vendaId);
       }
@@ -973,6 +1054,16 @@ function criarApi(db) {
   }, 'admin');
 
   // ---------------------------------------------------------------- backup
+  rota('GET', '/api/backup/status', () => backup.status(), 'admin');
+
+  rota('POST', '/api/backup/agora', () => {
+    try {
+      return { ...backup.fazer('manual'), status: backup.status() };
+    } catch (e) {
+      throw erro(500, `Não consegui fazer o backup: ${e.message}`);
+    }
+  }, 'admin');
+
   rota('GET', '/api/backup', () => {
     const tmp = path.join(os.tmpdir(), `clara-styllus-backup-${Date.now()}.db`);
     db.prepare('VACUUM INTO ?').run(tmp);
@@ -1079,7 +1170,7 @@ function criarApi(db) {
    * Resolve uma requisição; devolve { status, corpo, sessao } ou null se a rota não existir.
    * `sessao` vem preenchido (token, ou null para apagar) quando o cookie precisa mudar.
    */
-  return function despachar(metodo, caminho, query, corpo, token) {
+  function despachar(metodo, caminho, query, corpo, token) {
     for (const r of rotas) {
       if (r.metodo !== metodo) continue;
       const m = caminho.match(r.re);
@@ -1116,7 +1207,9 @@ function criarApi(db) {
       }
     }
     return null;
-  };
+  }
+  despachar.backup = backup; // usado pelo servidor para o backup diário
+  return despachar;
 }
 
-module.exports = { criarApi, FORMAS_PAGAMENTO };
+module.exports = { criarApi, FORMAS_PAGAMENTO, arredondarPreco };

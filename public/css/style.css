@@ -383,6 +383,18 @@ tr.linha-vermelho td { background: #fff7f6; }
 .txt-ok { color: var(--ok); }
 @media (max-width: 1100px) { .inv-grade { grid-template-columns: 1fr; } }
 
+/* Liquidação, preço sugerido e backup */
+.preco-de { color: var(--suave); text-decoration: line-through; }
+.preco-por { color: var(--perigo); }
+.sugestao-preco { font-size: 13px; color: var(--texto); background: #eef6ff; border-radius: 6px; padding: 4px 8px; }
+.sugestao-preco[hidden] { display: none; }
+.liq-previa { background: var(--fundo); border-radius: 8px; padding: 8px 10px; min-height: 20px; font-size: 14px; }
+.liq-previa:empty { display: none; }
+.backup-status code { font-size: 12px; word-break: break-all; }
+.backup-status .linha { align-items: baseline; }
+.painel-alerta { margin-bottom: 14px; }
+.painel-alerta a { color: inherit; font-weight: 600; }
+
 /* -------------------------------------------------------- etiquetas */
 .qtd-input { width: 80px; text-align: center; }
 .previa-etiqueta { display: flex; justify-content: center; padding: 20px; background: #eee; border-radius: 8px; }

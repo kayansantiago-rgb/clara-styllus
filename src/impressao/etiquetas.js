@@ -42,7 +42,15 @@ function conteudo(p, cfg, m) {
   if (cfg.etiqueta_mostrar_loja === '1') linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: 0.1 * h });
   linhas.push({ texto: p.nome, alt: 0.11 * h });
   if (det) linhas.push({ texto: det, alt: 0.085 * h });
-  if (cfg.etiqueta_mostrar_preco === '1') linhas.push({ texto: preco(p.preco_venda), alt: 0.17 * h });
+  if (cfg.etiqueta_mostrar_preco === '1') {
+    if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
+      // Liquidação: "DE R$ 159,90" riscado e "POR R$ 99,90" em destaque.
+      linhas.push({ texto: `DE ${preco(p.preco_anterior)}`, alt: 0.085 * h, riscado: true });
+      linhas.push({ texto: `POR ${preco(p.preco_venda)}`, alt: 0.15 * h });
+    } else {
+      linhas.push({ texto: preco(p.preco_venda), alt: 0.17 * h });
+    }
+  }
   return linhas.map((l) => ({ ...l, texto: semAcento(l.texto).toUpperCase(), alt: Math.max(12, Math.round(l.alt)) }));
 }
 
@@ -71,7 +79,12 @@ function zpl(lista, cfg) {
         while (alt > 14 && l.texto.length * alt * 0.75 * 0.8 > util) alt--;
         const w = Math.round(alt * 0.75);
         const max = Math.floor(util / (w * 0.8));
-        z += `^FO${x0 + m.margem},${y + (l.alt - alt)}^A0N,${alt},${w}^FB${util},1,0,C,0^FD${limpa(l.texto.slice(0, max))}^FS\n`;
+        const t = l.texto.slice(0, max);
+        z += `^FO${x0 + m.margem},${y + (l.alt - alt)}^A0N,${alt},${w}^FB${util},1,0,C,0^FD${limpa(t)}^FS\n`;
+        if (l.riscado) {
+          const tw = Math.min(util, Math.round(t.length * w * 0.8));
+          z += `^FO${x0 + m.margem + Math.round((util - tw) / 2)},${y + (l.alt - alt) + Math.round(alt * 0.45)}^GB${tw},2,2^FS\n`;
+        }
         y += l.alt + 2;
       }
       const codigo = semAcento(p.codigo);
@@ -125,6 +138,7 @@ function epl(lista, cfg) {
         const t = l.texto.slice(0, max);
         const x = x0 + m.margem + Math.max(0, Math.round((util - t.length * f.w) / 2));
         b += `A${x},${y},0,${f.n},1,1,N,"${limpa(t)}"\n`;
+        if (l.riscado) b += `LO${x},${y + Math.round(f.h / 2)},${t.length * f.w},2\n`;
         y += f.h + 3;
       }
       const codigo = semAcento(p.codigo);

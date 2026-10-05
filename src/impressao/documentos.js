@@ -64,6 +64,7 @@ function cupomVenda(venda, cfg, { via = '', abrirGaveta = false } = {}) {
   venda.itens.forEach((it, i) => {
     c.linha(`${String(i + 1).padStart(2, '0')} ${descItem(it)}`);
     const desc = it.desconto ? ` (-${num(it.desconto)})` : '';
+    if (it.preco_anterior > it.preco_unitario) c.linha(`   Liquidação: de ${num(it.preco_anterior)} por ${num(it.preco_unitario)}`);
     c.par(`   ${it.codigo}  ${it.quantidade} x ${num(it.preco_unitario)}${desc}`, num(it.total));
   });
   c.separador();
@@ -71,12 +72,15 @@ function cupomVenda(venda, cfg, { via = '', abrirGaveta = false } = {}) {
   c.par('Qtd. de peças', String(pecas));
   c.par('Subtotal', num(venda.subtotal));
   if (venda.desconto) c.par('Descontos', '-' + num(venda.desconto));
+  const economia = venda.itens.reduce((a, it) =>
+    a + (it.preco_anterior > it.preco_unitario ? (it.preco_anterior - it.preco_unitario) * it.quantidade : 0), 0) + (venda.desconto || 0);
   c.tamanho('grande').negrito().par('TOTAL', brl(venda.total)).negrito(false).tamanho('normal');
   c.separador();
   for (const p of venda.pagamentos) {
     c.par(nomeForma(p.forma) + (p.parcelas > 1 ? ` ${p.parcelas}x` : ''), num(p.valor));
   }
   if (venda.troco) c.negrito().par('Troco', num(venda.troco)).negrito(false);
+  if (economia > 0) c.separador().negrito().centro(`Você economizou ${brl(economia)}!`).negrito(false);
 
   if (venda.crediario && venda.crediario.length) {
     c.separador();

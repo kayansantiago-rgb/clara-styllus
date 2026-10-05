@@ -182,7 +182,10 @@ const Impressao = (() => {
       ${cfg.etiqueta_mostrar_loja === '1' ? `<div class="loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>` : ''}
       <div class="nome">${esc(p.nome)}</div>
       ${detalhes ? `<div class="det">${esc(detalhes)}</div>` : ''}
-      ${cfg.etiqueta_mostrar_preco === '1' ? `<div class="preco">${brl(p.preco_venda)}</div>` : ''}
+      ${cfg.etiqueta_mostrar_preco !== '1' ? ''
+    : p.preco_anterior > p.preco_venda
+      ? `<div class="de">de <s>${brl(p.preco_anterior)}</s></div><div class="preco">por ${brl(p.preco_venda)}</div>`
+      : `<div class="preco">${brl(p.preco_venda)}</div>`}
       <div class="barras">${CodigoBarras.svg(p.codigo)}</div>
       <div class="cod">${esc(p.codigo)}</div>
     </div>`;
@@ -203,6 +206,8 @@ const Impressao = (() => {
               max-height: 2.2em; overflow: hidden; width: 100%; }
       .det { font-size: ${Math.max(5, h * 0.17)}pt; line-height: 1.15; }
       .preco { font-size: ${Math.max(8, h * 0.36)}pt; font-weight: bold; line-height: 1.1; }
+      .de { font-size: ${Math.max(5, h * 0.17)}pt; line-height: 1.1; }
+      .de + .preco { font-size: ${Math.max(7, h * 0.3)}pt; }
       .barras { flex: 1; min-height: 5mm; width: 100%; padding: 0.5mm 1mm 0; }
       .cod { font-size: ${Math.max(5, h * 0.17)}pt; letter-spacing: 1px; line-height: 1.1; }
     `;

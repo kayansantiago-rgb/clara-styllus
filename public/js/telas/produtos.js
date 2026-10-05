@@ -13,6 +13,7 @@ Telas.produtos = (() => {
           <input id="q" type="search" placeholder="Buscar por nome, código, referência, cor…" autofocus>
           <label class="check"><input type="checkbox" id="baixo"> Só estoque baixo</label>
           <label class="check so-admin"><input type="checkbox" id="inativos"> Mostrar inativos</label>
+          <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">🔥 Liquidação</button>
           <button class="btn btn-primario so-admin" id="novo">+ Novo produto</button>
         </div>
       </div>
@@ -28,6 +29,7 @@ Telas.produtos = (() => {
     raiz.querySelector('#baixo').onchange = carregar;
     raiz.querySelector('#inativos').onchange = carregar;
     raiz.querySelector('#novo').onclick = () => formulario(null);
+    raiz.querySelector('#liquidacao').onclick = liquidacao;
     raiz.querySelector('#lista').onclick = acao;
     await carregar();
   }
@@ -47,7 +49,7 @@ Telas.produtos = (() => {
         <td>${esc(p.tamanho || '')}</td>
         <td>${esc(p.cor || '')}</td>
         <td class="r">${num(p.preco_custo)}</td>
-        <td class="r"><b>${num(p.preco_venda)}</b></td>
+        <td class="r">${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${num(p.preco_anterior)}</small><br><b class="preco-por">${num(p.preco_venda)}</b>` : `<b>${num(p.preco_venda)}</b>`}</td>
         <td class="r ${p.estoque <= p.estoque_minimo ? 'txt-perigo' : ''}"><b>${p.estoque}</b></td>
         <td class="r nowrap">
           <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">🔢</button>
@@ -73,7 +75,22 @@ Telas.produtos = (() => {
 
   const listaCsv = (s) => String(s || '').split(/[,;/]/).map((x) => x.trim()).filter(Boolean);
 
-  function formulario(p) {
+  /** Preço sugerido = custo × markup, arredondado para cima (,90 / ,99 / ,00). */
+  function precoSugerido(custo, cfg) {
+    const mk = Number(String(cfg.markup_padrao || '').replace(',', '.'));
+    if (!(custo > 0 && mk > 0)) return null;
+    let v = Math.round(custo * mk);
+    const final = { 90: 90, 99: 99, '00': 0 }[cfg.arredondar_preco];
+    if (final !== undefined) {
+      let r = Math.floor(v / 100) * 100 + final;
+      if (r < v) r += 100;
+      v = r;
+    }
+    return v;
+  }
+
+  async function formulario(p) {
+    const cfg = await U.config();
     const novo = !p;
     p = p || {};
     const corpo = abrirModal(novo ? 'Novo produto' : `Editar produto`, `
@@ -84,7 +101,10 @@ Telas.produtos = (() => {
         <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}"></label>
         <label>NCM<input name="ncm" value="${esc(p.ncm)}" inputmode="numeric" placeholder="Para nota fiscal (opcional)"></label>
         <label>Preço de custo (R$)<input name="preco_custo" inputmode="decimal" value="${p.preco_custo ? num(p.preco_custo) : ''}"></label>
-        <label>Preço de venda (R$) *<input name="preco_venda" inputmode="decimal" required value="${p.preco_venda ? num(p.preco_venda) : ''}"></label>
+        <label>Preço de venda (R$) *<input name="preco_venda" inputmode="decimal" required value="${p.preco_venda ? num(p.preco_venda) : ''}">
+          <span class="sugestao-preco" id="sugestao-preco" hidden></span></label>
+        <label class="so-admin">Preço "De" — liquidação (R$) <small>vazio = sem liquidação</small>
+          <input name="preco_anterior" inputmode="decimal" value="${p.preco_anterior ? num(p.preco_anterior) : ''}" placeholder="Preço antigo, sai riscado na etiqueta"></label>
         <label>Estoque mínimo<input name="estoque_minimo" type="number" min="0" value="${p.estoque_minimo ?? 0}"></label>
         <div class="col2 foto-campo">
           <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : '<span>👗<br><small>sem foto</small></span>'}</div>
@@ -129,6 +149,14 @@ Telas.produtos = (() => {
       const v = U.paraCentavos(form.preco_venda.value);
       corpo.querySelector('#margem').textContent = c > 0 && v > 0
         ? `Margem: ${(((v - c) / v) * 100).toFixed(0)}% · Markup: ${(v / c).toFixed(2)}x` : '';
+      // Sugestão pelo markup padrão da loja (Configurações → Regras de venda).
+      const sug = precoSugerido(c, cfg);
+      const el = corpo.querySelector('#sugestao-preco');
+      el.hidden = !sug || sug === v;
+      if (sug && sug !== v) {
+        el.innerHTML = `Sugerido pelo markup ${esc(cfg.markup_padrao)}x: <b>${U.brl(sug)}</b> <button type="button" class="link">usar</button>`;
+        el.querySelector('button').onclick = () => { form.preco_venda.value = num(sug); margem(); };
+      }
     };
     // Foto: undefined = não mexeu; null = remover; string = nova imagem.
     let foto;
@@ -154,7 +182,13 @@ Telas.produtos = (() => {
       }
     };
 
-    form.preco_custo.oninput = margem;
+    form.preco_custo.oninput = () => {
+      // Produto novo sem preço digitado: já preenche com o sugerido.
+      const sug = precoSugerido(U.paraCentavos(form.preco_custo.value), cfg);
+      if (novo && sug && !form.preco_venda.dataset.mexeu) form.preco_venda.value = num(sug);
+      margem();
+    };
+    form.preco_venda.addEventListener('input', () => { form.preco_venda.dataset.mexeu = '1'; });
     form.preco_venda.oninput = margem;
     margem();
 
@@ -166,7 +200,11 @@ Telas.produtos = (() => {
         preco_custo: U.paraCentavos(d.preco_custo), preco_venda: U.paraCentavos(d.preco_venda),
         estoque_minimo: Number(d.estoque_minimo || 0),
       };
-      if ([base.preco_custo, base.preco_venda].some(Number.isNaN)) return aviso('Preço inválido.', 'erro');
+      if ('preco_anterior' in d) base.preco_anterior = U.paraCentavos(d.preco_anterior);
+      if ([base.preco_custo, base.preco_venda, base.preco_anterior ?? 0].some(Number.isNaN)) return aviso('Preço inválido.', 'erro');
+      if (base.preco_anterior && base.preco_anterior <= base.preco_venda) {
+        return aviso('O preço "De" precisa ser maior que o preço de venda (ou deixe vazio).', 'erro');
+      }
       try {
         if (!novo) {
           await api(`/api/produtos/${p.id}`, {
@@ -207,6 +245,69 @@ Telas.produtos = (() => {
         if (raiz) carregar();
       } catch (e) { erro(e); }
     };
+  }
+
+  /** Liquidação em lote nos produtos que estão na lista (use a busca para filtrar antes). */
+  async function liquidacao() {
+    const cfg = await U.config();
+    const alvo = lista.filter((p) => p.ativo);
+    if (!alvo.length) return aviso('Nenhum produto na lista. Use a busca para filtrar (ex.: "vestido").', 'alerta');
+    const emLiq = alvo.filter((p) => p.preco_anterior > p.preco_venda);
+    const q = raiz.querySelector('#q').value.trim();
+    const corpo = abrirModal('🔥 Liquidação', `
+      <p>Vale para os <b>${alvo.length} produto(s)</b> da lista${q ? ` (busca: "<b>${esc(q)}</b>")` : ' (todos)'}.
+        Use a busca para escolher uma categoria, coleção ou referência antes.</p>
+      <form class="form grade-form" id="f-liq">
+        <label>Desconto (%)<input name="percentual" inputmode="decimal" required autofocus placeholder="ex.: 30"></label>
+        <label>Arredondar o preço para
+          <select name="arredondar">
+            ${[['90', 'terminar em ,90'], ['99', 'terminar em ,99'], ['00', 'terminar em ,00'], ['', 'não arredondar']].map(([v, t]) =>
+    `<option value="${v}" ${cfg.arredondar_preco === v ? 'selected' : ''}>${t}</option>`).join('')}
+          </select></label>
+        <div class="col2 liq-previa" id="liq-previa"></div>
+        <label class="check col2"><input type="checkbox" name="etiquetas" checked> Mandar as etiquetas novas (com "De/Por") para a fila de impressão</label>
+        <div class="acoes col2">
+          ${emLiq.length ? `<button type="button" class="btn btn-perigo-claro" id="encerrar">Encerrar liquidação (${emLiq.length})</button>` : ''}
+          <button type="button" class="btn" data-fechar>Cancelar</button>
+          <button class="btn btn-primario">Aplicar liquidação</button>
+        </div>
+      </form>`, { largura: '620px' });
+    const form = corpo.querySelector('form');
+    const previa = () => {
+      const pct = Number(String(form.percentual.value).replace(',', '.'));
+      const ex = alvo[0];
+      const base = ex.preco_anterior > ex.preco_venda ? ex.preco_anterior : ex.preco_venda;
+      corpo.querySelector('#liq-previa').innerHTML = pct > 0 && pct < 100
+        ? `Exemplo: <b>${esc(ex.nome)}</b> — de <s>${U.brl(base)}</s> por <b>~${U.brl(Math.round(base * (1 - pct / 100)))}</b> (antes de arredondar)` : '';
+    };
+    form.percentual.oninput = previa;
+    const terminar = async (resultado, msg) => {
+      fecharModal();
+      aviso(msg);
+      if (form.etiquetas.checked) {
+        resultado.forEach((p) => p.estoque > 0 && Telas.etiquetas.adicionar(p, p.estoque));
+        aviso(`Etiquetas na fila: ${resultado.reduce((a, p) => a + Math.max(0, p.estoque), 0)}. Imprima em Etiquetas.`);
+      }
+      if (raiz) carregar();
+    };
+    form.onsubmit = async (ev) => {
+      ev.preventDefault();
+      try {
+        const r = await api('/api/produtos/liquidacao', {
+          metodo: 'POST', corpo: { ids: alvo.map((p) => p.id), percentual: form.percentual.value, arredondar: form.arredondar.value },
+        });
+        terminar(r, `Liquidação aplicada em ${r.length} produto(s).`);
+      } catch (e) { erro(e); }
+    };
+    const enc = corpo.querySelector('#encerrar');
+    if (enc) {
+      enc.onclick = async () => {
+        try {
+          const r = await api('/api/produtos/liquidacao/encerrar', { metodo: 'POST', corpo: { ids: emLiq.map((p) => p.id) } });
+          terminar(r, `Liquidação encerrada: ${r.length} produto(s) voltaram ao preço normal.`);
+        } catch (e) { erro(e); }
+      };
+    }
   }
 
   /** Grade visual: tamanhos nas colunas, cores nas linhas, estoque em cada célula. */

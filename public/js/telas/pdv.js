@@ -214,7 +214,7 @@ Telas.pdv = (() => {
           <td class="num-item">${i + 1}</td>
           <td><b>${esc(p.nome)}</b><br><small>${esc(det)} ${det ? '·' : ''} ${esc(p.codigo)}</small></td>
           <td class="c qtd"><button class="mini" data-acao="menos">−</button><span>${it.quantidade}</span><button class="mini" data-acao="mais">+</button></td>
-          <td class="r">${num(p.preco_venda)}</td>
+          <td class="r">${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${num(p.preco_anterior)}</small><br><span class="preco-por">${num(p.preco_venda)}</span>` : num(p.preco_venda)}</td>
           <td class="r"><button class="link" data-acao="desc">${it.desconto ? '-' + num(it.desconto) : 'dar'}</button></td>
           <td class="r"><b>${num(totalItem(it))}</b></td>
           <td><button class="mini perigo" data-acao="remover" title="Remover">×</button></td>
@@ -343,7 +343,7 @@ Telas.pdv = (() => {
         ${U.miniatura(p)}
         <span class="sugestao-txt"><b>${esc(p.nome)}</b> ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}
           <small>${esc(p.codigo)}</small></span>
-        <span>${brl(p.preco_venda)} <small class="${p.estoque <= 0 ? 'txt-perigo' : ''}">est. ${p.estoque}</small></span>
+        <span>${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${brl(p.preco_anterior)}</small> ` : ''}${brl(p.preco_venda)} <small class="${p.estoque <= 0 ? 'txt-perigo' : ''}">est. ${p.estoque}</small></span>
       </div>`).join('');
     box.onmousedown = (ev) => {
       const d = ev.target.closest('[data-i]');

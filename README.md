@@ -5,6 +5,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Backup automático**: uma cópia ao fechar o caixa e uma vez por dia, guardando as últimas 30, com
+  segunda cópia opcional em pendrive ou pasta do Google Drive/OneDrive; o painel avisa se ficar sem backup.
+- **Preço sugerido pelo markup**: digite o custo e o sistema sugere o preço (ex.: custo × 2,2, terminando em ,90).
+- **Liquidação "De/Por"**: aplique um desconto em lote; a etiqueta sai com o preço antigo riscado, o PDV mostra
+  o "De" e o cupom informa quanto a cliente economizou.
 - **Inventário pelo leitor**: conta a loja toda ou uma categoria bipando as peças, mostra o que está
   faltando/sobrando (em peças e em custo), permite desfazer/corrigir leituras e ajusta o estoque ao finalizar.
 - **Taxas das maquininhas**: cadastre as % de débito, crédito (à vista, 2–6x, 7–12x) e PIX; a taxa fica
@@ -141,7 +146,10 @@ transmitida em até 24 h. A integração pode ser feita depois via ACBr ou uma A
 
 ## Backup
 
-Em *Configurações → Baixar backup agora* você baixa uma cópia do banco. Para restaurar, pare o
+O backup é automático (Configurações → Backup automático): ao fechar o caixa e uma vez por dia, em
+`C:\ProgramData\ClaraStyllus\backups`, guardando as últimas 30 cópias. Configure uma segunda pasta
+(pendrive ou Google Drive) para se proteger de defeito no computador. Em *Configurações → Backups*
+também dá para fazer um backup na hora ou baixar uma cópia. Para restaurar, pare o
 serviço “Clara Styllus PDV” (em *Serviços* do Windows), apague os arquivos `dados/clara-styllus.db-wal` e `-shm` (se existirem) e substitua
 `dados/clara-styllus.db` pelo arquivo do backup (renomeado).
 

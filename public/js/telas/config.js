@@ -131,8 +131,25 @@ Telas.config = (() => {
           </div>
         </div>
         <div class="cartao">
+          <h3>💾 Backup automático</h3>
+          <p class="dica">Uma cópia dos dados é feita <b>ao fechar o caixa</b> e, se o computador ficar ligado, <b>uma vez por dia</b>.
+            Para se proteger de defeito no computador, use a segunda pasta: um <b>pendrive</b> ou uma pasta do
+            <b>Google Drive / OneDrive</b> que sincroniza sozinha com a internet.</p>
+          <div class="grade-form">
+            ${check('backup_auto', 'Fazer backup automático')}
+            ${campo('backup_manter', 'Quantas cópias guardar', 'type="number" min="3" max="365"')}
+            <label class="col2">Pasta dos backups <small>vazio = pasta padrão do sistema</small>
+              <input name="backup_pasta" value="${esc(c.backup_pasta)}" placeholder="padrão: C:\\ProgramData\\ClaraStyllus\\backups"></label>
+            <label class="col2">Segunda cópia (pendrive ou Google Drive) <small>opcional</small>
+              <input name="backup_pasta_extra" value="${esc(c.backup_pasta_extra)}" placeholder="ex.: E:\\Backup Clara Styllus  ou  C:\\Users\\Clara\\Google Drive\\Backup PDV"></label>
+          </div>
+        </div>
+        <div class="cartao">
           <h3>Regras de venda</h3>
           <div class="grade-form">
+            <label>Markup padrão (preço sugerido) <small>ex.: 2,2 = custo × 2,2</small>
+              <input name="markup_padrao" inputmode="decimal" value="${esc(c.markup_padrao)}" placeholder="vazio = não sugerir"></label>
+            ${sel('arredondar_preco', 'Arredondar preços para', [['90', 'terminar em ,90'], ['99', 'terminar em ,99'], ['00', 'terminar em ,00 (redondo)'], ['', 'não arredondar']])}
             <label>Meta de vendas do mês (R$) <small>aparece no painel Início</small>
               <input name="meta_mensal" inputmode="decimal" value="${c.meta_mensal ? U.num(c.meta_mensal) : ''}"></label>
             ${check('som_bipe', 'Tocar som ao bipar produto e ao concluir a venda')}
@@ -143,14 +160,40 @@ Telas.config = (() => {
         <div class="acoes"><button class="btn btn-primario btn-grande">Salvar configurações</button></div>
       </form>
       <div class="cartao">
-        <h3>Backup</h3>
-        <p>Os dados ficam em <code>C:\\ProgramData\\ClaraStyllus\\dados</code> (instalado pelo instalador)
-          ou na pasta <code>dados</code> do sistema. Faça backup com frequência e guarde em um pendrive ou na nuvem.</p>
-        <a class="btn" href="/api/backup" download>💾 Baixar backup agora</a>
+        <h3>💾 Backups</h3>
+        <div id="backup-status" class="backup-status">Carregando…</div>
+        <div class="acoes acoes-esq">
+          <button type="button" class="btn btn-primario" id="backup-agora">💾 Fazer backup agora</button>
+          <a class="btn" href="/api/backup" download>⬇️ Baixar uma cópia neste computador</a>
+        </div>
       </div>`;
 
     const form = raiz.querySelector('#f-cfg');
     carregarImpressoras(raiz, false);
+    const mostrarBackup = (st) => {
+      const quando = st.ultimo ? new Date(st.ultimo).toLocaleString('pt-BR') : 'nunca';
+      const atrasado = st.horas_desde_ultimo == null || st.horas_desde_ultimo > 72;
+      raiz.querySelector('#backup-status').innerHTML = `
+        <div class="linha"><span>Último backup</span><b class="${atrasado ? 'txt-perigo' : 'txt-ok'}">${quando}${st.horas_desde_ultimo != null ? ` (há ${st.horas_desde_ultimo} h)` : ''}</b></div>
+        <div class="linha"><span>Pasta</span><code>${esc(st.pasta)}</code></div>
+        ${st.pasta_extra ? `<div class="linha"><span>Segunda cópia</span><code>${esc(st.pasta_extra)}</code></div>` : ''}
+        ${st.ultimo_erro ? `<div class="alerta-box">${esc(st.ultimo_erro)}</div>` : ''}
+        <details><summary>${st.arquivos.length} cópia(s) guardada(s)</summary>
+          ${st.arquivos.map((a) => `<div class="linha"><small>${esc(a.nome)}</small><small>${(a.tamanho / 1024 / 1024).toFixed(1)} MB</small></div>`).join('')}
+        </details>
+        <p class="dica">Para restaurar uma cópia: pare o serviço "Clara Styllus PDV" e troque o arquivo
+          <code>dados\\clara-styllus.db</code> pela cópia escolhida (renomeando). Se tiver dúvida, peça ajuda antes.</p>`;
+    };
+    api('/api/backup/status').then(mostrarBackup).catch((e) => { raiz.querySelector('#backup-status').textContent = e.message; });
+    raiz.querySelector('#backup-agora').onclick = async (ev) => {
+      ev.target.disabled = true;
+      try {
+        const r = await api('/api/backup/agora', { metodo: 'POST' });
+        aviso(r.aviso || 'Backup feito.', r.aviso ? 'alerta' : 'ok');
+        mostrarBackup(r.status);
+      } catch (e) { erro(e); }
+      ev.target.disabled = false;
+    };
     raiz.querySelectorAll('[data-atualizar-imp]').forEach((b) => { b.onclick = () => carregarImpressoras(raiz, true); });
     raiz.querySelectorAll('[data-teste]').forEach((b) => {
       b.onclick = async () => {

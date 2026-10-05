@@ -24,8 +24,17 @@ const TIPOS = {
   '.json': 'application/json',
 };
 
-function criarServidor(db) {
-  const despachar = criarApi(db);
+function criarServidor(db, opcoes = {}) {
+  const despachar = criarApi(db, opcoes);
+  // Backup diário: confere ao ligar e depois a cada hora (só faz se o último tiver mais de 24 h).
+  if (opcoes.agendarBackup) {
+    const verificar = () => {
+      const r = despachar.backup.seNecessario('automático diário');
+      if (r) console.log(`Backup automático salvo em ${r.arquivo}${r.aviso ? ' — ' + r.aviso : ''}`);
+    };
+    setTimeout(verificar, 10000).unref();
+    setInterval(verificar, 36e5).unref();
+  }
 
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -107,9 +116,11 @@ if (require.main === module) {
   const porta = Number(process.env.PORTA || 3456);
   const arquivoBanco = process.env.BANCO || path.join(__dirname, 'dados', 'clara-styllus.db');
   const db = abrirBanco(arquivoBanco);
+  // Backups ficam ao lado da pasta de dados (no Windows: C:\ProgramData\ClaraStyllus\backups).
+  const pastaBackup = process.env.PASTA_BACKUP || path.join(path.dirname(arquivoBanco), '..', 'backups');
   // Só aceita conexões desta máquina; defina HOST=0.0.0.0 para usar em outro computador da rede.
   const host = process.env.HOST || '127.0.0.1';
-  criarServidor(db).listen(porta, host, () => {
+  criarServidor(db, { pastaBackup, agendarBackup: true }).listen(porta, host, () => {
     console.log('');
     console.log('  Clara Styllus PDV rodando!');
     console.log(`  Abra no navegador: http://localhost:${porta}`);

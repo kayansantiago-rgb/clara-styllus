@@ -154,7 +154,8 @@ Telas.caixa = (() => {
       try {
         const fechado = await api('/api/caixa/fechar', { metodo: 'POST', corpo: { valor_informado: valor, observacao: form.obs.value } });
         fecharModal();
-        aviso('Caixa fechado.');
+        aviso(fechado.backup && fechado.backup.ok ? 'Caixa fechado e backup feito. ✅' : 'Caixa fechado.');
+        if (fechado.backup && fechado.backup.aviso) aviso(fechado.backup.aviso, 'alerta');
         Impressao.fechamentoCaixa(fechado);
         if (aoConcluir) aoConcluir();
       } catch (e) { erro(e); }
