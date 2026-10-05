@@ -16,7 +16,7 @@ const Trocas = (() => {
     try { d = await api(`/api/vendas/${vendaId}/troca`); } catch (e) { return erro(e); }
     const { venda, itens } = d;
     const qtd = new Map();
-    const corpo = abrirModal(`🔁 Troca — venda nº ${venda.id}`, `
+    const corpo = abrirModal(`Troca — venda nº ${venda.id}`, `
       <p class="dica">${U.dataHora(venda.criado_em)}${venda.cliente_nome ? ` · ${esc(venda.cliente_nome)}` : ''} · total ${brl(venda.total)}.
         Marque quantas peças de cada item estão voltando. O valor do vale é o que a cliente pagou (já com os descontos da venda).</p>
       <table class="tabela">
@@ -60,16 +60,16 @@ const Trocas = (() => {
   function mostrarVale(t) {
     const corpo = abrirModal('Vale-troca gerado', `
       <div class="concluida">
-        <div class="sucesso-ico">🎟️</div>
+        <div class="sucesso-ico"><i data-icone="vale"></i></div>
         <div class="concluida-rotulo">VALE-TROCA ${esc(t.vale ? t.vale.codigo : '')}</div>
         <div class="concluida-valor">${brl(t.valor)}</div>
         <div class="concluida-det">${t.vale && t.vale.validade ? `válido até ${t.vale.validade.split('-').reverse().join('/')} · ` : ''}as peças voltaram para o estoque</div>
       </div>
       <p class="dica">A cliente pode usar agora numa nova compra ou guardar o vale impresso.</p>
       <div class="acoes">
-        <button class="btn" id="vale-imp">🖨️ Imprimir de novo</button>
+        <button class="btn" id="vale-imp"><i data-icone="impressora"></i> Imprimir de novo</button>
         <button class="btn" data-fechar>Fechar</button>
-        ${t.vale ? '<button class="btn btn-primario btn-grande" id="vale-usar">🛍️ Usar agora numa nova venda</button>' : ''}
+        ${t.vale ? '<button class="btn btn-primario btn-grande" id="vale-usar"><i data-icone="sacola"></i> Usar agora numa nova venda</button>' : ''}
       </div>`, { largura: '520px' });
     corpo.querySelector('#vale-imp').onclick = () => Impressao.troca(t);
     const usar = corpo.querySelector('#vale-usar');

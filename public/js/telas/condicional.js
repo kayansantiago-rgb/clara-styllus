@@ -20,10 +20,10 @@ Telas.condicional = (() => {
         <h1>Condicional</h1>
         <div class="ferramentas">
           <select id="status"><option value="aberta">Abertas</option><option value="todas">Todas</option></select>
-          <a class="btn btn-primario" href="#/pdv" title="Bipe as peças no caixa, escolha a cliente e clique em Condicional">👜 Nova condicional</a>
+          <a class="btn btn-primario" href="#/pdv" title="Bipe as peças no caixa, escolha a cliente e clique em Condicional"><i data-icone="bolsa"></i> Nova condicional</a>
         </div>
       </div>
-      <p class="dica">Para criar: no <b>caixa</b>, bipe as peças, escolha a cliente (F6) e clique em <b>👜 Condicional</b>.
+      <p class="dica">Para criar: no <b>caixa</b>, bipe as peças, escolha a cliente (F6) e clique em <b><i data-icone="bolsa"></i> Condicional</b>.
         As peças saem do estoque até a cliente devolver; o que ela ficar vai para o caixa como venda.</p>
       <div class="cartao tabela-rolagem">
         <table class="tabela">
@@ -73,9 +73,9 @@ Telas.condicional = (() => {
       <p class="dica">Coloque quantas peças a cliente <b>ficou</b> (o resto volta para o estoque). As que ela ficou vão para o caixa para receber o pagamento.</p>` : ''}
       <div class="acoes">
         ${aberta ? '<button class="btn btn-perigo-claro so-admin" id="cancelar">Cancelar condicional</button>' : ''}
-        ${tel.length >= 10 && aberta ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${tel}?text=${msg}">📱 Lembrar no WhatsApp</a>` : ''}
-        <button class="btn" id="reimprimir">🖨️ Imprimir</button>
-        ${aberta ? '<button class="btn btn-primario btn-grande" id="fechar">✅ Fechar condicional</button>' : ''}
+        ${tel.length >= 10 && aberta ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${tel}?text=${msg}"><i data-icone="whatsapp"></i> Lembrar no WhatsApp</a>` : ''}
+        <button class="btn" id="reimprimir"><i data-icone="impressora"></i> Imprimir</button>
+        ${aberta ? '<button class="btn btn-primario btn-grande" id="fechar"><i data-icone="check"></i> Fechar condicional</button>' : ''}
       </div>`, { largura: '820px' });
     corpo.querySelector('#reimprimir').onclick = () => Impressao.condicional(c);
     if (!aberta) return;

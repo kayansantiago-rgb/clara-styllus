@@ -62,7 +62,7 @@ Telas.config = (() => {
           </div>
         </div>
         <div class="cartao">
-          <h3>🧾 Impressora de cupom</h3>
+          <h3><i data-icone="recibo"></i> Impressora de cupom</h3>
           <p class="dica"><b>Impressão direta</b> manda o cupom pronto para a térmica (Elgin i7/i8/i9, Epson TM-T20,
             Bematech MP-4200 em modo ESC/POS, Daruma, Tanca, Knup…): sai sempre do mesmo jeito, sem margens nem
             janela de impressão, e ainda abre a gaveta de dinheiro.</p>
@@ -81,11 +81,11 @@ Telas.config = (() => {
             ${check('impressao_automatica', 'Imprimir o cupom automaticamente ao concluir a venda')}
             ${check('cupom_corte', 'Cortar o papel no final (guilhotina)')}
             ${check('gaveta_abrir', 'Abrir a gaveta de dinheiro em venda com dinheiro')}
-            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="cupom">🖨️ Imprimir teste de cupom</button></div>
+            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="cupom"><i data-icone="impressora"></i> Imprimir teste de cupom</button></div>
           </div>
         </div>
         <div class="cartao">
-          <h3>🏷️ Impressora de etiquetas</h3>
+          <h3><i data-icone="etiqueta"></i> Impressora de etiquetas</h3>
           <p class="dica"><b>ZPL</b>: Zebra, Elgin L42 Pro, Argox e a maioria das atuais. <b>EPL</b>: Zebra LP/TLP antigas,
             Elgin L42 e Argox em modo PPLB. <b>Navegador</b>: só para etiquetas em folha A4 de impressora comum.</p>
           <div class="grade-form tres">
@@ -104,11 +104,11 @@ Telas.config = (() => {
             ${campo('etiqueta_gap_mm', 'Espaço entre etiquetas no rolo (mm)', 'type="number" min="0" max="20" step="0.5"')}
             ${check('etiqueta_mostrar_loja', 'Mostrar nome da loja')}
             ${check('etiqueta_mostrar_preco', 'Mostrar preço')}
-            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="etiqueta">🏷️ Imprimir etiqueta de teste</button></div>
+            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="etiqueta"><i data-icone="etiqueta"></i> Imprimir etiqueta de teste</button></div>
           </div>
         </div>
         <div class="cartao">
-          <h3>💳 Taxas das maquininhas</h3>
+          <h3><i data-icone="cartao"></i> Taxas das maquininhas</h3>
           <p class="dica">Coloque a porcentagem que a maquininha (Stone, Cielo, PagSeguro, Mercado Pago…) desconta.
             O sistema grava a taxa em cada venda e mostra nos Relatórios quanto realmente cai na conta.
             Deixe vazio o que não tem taxa.</p>
@@ -121,7 +121,7 @@ Telas.config = (() => {
           </div>
         </div>
         <div class="cartao">
-          <h3>📒 Crediário</h3>
+          <h3><i data-icone="caderno"></i> Crediário</h3>
           <div class="grade-form tres">
             ${campo('crediario_max_parcelas', 'Máximo de parcelas', 'type="number" min="1" max="24"')}
             ${campo('crediario_dias_primeira', '1º vencimento (dias após a compra)', 'type="number" min="1" max="120"')}
@@ -131,7 +131,7 @@ Telas.config = (() => {
           </div>
         </div>
         <div class="cartao">
-          <h3>💾 Backup automático</h3>
+          <h3><i data-icone="nuvem"></i> Backup automático</h3>
           <p class="dica">Uma cópia dos dados é feita <b>ao fechar o caixa</b> e, se o computador ficar ligado, <b>uma vez por dia</b>.
             Para se proteger de defeito no computador, use a segunda pasta: um <b>pendrive</b> ou uma pasta do
             <b>Google Drive / OneDrive</b> que sincroniza sozinha com a internet.</p>
@@ -157,19 +157,33 @@ Telas.config = (() => {
             ${check('estoque_negativo', 'Permitir vender produto sem estoque')}
           </div>
         </div>
+        <div class="cartao" id="atualizacoes">
+          <h3><i data-icone="atualizar"></i> Atualizações do sistema</h3>
+          <div id="at-status">Carregando…</div>
+          <details class="at-avancado"><summary>Atualização automática e acesso</summary>
+            <div class="grade-form">
+              ${check('atualizacao_auto', 'Procurar versão nova sozinho (a cada 6 horas, quando tiver internet) e já deixar baixada')}
+              <label class="col2">Token de acesso ao GitHub <small>necessário porque o repositório é privado — permissão só de leitura (Contents: read)</small>
+                <input name="atualizacao_token" class="campo-senha" autocomplete="off" value="${esc(c.atualizacao_token)}" placeholder="github_pat_…"></label>
+              <label class="col2">Endereço de atualização <small>deixe vazio para usar o padrão (GitHub)</small>
+                <input name="atualizacao_url" value="${esc(c.atualizacao_url)}" placeholder="https://api.github.com/repos/…/releases/latest"></label>
+            </div>
+          </details>
+        </div>
         <div class="acoes"><button class="btn btn-primario btn-grande">Salvar configurações</button></div>
       </form>
       <div class="cartao">
-        <h3>💾 Backups</h3>
+        <h3><i data-icone="nuvem"></i> Backups</h3>
         <div id="backup-status" class="backup-status">Carregando…</div>
         <div class="acoes acoes-esq">
-          <button type="button" class="btn btn-primario" id="backup-agora">💾 Fazer backup agora</button>
-          <a class="btn" href="/api/backup" download>⬇️ Baixar uma cópia neste computador</a>
+          <button type="button" class="btn btn-primario" id="backup-agora"><i data-icone="nuvem"></i> Fazer backup agora</button>
+          <a class="btn" href="/api/backup" download><i data-icone="nuvem"></i> Baixar uma cópia neste computador</a>
         </div>
       </div>`;
 
     const form = raiz.querySelector('#f-cfg');
     carregarImpressoras(raiz, false);
+    Atualizacao.desenharStatus(raiz.querySelector('#at-status'));
     const mostrarBackup = (st) => {
       const quando = st.ultimo ? new Date(st.ultimo).toLocaleString('pt-BR') : 'nunca';
       const atrasado = st.horas_desde_ultimo == null || st.horas_desde_ultimo > 72;
@@ -212,6 +226,7 @@ Telas.config = (() => {
         await api('/api/config', { metodo: 'PUT', corpo: dados });
         await U.config(true);
         aviso('Configurações salvas.');
+        Atualizacao.desenharStatus(raiz.querySelector('#at-status'));
       } catch (e) { erro(e); }
     };
   }

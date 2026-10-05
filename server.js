@@ -36,10 +36,42 @@ function criarServidor(db, opcoes = {}) {
     };
     setTimeout(verificar, 10000).unref();
     setInterval(verificar, 36e5).unref();
+    // Procura versão nova 1 minuto depois de ligar e a cada 6 horas (precisa de internet).
+    const procurar = () => {
+      if (db.prepare(`SELECT valor FROM config WHERE chave = 'atualizacao_auto'`).get()?.valor === '0') return;
+      despachar.atualizacao.verificar().then((s) => {
+        if (s.disponivel) console.log(`Atualização disponível: versão ${s.disponivel.versao}`);
+      });
+    };
+    setTimeout(procurar, 60000).unref();
+    setInterval(procurar, 6 * 36e5).unref();
   }
 
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
+
+    // Envio do instalador (arquivo binário grande) para atualizar sem internet.
+    if (url.pathname === '/api/atualizacao/arquivo' && req.method === 'POST') {
+      const partes = [];
+      let tam = 0;
+      req.on('data', (c) => {
+        tam += c.length;
+        if (tam > 300e6) req.destroy();
+        else partes.push(c);
+      });
+      req.on('end', async () => {
+        try {
+          const token = lerCookie(req.headers.cookie, COOKIE);
+          const corpo = { arquivo: Buffer.concat(partes), nome: decodeURIComponent(req.headers['x-nome-arquivo'] || '') };
+          const r = await despachar('POST', url.pathname, url.searchParams, corpo, token);
+          enviarJson(res, r.status, r.corpo);
+        } catch (e) {
+          console.error(e);
+          enviarJson(res, 500, { erro: 'Erro interno: ' + e.message });
+        }
+      });
+      return;
+    }
 
     if (url.pathname.startsWith('/api/')) {
       let bruto = '';
@@ -120,9 +152,10 @@ if (require.main === module) {
   const db = abrirBanco(arquivoBanco);
   // Backups ficam ao lado da pasta de dados (no Windows: C:\ProgramData\ClaraStyllus\backups).
   const pastaBackup = process.env.PASTA_BACKUP || path.join(path.dirname(arquivoBanco), '..', 'backups');
+  const pastaAtualizacoes = path.join(path.dirname(arquivoBanco), '..', 'atualizacoes');
   // Só aceita conexões desta máquina; defina HOST=0.0.0.0 para usar em outro computador da rede.
   const host = process.env.HOST || '127.0.0.1';
-  criarServidor(db, { pastaBackup, agendarBackup: true }).listen(porta, host, () => {
+  criarServidor(db, { pastaBackup, pastaAtualizacoes, agendarBackup: true }).listen(porta, host, () => {
     console.log('');
     console.log('  Clara Styllus PDV rodando!');
     console.log(`  Abra no navegador: http://localhost:${porta}`);

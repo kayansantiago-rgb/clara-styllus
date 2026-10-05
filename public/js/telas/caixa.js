@@ -82,7 +82,7 @@ Telas.caixa = (() => {
     return `
       <div class="cartao">
         <div class="caixa-topo">
-          <h3>🔓 Caixa nº ${r.caixa.id} — aberto em ${dataHora(r.caixa.aberto_em)} por ${esc(r.caixa.operador || '—')}</h3>
+          <h3><i data-icone="carteira"></i> Caixa nº ${r.caixa.id} — aberto em ${dataHora(r.caixa.aberto_em)} por ${esc(r.caixa.operador || '—')}</h3>
         </div>
         <div class="cards">
           <div class="card destaque"><small>Dinheiro esperado na gaveta</small><b>${brl(r.dinheiro_esperado)}</b></div>
@@ -94,11 +94,11 @@ Telas.caixa = (() => {
         ${r.movimentos.length ? `<h4>Sangrias e suprimentos</h4>${r.movimentos.map((m) =>
     `<div class="linha"><span>${dataHora(m.criado_em)} · ${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '-' : '+'}${brl(m.valor)}</span></div>`).join('')}` : ''}
         <div class="acoes">
-          <button class="btn" id="sangria">➖ Sangria</button>
-          <button class="btn" id="suprimento">➕ Suprimento</button>
-          <button class="btn" id="gaveta">🗄️ Abrir gaveta</button>
-          <button class="btn" id="parcial">🖨️ Imprimir parcial</button>
-          <button class="btn btn-perigo" id="fechar">🔒 Fechar caixa</button>
+          <button class="btn" id="sangria"><i data-icone="retirar"></i> Sangria</button>
+          <button class="btn" id="suprimento"><i data-icone="colocar"></i> Suprimento</button>
+          <button class="btn" id="gaveta"><i data-icone="gaveta"></i> Abrir gaveta</button>
+          <button class="btn" id="parcial"><i data-icone="impressora"></i> Imprimir parcial</button>
+          <button class="btn btn-perigo" id="fechar"><i data-icone="cadeado"></i> Fechar caixa</button>
         </div>
       </div>`;
   }
@@ -141,13 +141,13 @@ Telas.caixa = (() => {
         <label>Dinheiro contado na gaveta (R$)<input name="valor" inputmode="decimal" required autofocus></label>
         <div id="dif" class="dica"></div>
         <label>Observação<textarea name="obs" rows="2"></textarea></label>
-        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-perigo">🔒 Fechar e imprimir</button></div>
+        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-perigo"><i data-icone="cadeado"></i> Fechar e imprimir</button></div>
       </form>`, { largura: '480px' });
     const form = corpo.querySelector('form');
     form.valor.oninput = () => {
       const v = U.paraCentavos(form.valor.value);
       const d = v - r.dinheiro_esperado;
-      corpo.querySelector('#dif').innerHTML = Number.isNaN(v) || !form.valor.value ? '' : d === 0 ? '✅ Caixa batendo.'
+      corpo.querySelector('#dif').innerHTML = Number.isNaN(v) || !form.valor.value ? '' : d === 0 ? '<i data-icone="check"></i> Caixa batendo.'
         : `Diferença: <b class="${d < 0 ? 'txt-perigo' : ''}">${d > 0 ? 'sobra de ' : 'falta de '}${brl(Math.abs(d))}</b>`;
     };
     form.onsubmit = async (ev) => {
@@ -157,7 +157,7 @@ Telas.caixa = (() => {
       try {
         const fechado = await api('/api/caixa/fechar', { metodo: 'POST', corpo: { valor_informado: valor, observacao: form.obs.value } });
         fecharModal();
-        aviso(fechado.backup && fechado.backup.ok ? 'Caixa fechado e backup feito. ✅' : 'Caixa fechado.');
+        aviso(fechado.backup && fechado.backup.ok ? 'Caixa fechado e backup feito.' : 'Caixa fechado.');
         if (fechado.backup && fechado.backup.aviso) aviso(fechado.backup.aviso, 'alerta');
         Impressao.fechamentoCaixa(fechado);
         if (aoConcluir) aoConcluir();

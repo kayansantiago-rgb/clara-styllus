@@ -157,6 +157,11 @@ Section "Instalar"
   nsExec::ExecToLog '"$INSTDIR\${SERVICO}.exe" start'
   Pop $0
 
+  ; Atualização automática: remove a tarefa agendada que chamou este instalador (se houver).
+  nsExec::Exec 'schtasks /Delete /TN ClaraStyllusAtualizar /F'
+  Pop $0
+  CreateDirectory "$Dados\atualizacoes"
+
   ; Atalhos
   Call AcharNavegador
   CreateDirectory "$SMPROGRAMS\${APP}"

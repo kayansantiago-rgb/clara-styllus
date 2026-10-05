@@ -5,6 +5,17 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Assistente de boas-vindas**: na primeira vez, o administrador passa por 5 passos (dados da loja,
+  impressoras com teste, vendedoras, markup e meta) e o sistema já fica pronto para vender.
+- **Histórico de ações** (administrador): quem cancelou ou excluiu venda, deu desconto, mexeu no estoque
+  ou no preço, fez sangria, abriu a gaveta sem venda, fechou o caixa com diferença, errou a senha… com
+  filtros por período, pessoa e tipo, e destaque para o que merece atenção.
+- **Ficha da cliente**: total comprado, ticket médio, última compra, tamanhos/cores/categorias que ela
+  mais compra, últimas peças com foto, crediário, vales e condicionais, WhatsApp e "Vender para ela".
+- **Relatórios com gráficos**: comparação com o período anterior, faturamento por dia, formas de
+  pagamento, horário de pico, dia da semana, categorias e vendedoras.
+- **Atualização do sistema**: procura versão nova sozinho (com internet), baixa em segundo plano e avisa
+  no Início; um clique instala. Sem internet, dá para atualizar escolhendo o instalador (pendrive).
 - **Visual moderno**: menu com ícones, fontes próprias (funcionam sem internet), tela de venda e cadastro
   de produto redesenhados.
 - **Login sem senha salva**: o navegador não oferece para guardar a senha; cada pessoa digita a sua ao entrar
@@ -172,6 +183,23 @@ transmitida em até 24 h. A integração pode ser feita depois via ACBr ou uma A
 
 > **MEI** normalmente não é obrigado a emitir NFC-e para venda a consumidor final pessoa física.
 > Confirme com a contabilidade.
+
+## Atualizar o sistema
+
+**Pelo próprio sistema (com internet):** em *Configurações → Atualizações do sistema* aparece a versão
+instalada e se existe uma nova. O sistema procura sozinho a cada 6 horas e já deixa o instalador baixado;
+o aviso aparece também no Início. Clique em **Atualizar agora**: o PDV fecha por 1–2 minutos, instala
+(com backup dos dados antes) e a tela volta sozinha.
+
+As versões vêm das *Releases* do GitHub (a cada tag `v*` o GitHub Actions publica o instalador).
+Como o repositório é **privado**, o computador da loja precisa de um token de leitura:
+
+1. No GitHub: *Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*.
+2. *Repository access*: só o repositório `clara-styllus`. *Permissions → Contents*: **Read-only**.
+3. Copie o token e cole em *Configurações → Atualizações do sistema → Atualização automática e acesso*.
+
+**Sem internet:** baixe o `ClaraStyllus-PDV-Setup-x.y.z.exe` em outro computador, leve num pendrive e
+use **Atualizar com arquivo** na mesma tela (ou simplesmente rode o instalador).
 
 ## Backup
 

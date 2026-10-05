@@ -70,7 +70,18 @@ const Icone = (() => {
 
   /** Troca <i data-icone="nome"></i> pelo SVG (usado no HTML fixo da página). */
   Icone.aplicar = (raiz = document) => {
-    raiz.querySelectorAll('i[data-icone]').forEach((el) => { el.outerHTML = Icone(el.dataset.icone, el.className); });
+    raiz.querySelectorAll('i[data-icone]').forEach((el) => { if (el.parentNode) el.outerHTML = Icone(el.dataset.icone, el.className); });
   };
+  // Qualquer <i data-icone="nome"> que aparecer na página (telas, janelas) vira ícone sozinho.
+  new MutationObserver((mudancas) => {
+    for (const m of mudancas) {
+      for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (!n.isConnected) continue; // já saiu da página antes de chegar aqui
+        if (n.matches('i[data-icone]')) { if (n.parentNode) n.outerHTML = Icone(n.dataset.icone, n.className); }
+        else if (n.querySelector('i[data-icone]')) Icone.aplicar(n);
+      }
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
   return Icone;
 })();

@@ -268,7 +268,7 @@ Telas.pdv = (() => {
     if (!el) return;
     const alertas = [];
     if (carrinho.cliente && saldoCliente && saldoCliente.vencido > 0) {
-      alertas.push(['perigo', `📒 ${esc(carrinho.cliente.nome)} tem <b>${brl(saldoCliente.vencido)}</b> vencido no crediário.`]);
+      alertas.push(['perigo', `<i data-icone="caderno"></i> ${esc(carrinho.cliente.nome)} tem <b>${brl(saldoCliente.vencido)}</b> vencido no crediário.`]);
     }
     const porProduto = new Map();
     for (const it of carrinho.itens) {
@@ -279,14 +279,14 @@ Telas.pdv = (() => {
     for (const { p, qtd } of porProduto.values()) {
       if (p.servico) continue; // serviço não tem estoque
       const nome = esc([p.nome, p.tamanho, p.cor].filter(Boolean).join(' '));
-      if (qtd > p.estoque) alertas.push(['perigo', `📦 <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.`]);
-      else if (p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `📦 <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
+      if (qtd > p.estoque) alertas.push(['perigo', `<i data-icone="caixa"></i> <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.`]);
+      else if (p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `<i data-icone="caixa"></i> <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
     }
     const pendente = local.ler('pdv_vale_pendente', null);
-    if (pendente) alertas.push(['ok', `🎟️ Vale-troca <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);
+    if (pendente) alertas.push(['ok', `<i data-icone="vale"></i> Vale-troca <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);
     const aberto = caixa ? new Date(caixa.aberto_em.replace(' ', 'T')) : null;
     if (aberto && Date.now() - aberto.getTime() > 12 * 36e5) {
-      alertas.push(['alerta', `💰 O caixa nº ${caixa.id} está aberto desde ${U.dataHora(caixa.aberto_em)}. Feche o caixa do dia anterior.`]);
+      alertas.push(['alerta', `<i data-icone="dinheiro"></i> O caixa nº ${caixa.id} está aberto desde ${U.dataHora(caixa.aberto_em)}. Feche o caixa do dia anterior.`]);
     }
     el.innerHTML = alertas.map(([tipo, txt]) => `<div class="pdv-alerta ${tipo}">${txt}</div>`).join('');
     const tirar = el.querySelector('#tirar-vale');
@@ -845,14 +845,14 @@ Telas.pdv = (() => {
     const cfg = await U.config();
     const prazo = new Date(Date.now() + (Number(cfg.condicional_prazo_dias) || 3) * 864e5).toLocaleDateString('sv-SE');
     const total = pecas.reduce((a, it) => a + it.produto.preco_venda * it.quantidade, 0);
-    const corpo = abrirModal('👜 Condicional (malinha)', `
+    const corpo = abrirModal('Condicional (malinha)', `
       <p><b>${esc(carrinho.cliente.nome)}</b> vai levar <b>${pecas.reduce((a, it) => a + it.quantidade, 0)} peça(s)</b> para provar (${brl(total)}).
         As peças saem do estoque até ela devolver ou comprar.</p>
       <form class="form">
         <label>Devolver até<input type="date" name="prazo" value="${prazo}" required></label>
         <label>Observação<input name="obs" placeholder="Ex.: vai mostrar para a irmã"></label>
         <div class="acoes"><button type="button" class="btn" data-fechar>Voltar</button>
-          <button class="btn btn-primario btn-grande">👜 Registrar e imprimir (2 vias)</button></div>
+          <button class="btn btn-primario btn-grande"><i data-icone="bolsa"></i> Registrar e imprimir (2 vias)</button></div>
       </form>`, { largura: '520px' });
     corpo.querySelector('form').onsubmit = async (ev) => {
       ev.preventDefault();
@@ -929,7 +929,7 @@ Telas.pdv = (() => {
         if (!st) return;
         if (ok === false) {
           st.classList.add('falhou');
-          st.innerHTML = '⚠️ O cupom não foi impresso. Confira se a impressora está ligada e com papel'
+          st.innerHTML = '<i data-icone="alerta"></i> O cupom não foi impresso. Confira se a impressora está ligada e com papel'
             + (U.ehAdmin() ? ' (Configurações → Impressão)' : '')
             + ' e clique em “Imprimir de novo”.';
         } else {

@@ -52,7 +52,7 @@ const GradeEditor = (() => {
           <span class="ge-ferramentas">
             <label class="ge-preencher">Preencher vazias com <input type="number" min="0" id="ge-n" value="1"> <button type="button" class="btn btn-peq" id="ge-preencher">ok</button></label>
             <button type="button" class="btn btn-peq" id="ge-zerar">Zerar</button>
-            <button type="button" class="btn btn-peq btn-bipar" id="ge-bipar">📷 Modo bipar</button>
+            <button type="button" class="btn btn-peq btn-bipar" id="ge-bipar"><i data-icone="camera"></i> Modo bipar</button>
           </span>
         </div>
         <div class="ge-bipe" id="ge-bipe" hidden>
@@ -140,7 +140,7 @@ const GradeEditor = (() => {
     if (existentes.has(k)) return '<td><span class="ge-existe" title="Já cadastrado">✓ já existe</span></td>';
     return `<td class="${selecionada === k ? 'ge-sel' : ''}" data-cel="${esc(k)}">
             <input type="number" min="0" class="ge-qtd" data-k="${esc(k)}" value="${qtd.get(k) || ''}" placeholder="0">
-            ${cod.get(k) ? `<small class="ge-cod" title="${esc(cod.get(k))}">🏷️ ${esc(cod.get(k).slice(-6))}</small>` : ''}</td>`;
+            ${cod.get(k) ? `<small class="ge-cod" title="${esc(cod.get(k))}"><i data-icone="etiqueta"></i> ${esc(cod.get(k).slice(-6))}</small>` : ''}</td>`;
   }).join('')}<td class="grade-total">${colunas().reduce((a, t) => a + (qtd.get(chave(t, c)) || 0), 0)}</td></tr>`).join('')}</tbody>`;
       atualizarRodape();
     }

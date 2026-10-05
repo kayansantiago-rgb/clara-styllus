@@ -12,6 +12,7 @@ const FORMAS = { dinheiro: 'dinheiro', pix: 'PIX', debito: 'débito', credito: '
 
 // Nomes amigáveis das configurações mais comuns (as demais aparecem pelo nome técnico).
 const NOMES_CONFIG = {
+  atualizacao_token: 'token de atualização', atualizacao_auto: 'atualização automática', boas_vindas_ok: 'assistente de boas-vindas',
   loja_nome: 'nome da loja', loja_cnpj: 'CNPJ', impressora_cupom: 'impressora de cupom', impressora_etiqueta: 'impressora de etiqueta',
   impressao_automatica: 'impressão automática', desconto_maximo: 'desconto máximo', meta_mensal: 'meta do mês',
   markup_padrao: 'markup', crediario_max_parcelas: 'parcelas do crediário', backup_pasta: 'pasta de backup',
@@ -156,6 +157,8 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
       antes: (c) => db.prepare('SELECT descricao, valor FROM despesas WHERE id = ?').get(c.params.id),
       depois: (c, r, a) => ({ tipo: 'despesa', acao: 'Apagou despesa', descricao: a ? `${a.descricao} · ${brl(a.valor)}` : `Nº ${c.params.id}` }),
     },
+    'POST /api/atualizacao/instalar': { depois: (c, r) => ({ tipo: 'config', acao: 'Atualizou o sistema', descricao: `Para a versão ${r.versao}`, importante: true }) },
+    'POST /api/atualizacao/arquivo': { depois: (c, r) => ({ tipo: 'config', acao: 'Atualizou o sistema', descricao: `Para a versão ${r.versao} (arquivo)`, importante: true }) },
     'POST /api/backup/agora': { depois: () => ({ tipo: 'config', acao: 'Fez backup manual' }) },
     'POST /api/imprimir/gaveta': { depois: () => ({ tipo: 'caixa', acao: 'Abriu a gaveta', descricao: 'Sem venda (botão Gaveta)', importante: true }) },
   };

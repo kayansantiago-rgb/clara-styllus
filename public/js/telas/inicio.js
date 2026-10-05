@@ -43,8 +43,9 @@ Telas.inicio = (() => {
   }
 
   async function abrir(raiz) {
-    const [r, bk, conds] = await Promise.all([
+    const [r, bk, conds, at] = await Promise.all([
       api('/api/painel'), api('/api/backup/status').catch(() => null), api('/api/condicionais').catch(() => []),
+      api('/api/atualizacao').catch(() => null),
     ]);
     const condAtrasadas = conds.filter((c) => c.prazo < U.hoje());
     const semBackup = bk && (bk.horas_desde_ultimo == null || bk.horas_desde_ultimo > 72);
@@ -61,11 +62,14 @@ Telas.inicio = (() => {
         <div class="ferramentas"><a class="btn btn-primario btn-grande" href="#/pdv">${Icone('sacola')} Ir para o caixa</a></div>
       </div>
 
-      ${condAtrasadas.length ? `<div class="pdv-alerta alerta painel-alerta">👜 ${condAtrasadas.length} condicional(is) passou do prazo de devolução:
+      ${at && at.disponivel ? `<div class="pdv-alerta ok painel-alerta at-aviso"><i data-icone="nuvem"></i>
+        <span>Nova versão <b>${esc(at.disponivel.versao)}</b> do sistema disponível (você está na ${esc(at.versao_atual)}).</span>
+        <button class="btn btn-peq btn-primario" id="at-agora">Atualizar agora</button> <a href="#/config">detalhes</a></div>` : ''}
+      ${condAtrasadas.length ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="bolsa"></i> ${condAtrasadas.length} condicional(is) passou do prazo de devolução:
         ${condAtrasadas.slice(0, 3).map((c) => esc(c.cliente_nome)).join(', ')}${condAtrasadas.length > 3 ? '…' : ''}. <a href="#/condicional">Ver condicionais →</a></div>` : ''}
-      ${semBackup ? `<div class="pdv-alerta perigo painel-alerta">💾 ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}
+      ${semBackup ? `<div class="pdv-alerta perigo painel-alerta"><i data-icone="nuvem"></i> ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}
         Se o computador der defeito, os dados podem se perder. <a href="#/config">Fazer backup agora →</a></div>`
-    : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta">💾 ${esc(bk.ultimo_erro)}</div>` : ''}
+    : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="nuvem"></i> ${esc(bk.ultimo_erro)}</div>` : ''}
       <div class="cards painel-kpis">
         <div class="card destaque"><small>Vendido hoje</small><b>${brl(r.hoje.faturamento)}</b>${variacao(r.hoje.faturamento, r.ontem.faturamento)}</div>
         <div class="card"><small>Vendas hoje</small><b>${r.hoje.vendas}</b>${variacao(r.hoje.vendas, r.ontem.vendas)}</div>
@@ -108,7 +112,7 @@ Telas.inicio = (() => {
     const link = whats(c.telefone, `Feliz aniversário, ${c.nome.split(' ')[0]}! 🎉 A Clara Styllus deseja um dia lindo. Passa aqui na loja que temos um presente para você!`);
     return `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b>
               <small>${c.em_dias === 0 ? '<b class="txt-rosa">hoje!</b>' : c.em_dias === 1 ? 'amanhã' : `em ${c.em_dias} dias`} · ${c.aniversario.slice(8)}/${c.aniversario.slice(5, 7)}</small></span>
-              ${link ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${link}">📱 Parabéns</a>` : ''}</div>`;
+              ${link ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${link}"><i data-icone="whatsapp"></i> Parabéns</a>` : ''}</div>`;
   }).join('') || '<div class="vazio">Ninguém faz aniversário nos próximos 7 dias.</div>'}
         </div>
 
@@ -121,7 +125,7 @@ Telas.inicio = (() => {
           </div>
           <h4>Vencendo hoje</h4>
           ${r.crediario.vencendo_hoje.map((c) => `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b><small>${brl(c.valor)}</small></span>
-            ${whats(c.telefone, '') ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${whats(c.telefone, `Olá, ${c.nome.split(' ')[0]}! Aqui é da Clara Styllus. Lembrando que hoje vence sua parcela do crediário de ${brl(c.valor)}. Obrigada!`)}">📱 Lembrar</a>` : ''}</div>`).join('')
+            ${whats(c.telefone, '') ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${whats(c.telefone, `Olá, ${c.nome.split(' ')[0]}! Aqui é da Clara Styllus. Lembrando que hoje vence sua parcela do crediário de ${brl(c.valor)}. Obrigada!`)}"><i data-icone="whatsapp"></i> Lembrar</a>` : ''}</div>`).join('')
     || '<div class="vazio">Nenhuma parcela vence hoje.</div>'}
           <a href="#/crediario">Ver crediário completo →</a>
         </div>
@@ -130,11 +134,12 @@ Telas.inicio = (() => {
           <h3 class="titulo-ico">${Icone('caixa')} Estoque</h3>
           ${r.estoque_baixo
     ? `<p><b class="txt-perigo">${r.estoque_baixo}</b> produto(s) no estoque mínimo ou esgotados.</p><a href="#/relatorios">Ver lista para repor →</a>`
-    : '<p>Tudo certo com o estoque. ✅</p>'}
+    : '<p>Tudo certo com o estoque.</p>'}
         </div>
       </div>`;
 
     // Dica ao passar o mouse (ou focar com o teclado) nas barras.
+    raiz.querySelector('#at-agora')?.addEventListener('click', (ev) => Atualizacao.instalar(ev.currentTarget));
     const grafico = raiz.querySelector('.grafico-dias');
     const dica = grafico.querySelector('.dica-grafico');
     const mostrar = (ev) => {

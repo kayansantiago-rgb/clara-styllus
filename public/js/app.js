@@ -2,7 +2,7 @@
 (() => {
   const { esc, api, aviso, erro } = U;
   const conteudo = document.getElementById('conteudo');
-  const ROTAS_ADMIN = ['inicio', 'relatorios', 'usuarios', 'config', 'historico'];
+  const ROTAS_ADMIN = ['inicio', 'relatorios', 'usuarios', 'config', 'historico', 'boas-vindas'];
   let telaAtual = null;
 
   // --------------------------------------------------------------- login
@@ -35,8 +35,10 @@
       </span>`;
     document.getElementById('trocar').onclick = sair;
     document.getElementById('minha-senha').onclick = trocarSenha;
-    U.config().catch(() => {}); // carrega a configuração (som do bipe etc.)
-    navegar();
+    U.config().then((cfg) => {
+      // Primeira vez do administrador: abre o assistente de boas-vindas.
+      if (usuario.perfil === 'admin' && cfg.boas_vindas_ok !== '1') location.hash = '#/boas-vindas';
+    }).catch(() => {}).finally(navegar);
   }
 
   async function sair() {
@@ -169,7 +171,7 @@
       try {
         const r = await api('/api/primeiro-acesso', { metodo: 'POST', corpo: d });
         U.local.gravar('ultimo_login', r.usuario.login);
-        aviso('Administrador criado. Cadastre os vendedores em “Vendedores”.');
+        aviso('Administrador criado.');
         entrar(r.usuario);
       } catch (e) { erro(e); }
     };
@@ -213,6 +215,7 @@
     conteudo.className = `tela-${nome}`;
     // No PDV o menu fica estreito (só ícones) para sobrar espaço para a venda.
     document.body.classList.toggle('modo-pdv', nome === 'pdv');
+    document.body.classList.toggle('modo-boas-vindas', nome === 'boas-vindas');
     try {
       await tela.abrir(conteudo);
     } catch (e) {

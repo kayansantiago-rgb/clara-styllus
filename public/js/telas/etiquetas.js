@@ -27,7 +27,7 @@ Telas.etiquetas = (() => {
         <div class="ferramentas">
           <input id="q" placeholder="Bipe o código ou digite o nome e Enter" autofocus>
           <button class="btn" id="limpar">Limpar fila</button>
-          <button class="btn btn-primario" id="imprimir">🖨️ Imprimir</button>
+          <button class="btn btn-primario" id="imprimir"><i data-icone="impressora"></i> Imprimir</button>
         </div>
       </div>
       <div class="duas-colunas">
@@ -101,7 +101,7 @@ Telas.etiquetas = (() => {
         <td class="r">${brl(x.produto.preco_venda)}</td>
         <td class="c"><input type="number" min="0" class="qtd-input" data-i="${i}" value="${x.quantidade}"></td>
         <td><button class="mini perigo" data-rm="${i}">×</button></td>
-      </tr>`).join('') || '<tr><td colspan="4" class="vazio">Fila vazia. Bipe produtos aqui ou use 🏷️ na tela de Produtos.</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="4" class="vazio">Fila vazia. Bipe produtos aqui ou use <i data-icone="etiqueta"></i> na tela de Produtos.</td></tr>';
     atualizarBotao();
 
     const cfg = await U.config();
@@ -116,7 +116,7 @@ Telas.etiquetas = (() => {
 
   function atualizarBotao() {
     const total = fila().reduce((a, x) => a + x.quantidade, 0);
-    raiz.querySelector('#imprimir').textContent = `🖨️ Imprimir ${total} etiqueta${total === 1 ? '' : 's'}`;
+    raiz.querySelector('#imprimir').innerHTML = `<i data-icone="impressora"></i> Imprimir ${total} etiqueta${total === 1 ? '' : 's'}`;
   }
 
   async function imprimir() {

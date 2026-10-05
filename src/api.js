@@ -13,6 +13,7 @@ const { criarBackup } = require('./backup');
 const { instalarTrocas } = require('./trocas');
 const { instalarCondicional } = require('./condicional');
 const { instalarAuditoria } = require('./auditoria');
+const { instalarAtualizacao, VERSAO } = require('./atualizacao');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
@@ -159,6 +160,7 @@ function criarApi(db, opcoes = {}) {
     usuario: publico(usuario),
     primeiro_acesso: !temUsuarios(),
     loja_nome: config().loja_nome,
+    versao: VERSAO,
   }), 'publico');
 
   rota('POST', '/api/primeiro-acesso', (ctx) => {
@@ -232,10 +234,17 @@ function criarApi(db, opcoes = {}) {
   }, 'admin');
 
   // ---------------------------------------------------------------- config
-  rota('GET', '/api/config', () => config());
+  const OCULTO = '••••••••';
+  // O token de atualização nunca volta para a tela (só aparece que está preenchido).
+  rota('GET', '/api/config', () => {
+    const c = config();
+    if (c.atualizacao_token) c.atualizacao_token = OCULTO;
+    return c;
+  });
 
   rota('PUT', '/api/config', ({ corpo }) => {
     const atual = config();
+    if (corpo && corpo.atualizacao_token === OCULTO) delete corpo.atualizacao_token;
     const up = db.prepare('UPDATE config SET valor = ? WHERE chave = ?');
     transacao(db, () => {
       for (const [k, v] of Object.entries(corpo || {})) {
@@ -1465,6 +1474,10 @@ function criarApi(db, opcoes = {}) {
    * `sessao` vem preenchido (token, ou null para apagar) quando o cookie precisa mudar.
    */
   const auditoria = instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, buscarProduto });
+  const atualizacao = instalarAtualizacao({
+    rota, erro, config, salvarConfig,
+    pasta: opcoes.pastaAtualizacoes || path.join(os.tmpdir(), 'clara-styllus-atualizacoes'),
+  });
 
   function despachar(metodo, caminho, query, corpo, token) {
     for (const r of rotas) {
@@ -1507,6 +1520,7 @@ function criarApi(db, opcoes = {}) {
     return null;
   }
   despachar.backup = backup; // usado pelo servidor para o backup diário
+  despachar.atualizacao = atualizacao; // verificação periódica de versão nova
   return despachar;
 }
 

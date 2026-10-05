@@ -80,7 +80,7 @@ Telas.crediario = (() => {
         <td class="r"><b>${brl(c.saldo)}</b></td>
         <td class="r"><button class="btn btn-primario btn-peq" data-receber>Receber</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="8" class="vazio">Ninguém devendo no crediário. 🎉</td></tr>';
+    }).join('') || '<tr><td colspan="8" class="vazio">Ninguém devendo no crediário.</td></tr>';
   }
 
   // ------------------------------------------------------------- detalhe
@@ -113,9 +113,9 @@ Telas.crediario = (() => {
         <div class="card"><small>Limite de crédito</small><b>${d.limite == null ? 'sem limite' : brl(d.limite)}</b></div>
       </div>
       <div class="acoes acoes-esq">
-        <button class="btn btn-primario" id="receber" ${d.saldo.aberto ? '' : 'disabled'}>💰 Receber pagamento</button>
+        <button class="btn btn-primario" id="receber" ${d.saldo.aberto ? '' : 'disabled'}><i data-icone="dinheiro"></i> Receber pagamento</button>
         <button class="btn so-admin" id="debito">+ Lançar débito</button>
-        ${tel.length >= 10 && d.saldo.aberto ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${tel.replace(/^55/, '')}?text=${msg}">📱 Cobrar no WhatsApp</a>` : ''}
+        ${tel.length >= 10 && d.saldo.aberto ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${tel.replace(/^55/, '')}?text=${msg}"><i data-icone="whatsapp"></i> Cobrar no WhatsApp</a>` : ''}
       </div>
       <h3>Parcelas em aberto</h3>
       <div class="tabela-rolagem baixa"><table class="tabela">
@@ -126,7 +126,7 @@ Telas.crediario = (() => {
       <div class="tabela-rolagem baixa"><table class="tabela"><tbody id="recs">${d.recebimentos.map((r) => `
         <tr class="${r.status === 'estornado' ? 'inativo' : ''}"><td>${dataHora(r.criado_em)}</td><td>${U.FORMAS[r.forma] || r.forma}</td>
           <td>${esc(r.operador || '')}</td><td class="r"><b>${brl(r.valor)}</b>${r.status === 'estornado' ? ' <span class="selo perigo">estornado</span>' : ''}</td>
-          <td class="r nowrap"><button class="btn-ico" data-recibo="${r.id}" title="Imprimir recibo">🖨️</button>
+          <td class="r nowrap"><button class="btn-ico" data-recibo="${r.id}" title="Imprimir recibo"><i data-icone="impressora"></i></button>
           ${r.status === 'ok' ? `<button class="btn-ico so-admin" data-estornar="${r.id}" title="Estornar">↩️</button>` : ''}</td></tr>`).join('') ||
         '<tr><td class="vazio">Nenhum recebimento.</td></tr>'}</tbody></table></div>
       ${pagas.length ? `<details><summary>Parcelas já pagas (${pagas.length})</summary>

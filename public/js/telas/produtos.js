@@ -311,7 +311,7 @@ Telas.produtos = (() => {
    */
   function entradaBipagem() {
     const itens = new Map(); // produto_id -> { produto, quantidade }
-    const corpo = abrirModal('📦 Entrada por bipagem', `
+    const corpo = abrirModal('Entrada por bipagem', `
       <p class="dica">Bipe a etiqueta de cada peça que chegou. Pode usar <b>3*código</b> para várias iguais.
         Nada muda no estoque até você clicar em <b>Confirmar entrada</b>.</p>
       <div class="pdv-busca"><span class="pdv-busca-ico">⌕</span><input id="ent-leitor" autocomplete="off" placeholder="Bipe as peças aqui" autofocus></div>
@@ -404,7 +404,7 @@ Telas.produtos = (() => {
     if (!alvo.length) return aviso('Nenhum produto na lista. Use a busca para filtrar (ex.: "vestido").', 'alerta');
     const emLiq = alvo.filter((p) => p.preco_anterior > p.preco_venda);
     const q = raiz.querySelector('#q').value.trim();
-    const corpo = abrirModal('🔥 Liquidação', `
+    const corpo = abrirModal('Liquidação', `
       <p>Vale para os <b>${alvo.length} produto(s)</b> da lista${q ? ` (busca: "<b>${esc(q)}</b>")` : ' (todos)'}.
         Use a busca para escolher uma categoria, coleção ou referência antes.</p>
       <form class="form grade-form" id="f-liq">

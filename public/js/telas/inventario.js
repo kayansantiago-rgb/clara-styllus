@@ -21,7 +21,7 @@ Telas.inventario = (() => {
       <div class="cabecalho-tela"><h1>Inventário</h1></div>
       <div class="duas-colunas">
         <div class="cartao">
-          <h3>📋 Começar um inventário</h3>
+          <h3><i data-icone="prancheta"></i> Começar um inventário</h3>
           <ol class="passos">
             <li>Escolha se vai contar a loja toda ou só uma categoria.</li>
             <li>Bipe <b>todas as peças</b> com o leitor (pode usar <b>3*</b>código para várias iguais).</li>
@@ -35,7 +35,7 @@ Telas.inventario = (() => {
                 ${cats.map((c) => `<option value="${esc(c.categoria)}">Só ${esc(c.categoria)} (${c.produtos} produtos)</option>`).join('')}
               </select></label>
             <label>Descrição (opcional)<input name="descricao" placeholder="Ex.: Inventário de fim de mês"></label>
-            <button class="btn btn-primario btn-grande">📋 Começar inventário</button>
+            <button class="btn btn-primario btn-grande"><i data-icone="prancheta"></i> Começar inventário</button>
           </form>
           ${U.sessao.ehAdmin() ? '' : '<p class="alerta-box">Só o administrador pode começar um inventário.</p>'}
         </div>
@@ -76,7 +76,7 @@ Telas.inventario = (() => {
         <div><h1>Inventário nº ${inv.id}</h1><p class="dica">${esc(inv.descricao || '')} · começou ${dataHora(inv.criado_em)} por ${esc(inv.usuario || '')}</p></div>
         <div class="ferramentas">
           <button class="btn" id="desfazer">↩️ Desfazer última leitura</button>
-          <button class="btn btn-primario" id="conferir">🔍 Conferir e finalizar</button>
+          <button class="btn btn-primario" id="conferir"><i data-icone="busca"></i> Conferir e finalizar</button>
           <button class="btn btn-perigo-claro so-admin" id="cancelar">Cancelar inventário</button>
         </div>
       </div>
@@ -213,7 +213,7 @@ Telas.inventario = (() => {
         <button class="aba" data-aba="sobras">Sobrando (${sobras.length})</button>
         ${somenteVer ? '' : `<button class="aba" data-aba="nao">Não bipados (${naoBipados.length})</button>`}
       </div>
-      <div data-painel="faltas">${tabela(faltas, 'Nada faltando. 🎉')}</div>
+      <div data-painel="faltas">${tabela(faltas, 'Nada faltando.')}</div>
       <div data-painel="sobras" hidden>${tabela(sobras, 'Nada sobrando.')}</div>
       ${somenteVer ? '' : `<div data-painel="nao" hidden>${tabela(naoBipados, 'Todos os produtos com estoque foram bipados.')}</div>
       <div class="finalizar-inv so-admin">
@@ -222,7 +222,7 @@ Telas.inventario = (() => {
         <p class="dica">Desmarque se contou só uma parte da loja: aí só os produtos bipados são ajustados.</p>
         <div class="acoes">
           <button class="btn" data-fechar>Voltar a contar</button>
-          <button class="btn btn-primario btn-grande" id="finalizar">✅ Finalizar e ajustar estoque</button>
+          <button class="btn btn-primario btn-grande" id="finalizar"><i data-icone="check"></i> Finalizar e ajustar estoque</button>
         </div>
       </div>`}`, { largura: '900px' });
 

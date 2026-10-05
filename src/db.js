@@ -233,6 +233,13 @@ const CONFIG_PADRAO = {
   backup_ultimo_erro: '',
   // Trocas e condicional
   vale_validade_dias: '90',
+  // Assistente de boas-vindas (aparece para o administrador até ser concluído ou pulado)
+  boas_vindas_ok: '0',
+  // Atualização automática do sistema
+  atualizacao_auto: '1',
+  atualizacao_url: '',
+  atualizacao_token: '',
+  atualizacao_verificada_em: '',
   condicional_prazo_dias: '3',
 };
 
@@ -248,6 +255,9 @@ function abrirBanco(arquivo) {
   migrar(db);
 
   const inserir = db.prepare('INSERT OR IGNORE INTO config (chave, valor) VALUES (?, ?)');
+  // Loja que já estava em uso ao atualizar: não mostra o assistente de boas-vindas.
+  if (!db.prepare(`SELECT 1 FROM config WHERE chave = 'boas_vindas_ok'`).get()
+    && db.prepare('SELECT COUNT(*) AS n FROM produtos').get().n > 0) inserir.run('boas_vindas_ok', '1');
   for (const [chave, valor] of Object.entries(CONFIG_PADRAO)) inserir.run(chave, valor);
 
   return db;
