@@ -54,75 +54,92 @@ Telas.pdv = (() => {
     if (!caixa) return telaCaixaFechado();
 
     const hora = caixa.aberto_em.split(' ')[1]?.slice(0, 5) || '';
+    const eu = U.sessao.usuario;
     raiz.innerHTML = `
-      <div class="pdv3">
-        <header class="p3-topo">
-          <div class="p3-caixa" title="Caixa aberto às ${esc(hora)} por ${esc(caixa.operador || '')}">
-            <span class="ponto ok"></span><div><b>Caixa ${caixa.id}</b><small>${esc(hora)} · ${esc((caixa.operador || '').split(' ')[0])}</small></div>
+      <div class="pdv4">
+        <header class="p4-topo">
+          <div class="p3-mais">
+            <button class="p4-nav-btn" id="t-nav" title="Ir para outra tela">${Icone('grade')}<span>Menu</span></button>
+            <div class="p3-menu p4-nav" id="menu-nav" hidden>
+              <a href="#/inicio" data-admin>${Icone('inicio')} Início</a>
+              <a href="#/produtos">${Icone('roupa')} Produtos</a>
+              <a href="#/vendas">${Icone('recibo')} Vendas</a>
+              <a href="#/clientes">${Icone('clientes')} Clientes</a>
+              <a href="#/crediario">${Icone('caderno')} Crediário</a>
+              <a href="#/condicional">${Icone('bolsa')} Condicional</a>
+              <a href="#/etiquetas">${Icone('etiqueta')} Etiquetas</a>
+              <a href="#/caixa">${Icone('carteira')} Caixa</a>
+              <a href="#/relatorios" data-admin>${Icone('grafico')} Relatórios</a>
+              <a href="#/config" data-admin>${Icone('ajustes')} Configurações</a>
+            </div>
           </div>
-          <div class="pdv-busca p3-busca">
-            <span class="pdv-busca-ico">${Icone('codigo')}</span>
-            <input id="busca" autocomplete="off" placeholder="Bipe a etiqueta ou digite o nome da peça">
-            <kbd>F2</kbd>
-            <div id="sugestoes" class="sugestoes" hidden></div>
-          </div>
-          <div class="p3-acoes">
-            <button class="btn btn-topo" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')}<span>Troca</span></button>
-            <button class="btn btn-topo" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')}<span>Condicional</span></button>
-            <button class="btn btn-topo" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')}<span>Gaveta</span></button>
+          <div class="p4-caixa"><span class="ponto ok"></span><b>Caixa ${caixa.id} aberto</b><small>desde ${esc(hora)}</small></div>
+          <div class="p4-topo-acoes">
+            <button class="p4-acao" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')}<span>Troca</span></button>
+            <button class="p4-acao" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')}<span>Condicional</span></button>
+            <button class="p4-acao" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')}<span>Gaveta</span></button>
             <div class="p3-mais">
-              <button class="btn btn-topo" id="t-mais" title="Mais opções do caixa">${Icone('ajustes')}<span>Caixa</span></button>
+              <button class="p4-acao" id="t-mais" title="Sangria, suprimento e fechar o caixa">${Icone('carteira')}<span>Caixa</span></button>
               <div class="p3-menu" id="menu-caixa" hidden>
                 <button id="t-sangria">${Icone('retirar')} Sangria <small>retirar dinheiro</small></button>
                 <button id="t-suprimento">${Icone('colocar')} Suprimento <small>colocar troco</small></button>
                 <button id="t-tela">${Icone('telaCheia')} Tela cheia <small>F11</small></button>
                 <hr>
-                <button id="t-fechar" class="perigo">${Icone('cadeado')} Fechar caixa</button>
+                <button id="t-fechar" class="perigo">${Icone('cadeado')} Fechar o caixa</button>
               </div>
             </div>
+          </div>
+          <div class="p4-quem" title="Vendas ficam no nome de quem está logado">
+            <span class="avatar">${esc(String(eu.nome || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase())}</span>
+            <div><b>${esc(eu.nome.split(' ')[0])}</b><button class="link" onclick="exigirLogin()" type="button">trocar</button></div>
           </div>
           <span class="pdv-relogio" id="relogio"></span>
         </header>
 
-        <section class="p3-esq">
-          <div class="pdv-alertas" id="alertas"></div>
-          <div class="pdv-ultimo p3-ultimo" id="ultimo"></div>
-          <div class="p3-secao" id="secao-atalhos">
-            <h4>${Icone('raio')} Botões rápidos</h4>
-            <div class="pdv-atalhos" id="atalhos"></div>
+        <section class="p4-venda">
+          <div class="p4-passo"><span>1</span>Bipe a etiqueta ou procure a peça</div>
+          <div class="pdv-busca p4-busca">
+            <span class="pdv-busca-ico">${Icone('codigo')}</span>
+            <input id="busca" autocomplete="off" placeholder="Bipe aqui ou digite o nome da peça…">
+            <kbd>F2</kbd>
+            <div id="sugestoes" class="sugestoes" hidden></div>
           </div>
-          <div class="p3-secao p3-secao-vitrine">
-            <h4>${Icone('estrela')} Mais vendidas <small>clique para adicionar</small></h4>
-            <div class="p3-vitrine" id="vitrine"></div>
+          <div class="pdv-alertas" id="alertas"></div>
+          <div class="p4-lista-cab">
+            <div><b>Peças da venda</b><span id="itens-cont"></span></div>
+            <button class="btn btn-claro btn-peq" id="btn-sem-etiqueta">${Icone('estrela')} Peça sem etiqueta</button>
+          </div>
+          <div class="pdv-lista p4-lista" id="itens"></div>
+          <div class="p4-rapidos" id="secao-atalhos" hidden>
+            <span>${Icone('raio')} Rápido</span>
+            <div class="pdv-atalhos" id="atalhos"></div>
           </div>
         </section>
 
-        <aside class="p3-carrinho">
-          <div class="p3-car-cab">
-            <div><b>Venda atual</b><span id="itens-cont"></span></div>
-            <button class="btn btn-fantasma btn-peq" id="btn-limpar" title="Cancelar esta venda">${Icone('lixeira')} Limpar <kbd>F9</kbd></button>
-          </div>
+        <aside class="p4-pagar">
+          <div class="p4-passo"><span>2</span>Confira a cliente e o total</div>
           <button class="pdv-cliente" id="btn-cliente">
             <span class="pdv-cliente-ico">${Icone('usuario')}</span>
             <span id="cliente-info" class="pdv-cliente-txt"></span>
             <kbd>F6</kbd>
           </button>
-          <div class="pdv-lista" id="itens"></div>
-          <div class="p3-extras">
-            <label>${Icone('etiqueta')}<input id="desconto" placeholder="Desconto: 10% ou 15,00" value="${esc(carrinho.desconto)}"><kbd>F7</kbd></label>
-            <label>${Icone('recibo')}<input id="cpf" inputmode="numeric" placeholder="CPF/CNPJ na nota" value="${esc(carrinho.cpf_nota)}"></label>
+          <div class="p4-total">
+            <small>Total a pagar</small>
+            <b id="t-total"></b>
+            <div class="p4-total-det"><span><b id="t-pecas"></b> peça(s)</span><span>Subtotal <b id="t-sub"></b></span><span>Desconto <b id="t-desc"></b></span></div>
           </div>
-          <div class="p3-totais">
-            <div class="linha"><span>Subtotal · <b id="t-pecas"></b> peça(s)</span><span id="t-sub"></span></div>
-            <div class="linha p3-desc"><span>Descontos</span><span id="t-desc"></span></div>
-            <div class="p3-total"><span>Total</span><b id="t-total"></b></div>
+          <div class="p4-ajustes">
+            <button id="btn-desconto">${Icone('etiqueta')}<span id="desconto-txt">Desconto</span><kbd>F7</kbd></button>
+            <button id="btn-cpf">${Icone('recibo')}<span id="cpf-txt">CPF na nota</span></button>
           </div>
-          <div class="pdv-pagar">
-            ${FORMAS_RAPIDAS.map(([k, ico, nome]) => `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}${nome}</button>`).join('')}
+          <div class="p4-passo"><span>3</span>Como a cliente vai pagar?</div>
+          <div class="pdv-pagar p4-formas">
+            ${[...FORMAS_RAPIDAS, ['vale', 'vale', 'Vale-troca']].map(([k, ico, nome]) => `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}<span>${nome}</span></button>`).join('')}
           </div>
-          <button class="btn btn-primario pdv-finalizar" id="btn-finalizar">${Icone('check')} Finalizar venda <kbd>F4</kbd></button>
-          <div class="vendedor-logado"><small>Vendedor(a)</small><b>${esc(U.sessao.usuario.nome)}</b>
-            <button class="link" onclick="exigirLogin()" type="button">trocar</button></div>
+          <div class="p4-rodape-pagar">
+            <button class="link" id="btn-finalizar">Dividir em duas formas <kbd>F4</kbd></button>
+            <button class="link p4-cancelar" id="btn-limpar">Cancelar venda <kbd>F9</kbd></button>
+          </div>
         </aside>
       </div>`;
 
@@ -130,8 +147,11 @@ Telas.pdv = (() => {
     busca.addEventListener('keydown', teclaBusca);
     busca.addEventListener('input', U.debounce(() => sugerir(busca.value), 200));
     busca.addEventListener('blur', () => setTimeout(esconderSugestoes, 150));
-    raiz.querySelector('#cpf').addEventListener('input', (e) => { carrinho.cpf_nota = e.target.value; salvar(); });
-    raiz.querySelector('#desconto').addEventListener('input', (e) => { carrinho.desconto = e.target.value; salvar(); desenharTotais(); });
+    raiz.querySelector('#btn-desconto').onclick = pedirDesconto;
+    raiz.querySelector('#btn-cpf').onclick = pedirCpf;
+    raiz.querySelector('#btn-sem-etiqueta').onclick = abrirVitrine;
+    const nav = raiz.querySelector('#menu-nav');
+    raiz.querySelector('#t-nav').onclick = (ev) => { ev.stopPropagation(); nav.hidden = !nav.hidden; };
     raiz.querySelector('#btn-cliente').onclick = () => escolherCliente();
     raiz.querySelector('#btn-finalizar').onclick = () => finalizar();
     raiz.querySelector('#btn-limpar').onclick = limpar;
@@ -150,9 +170,11 @@ Telas.pdv = (() => {
     const menu = raiz.querySelector('#menu-caixa');
     raiz.querySelector('#t-mais').onclick = (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; };
     menu.onclick = () => { menu.hidden = true; };
-    raiz.addEventListener('click', (ev) => { if (!ev.target.closest('.p3-mais')) menu.hidden = true; });
+    raiz.addEventListener('click', (ev) => {
+      if (!ev.target.closest('#t-mais')) menu.hidden = true;
+      if (!ev.target.closest('#t-nav')) nav.hidden = true;
+    });
     carregarAtalhos();
-    carregarVitrine();
     raiz.querySelector('#t-fechar').onclick = async () => {
       if (carrinho.itens.length && !(await U.confirmar('Fechar caixa',
         'Há uma venda em andamento. Ela continua guardada e volta quando o caixa for aberto de novo. Fechar mesmo assim?',
@@ -221,32 +243,35 @@ Telas.pdv = (() => {
     lista.innerHTML = carrinho.itens.length
       ? carrinho.itens.map((it, i) => {
         const p = it.produto;
-        const det = [p.tamanho && `Tam ${p.tamanho}`, p.cor].filter(Boolean).join(' · ');
         const liq = p.preco_anterior > p.preco_venda;
-        return `<div class="pdv-item ${i === carrinho.itens.length - 1 ? 'recente' : ''}" data-i="${i}">
-          ${U.miniatura(p, 'pdv-item-foto')}
-          <div class="pdv-item-txt">
+        return `<div class="p4-item ${i === carrinho.itens.length - 1 ? 'recente' : ''}" data-i="${i}">
+          ${U.miniatura(p, 'p4-item-foto')}
+          <div class="p4-item-txt">
             <b title="${esc(p.nome)}">${esc(p.nome)}</b>
-            <small>${det ? `<span class="pdv-tag">${esc(det)}</span>` : ''}${liq ? `<s>${num(p.preco_anterior)}</s> ` : ''}${num(p.preco_venda)} cada</small>
+            <span class="p4-tags">${p.tamanho ? `<span class="p4-tag">Tam ${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${esc(p.cor)}</span>` : ''}<small>${esc(p.codigo)}</small></span>
           </div>
-          <b class="pdv-item-total">${num(totalItem(it))}</b>
-          <div class="pdv-item-acoes">
-            <span class="qtd-ctrl"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>
-            <button class="pdv-desc ${it.desconto ? 'tem' : ''}" data-acao="desc" title="Desconto nesta peça">${it.desconto ? `−${num(it.desconto)}` : `${Icone('etiqueta')} desconto`}</button>
-            <button class="mini perigo" data-acao="remover" title="Tirar da venda">${Icone('lixeira')}</button>
-          </div>
+          <div class="p4-item-preco">${liq ? `<s>${num(p.preco_anterior)}</s>` : ''}<span>${num(p.preco_venda)}</span><small>cada</small></div>
+          <span class="qtd-ctrl p4-qtd"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>
+          <button class="pdv-desc ${it.desconto ? 'tem' : ''}" data-acao="desc" title="Desconto nesta peça">${it.desconto ? `−${num(it.desconto)}` : `${Icone('etiqueta')} desconto`}</button>
+          <b class="p4-item-total">${num(totalItem(it))}</b>
+          <button class="p4-remover" data-acao="remover" title="Tirar da venda">${Icone('lixeira')}</button>
         </div>`;
       }).join('')
-      : `<div class="p3-vazio">
+      : `<div class="p4-vazio">
           <div class="pdv-vazio-ico">${Icone('sacola')}</div>
-          <b>Nenhuma peça ainda</b>
-          <small>Bipe a etiqueta, digite o nome ou clique numa peça ao lado.</small>
-          <div class="pdv-vazio-dicas"><span><kbd>3*</kbd>código = 3 peças</span><span><kbd>F8</kbd> tira a última</span></div></div>`;
+          <b>Caixa livre</b>
+          <p>Bipe a etiqueta da peça com o leitor — ela aparece aqui.</p>
+          <div class="p4-vazio-passos">
+            <span><i>1</i>Bipe as peças</span><span><i>2</i>Confira o total</span><span><i>3</i>Escolha a forma de pagamento</span>
+          </div>
+          <div class="pdv-vazio-dicas"><span><kbd>3*</kbd>código = 3 peças iguais</span><span><kbd>F8</kbd> tira a última peça</span></div>
+        </div>`;
     const recente = lista.querySelector('.recente');
     if (recente) recente.scrollIntoView({ block: 'nearest' });
 
     const ult = carrinho.itens[carrinho.itens.length - 1];
     const ultEl = raiz.querySelector('#ultimo');
+    if (ultEl) {
     ultEl.classList.toggle('vazio-ult', !ult);
     const chaveUlt = ult ? `${carrinho.itens.length}-${ult.produto.id}-${ult.quantidade}` : '';
     if (chaveUlt && chaveUlt !== ultEl.dataset.chave) {
@@ -260,6 +285,7 @@ Telas.pdv = (() => {
            <small>${esc([ult.produto.tamanho && 'Tam ' + ult.produto.tamanho, ult.produto.cor].filter(Boolean).join(' · '))}</small></div>
          <b>${ult.quantidade} × ${brl(ult.produto.preco_venda)}</b>`
       : `<span class="ultimo-foto sem-foto">${Icone('sacola')}</span><div class="ultimo-txt"><small>Último item</small><span>Nenhuma peça ainda</span><small>As peças bipadas aparecem aqui</small></div><b>${brl(0)}</b>`;
+    }
 
     desenharCliente();
     desenharTotais();
@@ -303,8 +329,39 @@ Telas.pdv = (() => {
     raiz.querySelector('#t-sub').textContent = brl(t.bruto);
     raiz.querySelector('#t-desc').textContent = brl(t.bruto - t.total);
     raiz.querySelector('#t-total').textContent = brl(t.total);
-    const campo = raiz.querySelector('#desconto');
-    campo.classList.toggle('invalido', Number.isNaN(lerDesconto(carrinho.desconto, t.subtotal)));
+    const temDesc = !!String(carrinho.desconto || '').trim();
+    raiz.querySelector('#desconto-txt').textContent = temDesc ? `Desconto: ${carrinho.desconto}` : 'Desconto';
+    raiz.querySelector('#btn-desconto').classList.toggle('ativo', temDesc);
+    raiz.querySelector('#btn-desconto').classList.toggle('invalido', Number.isNaN(lerDesconto(carrinho.desconto, t.subtotal)));
+    raiz.querySelector('#cpf-txt').textContent = carrinho.cpf_nota ? `CPF ${carrinho.cpf_nota}` : 'CPF na nota';
+    raiz.querySelector('#btn-cpf').classList.toggle('ativo', !!carrinho.cpf_nota);
+    raiz.querySelector('.p4-pagar').classList.toggle('sem-itens', !carrinho.itens.length);
+  }
+
+  /** Desconto na venda inteira: "10%" ou "15,00". */
+  async function pedirDesconto() {
+    const t = totais();
+    const v = await U.perguntar('Desconto na venda', `Digite em % (ex.: 10%) ou em reais (ex.: 15,00). Subtotal: ${brl(t.subtotal)}. Deixe vazio para tirar.`,
+      { valor: carrinho.desconto || '', obrigatorio: false });
+    if (v === null) return;
+    const d = lerDesconto(v, t.subtotal);
+    if (Number.isNaN(d) || d < 0) return aviso('Desconto inválido. Use 10% ou 15,00.', 'erro');
+    if (d > t.subtotal) return aviso('O desconto não pode ser maior que a venda.', 'erro');
+    carrinho.desconto = String(v).trim();
+    salvar();
+    desenharTotais();
+    raiz.querySelector('#busca').focus();
+  }
+
+  async function pedirCpf() {
+    const v = await U.perguntar('CPF/CNPJ na nota', 'Digite o CPF ou CNPJ da cliente (vazio para tirar):', { valor: carrinho.cpf_nota || '', obrigatorio: false });
+    if (v === null) return;
+    const dig = String(v).replace(/\D/g, '');
+    if (dig && dig.length !== 11 && dig.length !== 14) return aviso('CPF precisa ter 11 números (CNPJ, 14).', 'erro');
+    carrinho.cpf_nota = dig ? U.cpf(dig) : '';
+    salvar();
+    desenharTotais();
+    raiz.querySelector('#busca').focus();
   }
 
   // -------------------------------------------------------------- busca
@@ -332,23 +389,23 @@ Telas.pdv = (() => {
     };
   }
 
-  /** Vitrine com as peças mais vendidas (toque para adicionar). */
-  async function carregarVitrine() {
+  /** Peça sem etiqueta: escolhe pela foto entre as mais vendidas (ou procura pelo nome). */
+  async function abrirVitrine() {
     let lista = [];
-    try { lista = await api('/api/produtos/populares?limite=12'); } catch { /* sem vitrine */ }
-    const el = raiz && raiz.querySelector('#vitrine');
-    if (!el) return;
-    el.innerHTML = lista.length ? lista.map((p, i) => `<button class="p3-peca" data-i="${i}" title="${esc(p.nome)}">
+    try { lista = await api('/api/produtos/populares?limite=24'); } catch (e) { return erro(e); }
+    const corpo = abrirModal('Peça sem etiqueta', `
+      <p class="dica">Clique na peça para colocar na venda. Não achou? Feche e digite o nome na busca.</p>
+      <div class="p3-vitrine" id="vitrine">${lista.length ? lista.map((p, i) => `<button class="p3-peca" data-i="${i}" title="${esc(p.nome)}">
         ${U.miniatura(p, 'p3-peca-foto')}
         <span class="p3-peca-txt"><b>${esc(p.nome)}</b><small>${esc([p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small></span>
         <span class="p3-peca-preco">${p.preco_anterior > p.preco_venda ? `<s>${num(p.preco_anterior)}</s>` : ''}<b>${brl(p.preco_venda)}</b><small>${p.servico ? 'serviço' : `${p.estoque} em estoque`}</small></span>
-      </button>`).join('')
-      : '<div class="p3-vitrine-vazia">As peças mais vendidas aparecem aqui depois das primeiras vendas.</div>';
-    el.onclick = (ev) => {
+      </button>`).join('') : '<div class="p3-vitrine-vazia">As peças mais vendidas aparecem aqui depois das primeiras vendas.</div>'}</div>`,
+    { largura: '900px', aoFechar: () => raiz && raiz.querySelector('#busca').focus() });
+    corpo.querySelector('#vitrine').onclick = (ev) => {
       const b = ev.target.closest('[data-i]');
       if (!b) return;
+      fecharModal();
       adicionar(lista[Number(b.dataset.i)], 1);
-      raiz.querySelector('#busca').focus();
     };
   }
 
@@ -547,7 +604,7 @@ Telas.pdv = (() => {
       salvar();
       fecharModal();
       if (!raiz) return;
-      raiz.querySelector('#cpf').value = carrinho.cpf_nota;
+      desenharTotais();
       carregarSaldoCliente().then(() => {
         desenharCliente();
         desenharAlertas();
@@ -969,7 +1026,7 @@ Telas.pdv = (() => {
       F2: () => raiz.querySelector('#busca').focus(),
       F4: () => !U.modalAberto() && finalizar(),
       F6: () => !U.modalAberto() && escolherCliente(),
-      F7: () => { const d = raiz.querySelector('#desconto'); d.focus(); d.select(); },
+      F7: () => !U.modalAberto() && pedirDesconto(),
       F8: () => {
         if (U.modalAberto() || !carrinho.itens.length) return;
         carrinho.itens.pop();
