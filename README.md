@@ -5,6 +5,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Cadastro em grade**: escolha os tamanhos (botões prontos: PP–GG, 34–46…) e as cores, e digite a quantidade
+  de cada combinação numa tabela. No **modo bipar**, cada bipe da etiqueta do fornecedor soma +1 na combinação
+  e guarda o código dela. Dá para **adicionar tamanhos/cores** a um produto que já existe.
+- **Entrada por bipagem**: quando chega mercadoria, bipe as peças e confirme — o estoque soma de uma vez.
 - **Backup automático**: uma cópia ao fechar o caixa e uma vez por dia, guardando as últimas 30, com
   segunda cópia opcional em pendrive ou pasta do Google Drive/OneDrive; o painel avisa se ficar sem backup.
 - **Preço sugerido pelo markup**: digite o custo e o sistema sugere o preço (ex.: custo × 2,2, terminando em ,90).

@@ -288,6 +288,15 @@ function criarApi(db, opcoes = {}) {
     return planos(db.prepare(sql).all(...args));
   });
 
+  /** Cores, tamanhos, categorias e marcas já usados (sugestões no cadastro). */
+  rota('GET', '/api/produtos/atributos', () => {
+    const distintos = (col) => db
+      .prepare(`SELECT ${col} AS v, COUNT(*) AS n FROM produtos WHERE ativo = 1 AND ${col} IS NOT NULL AND ${col} <> ''
+                GROUP BY ${col} COLLATE NOCASE ORDER BY n DESC, v LIMIT 60`)
+      .all().map((r) => r.v);
+    return { cores: distintos('cor'), tamanhos: distintos('tamanho'), categorias: distintos('categoria'), marcas: distintos('marca') };
+  });
+
   /** Ordem natural dos tamanhos de roupa (PP, P, M, G… e numeração). */
   const ORDEM_TAM = ['RN', 'BB', 'PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'EG', 'EXG', 'G1', 'G2', 'G3', 'G4', 'U', 'UN', 'UNICO', 'ÚNICO'];
   const pesoTamanho = (t) => {
@@ -367,10 +376,8 @@ function criarApi(db, opcoes = {}) {
     );
   });
 
-  rota('POST', '/api/produtos', ({ corpo }) => {
-    const p = lerProduto(corpo || {});
-    const estoqueInicial = inteiro(corpo.estoque, 'estoque', { min: 0, padrao: 0 });
-    return transacao(db, () => {
+  /** Grava um produto novo (chamar dentro de uma transação). */
+  const inserirProduto = (p, estoqueInicial) => {
       if (p.codigo && db.prepare('SELECT 1 FROM produtos WHERE codigo = ?').get(p.codigo)) {
         throw erro(409, `Já existe um produto com o código ${p.codigo}.`);
       }
@@ -395,7 +402,66 @@ function criarApi(db, opcoes = {}) {
         ).run(id, estoqueInicial);
       }
       return buscarProduto(id);
+  };
+
+  rota('POST', '/api/produtos', ({ corpo }) => {
+    const p = lerProduto(corpo || {});
+    const estoqueInicial = inteiro(corpo.estoque, 'estoque', { min: 0, padrao: 0 });
+    return transacao(db, () => inserirProduto(p, estoqueInicial));
+  }, 'admin');
+
+  /**
+   * Cadastro da grade inteira de uma vez: mesmos dados (nome, preço…) e uma lista de
+   * variações { tamanho, cor, quantidade, codigo? }. Tudo ou nada (transação).
+   */
+  rota('POST', '/api/produtos/grade', ({ corpo }) => {
+    const base = lerProduto({ ...(corpo || {}), tamanho: null, cor: null, codigo: null });
+    const variantes = Array.isArray(corpo.variantes) ? corpo.variantes : [];
+    if (!variantes.length) throw erro(400, 'Escolha pelo menos um tamanho ou uma cor.');
+    if (variantes.length > 300) throw erro(400, 'Grade grande demais (máximo 300 variações).');
+    const chaves = new Set();
+    const codigos = new Set();
+    const lista = variantes.map((v) => {
+      const tamanho = texto(v.tamanho, 20);
+      const cor = texto(v.cor, 60);
+      const k = `${(tamanho || '').toLowerCase()}|${(cor || '').toLowerCase()}`;
+      if (chaves.has(k)) throw erro(400, `Tamanho ${tamanho || '—'} / cor ${cor || '—'} repetido na grade.`);
+      chaves.add(k);
+      const codigo = texto(v.codigo, 60);
+      if (codigo) {
+        if (codigos.has(codigo)) throw erro(400, `O código ${codigo} foi usado em duas variações.`);
+        codigos.add(codigo);
+      }
+      return { tamanho, cor, codigo, quantidade: inteiro(v.quantidade, 'quantidade', { min: 0, padrao: 0 }) };
     });
+    return transacao(db, () => lista.map((v) => {
+      const existe = db
+        .prepare(
+          `SELECT id FROM produtos WHERE ativo = 1 AND nome = ? COLLATE NOCASE
+           AND COALESCE(referencia,'') = COALESCE(?, '') AND COALESCE(tamanho,'') = COALESCE(?, '') COLLATE NOCASE
+           AND COALESCE(cor,'') = COALESCE(?, '') COLLATE NOCASE`
+        )
+        .get(base.nome, base.referencia, v.tamanho, v.cor);
+      if (existe) {
+        throw erro(409, `Já existe "${base.nome}" ${[v.tamanho, v.cor].filter(Boolean).join(' ')} cadastrado. Use "Entrada por bipagem" para somar estoque.`);
+      }
+      return inserirProduto({ ...base, tamanho: v.tamanho, cor: v.cor, codigo: v.codigo }, v.quantidade);
+    }));
+  }, 'admin');
+
+  /** Entrada de mercadoria em lote (ex.: bipando as peças que chegaram). */
+  rota('POST', '/api/produtos/entrada-lote', ({ corpo }) => {
+    const itens = Array.isArray(corpo.itens) ? corpo.itens : [];
+    if (!itens.length) throw erro(400, 'Nenhuma peça bipada.');
+    const motivo = texto(corpo.motivo, 200) || 'Entrada por bipagem';
+    return transacao(db, () => itens.map((it) => {
+      const p = buscarProduto(inteiro(it.produto_id, 'produto_id', { min: 1 }));
+      const qtd = inteiro(it.quantidade, 'quantidade', { min: 1 });
+      db.prepare(`UPDATE produtos SET estoque = estoque + ?, atualizado_em = datetime('now','localtime') WHERE id = ?`).run(qtd, p.id);
+      db.prepare(`INSERT INTO estoque_movimentos (produto_id, tipo, quantidade, motivo) VALUES (?, 'entrada', ?, ?)`)
+        .run(p.id, qtd, motivo);
+      return buscarProduto(p.id);
+    }));
   }, 'admin');
 
   rota('PUT', '/api/produtos/:id', ({ params, corpo }) => {

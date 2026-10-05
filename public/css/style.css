@@ -395,6 +395,42 @@ tr.linha-vermelho td { background: #fff7f6; }
 .painel-alerta { margin-bottom: 14px; }
 .painel-alerta a { color: inherit; font-weight: 600; }
 
+/* Editor de grade (cadastro) */
+.ge { display: flex; flex-direction: column; gap: 8px; }
+.ge-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.ge-presets, .ge-ferramentas { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip-preset { font: inherit; font-size: 12px; border: 1px dashed var(--rosa); color: var(--rosa-escuro); background: #fff; border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+.chip-preset:hover { background: var(--rosa-claro); }
+.ge-chips { display: flex; gap: 6px; flex-wrap: wrap; min-height: 30px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--rosa); color: #fff; border-radius: 99px; padding: 4px 6px 4px 12px; font-weight: 600; font-size: 14px; }
+.chip button { border: 0; background: rgba(255,255,255,.25); color: #fff; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; line-height: 1; }
+.chip-cor { background: #2b2326; }
+.ge-sug { font-size: 12px; color: var(--suave); }
+.ge-sug .link { font-size: 12px; margin: 0 2px; }
+.ge-add input { max-width: 420px; }
+.ge-preencher { flex-direction: row; align-items: center; gap: 4px; font-size: 13px; }
+.ge-preencher input { width: 56px; padding: 4px 6px; }
+.btn-bipar.ativo { background: var(--rosa); color: #fff; border-color: var(--rosa); }
+.ge-bipe { background: var(--rosa-claro); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ge-bipe[hidden] { display: none; }
+.ge-bipe .pdv-busca input { font-size: 17px; padding: 10px 12px 10px 44px; }
+.ge-bipe-info { font-size: 14px; }
+.ge-msg.ok { color: var(--ok); } .ge-msg.erro { color: var(--perigo); } .ge-msg.alerta { color: #7a5208; }
+.ge-tabela { border-collapse: separate; border-spacing: 4px; }
+.ge-tabela th { font-size: 13px; color: var(--suave); padding: 2px 6px; text-align: center; white-space: nowrap; }
+.ge-tabela tbody th { text-align: right; color: var(--texto); }
+.ge-tabela td { text-align: center; border-radius: 8px; padding: 3px; vertical-align: top; }
+.ge-tabela td.ge-sel { outline: 2px solid var(--rosa); background: var(--rosa-claro); }
+.ge-tabela td.ge-pisca { animation: ge-pisca .4s; }
+@keyframes ge-pisca { from { background: #bfe8cf; } }
+.ge-qtd { width: 62px; text-align: center; font-size: 17px; font-weight: 700; padding: 6px 4px; }
+.ge-qtd::placeholder { color: #cfc4c8; font-weight: 400; }
+.ge-cod { display: block; font-size: 10px; color: var(--ok); margin-top: 2px; }
+.ge-existe { display: inline-block; font-size: 11px; color: var(--suave); background: #f3f0f1; border-radius: 6px; padding: 8px 6px; }
+.ge-rodape { font-size: 14px; color: var(--suave); }
+.ent-msg { min-height: 24px; margin: 8px 0; font-size: 14px; }
+.ent-total { margin: 8px 0; }
+
 /* -------------------------------------------------------- etiquetas */
 .qtd-input { width: 80px; text-align: center; }
 .previa-etiqueta { display: flex; justify-content: center; padding: 20px; background: #eee; border-radius: 8px; }

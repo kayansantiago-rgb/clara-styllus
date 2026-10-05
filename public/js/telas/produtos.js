@@ -13,6 +13,7 @@ Telas.produtos = (() => {
           <input id="q" type="search" placeholder="Buscar por nome, código, referência, cor…" autofocus>
           <label class="check"><input type="checkbox" id="baixo"> Só estoque baixo</label>
           <label class="check so-admin"><input type="checkbox" id="inativos"> Mostrar inativos</label>
+          <button class="btn so-admin" id="entrada" title="Somar estoque bipando as peças que chegaram">📦 Entrada por bipagem</button>
           <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">🔥 Liquidação</button>
           <button class="btn btn-primario so-admin" id="novo">+ Novo produto</button>
         </div>
@@ -30,6 +31,7 @@ Telas.produtos = (() => {
     raiz.querySelector('#inativos').onchange = carregar;
     raiz.querySelector('#novo').onclick = () => formulario(null);
     raiz.querySelector('#liquidacao').onclick = liquidacao;
+    raiz.querySelector('#entrada').onclick = entradaBipagem;
     raiz.querySelector('#lista').onclick = acao;
     await carregar();
   }
@@ -73,8 +75,6 @@ Telas.produtos = (() => {
     }
   }
 
-  const listaCsv = (s) => String(s || '').split(/[,;/]/).map((x) => x.trim()).filter(Boolean);
-
   /** Preço sugerido = custo × markup, arredondado para cima (,90 / ,99 / ,00). */
   function precoSugerido(custo, cfg) {
     const mk = Number(String(cfg.markup_padrao || '').replace(',', '.'));
@@ -89,11 +89,33 @@ Telas.produtos = (() => {
     return v;
   }
 
-  async function formulario(p) {
+  /**
+   * Formulário de produto.
+   * opcoes.base: produto existente para "adicionar tamanhos/cores" na mesma grade.
+   * opcoes.codigo: código já bipado (vindo da entrada por bipagem) para um produto novo.
+   */
+  async function formulario(p, opcoes = {}) {
     const cfg = await U.config();
     const novo = !p;
+    let existentes = new Set();
+    let tamIniciais = [];
+    let corIniciais = [];
+    if (novo && opcoes.base) {
+      const b = opcoes.base;
+      p = { nome: b.nome, referencia: b.referencia, categoria: b.categoria, marca: b.marca, ncm: b.ncm,
+        preco_custo: b.preco_custo, preco_venda: b.preco_venda, preco_anterior: b.preco_anterior, estoque_minimo: b.estoque_minimo };
+      try {
+        const g = await api(`/api/produtos/grade?nome=${encodeURIComponent(b.nome)}${b.referencia ? `&referencia=${encodeURIComponent(b.referencia)}` : ''}`);
+        tamIniciais = g.tamanhos.filter((t) => t !== '—');
+        corIniciais = g.cores.filter((c) => c !== '—');
+        existentes = new Set(Object.keys(g.celulas).map((k) => {
+          const [c, t] = k.split('|');
+          return GradeEditor.chave(t === '—' ? '' : t, c === '—' ? '' : c);
+        }));
+      } catch (e) { erro(e); }
+    }
     p = p || {};
-    const corpo = abrirModal(novo ? 'Novo produto' : `Editar produto`, `
+    const corpo = abrirModal(novo ? (opcoes.base ? `Adicionar tamanhos/cores — ${p.nome}` : 'Novo produto') : `Editar produto`, `
       <form class="form grade-form" id="f-prod">
         <label class="col2">Nome *<input name="nome" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado"></label>
         <label>Referência<input name="referencia" value="${esc(p.referencia)}"></label>
@@ -121,16 +143,11 @@ Telas.produtos = (() => {
         </div>
         ${novo ? `
         <fieldset class="col2">
-          <legend>Tamanho e cor</legend>
-          <p class="dica">Para cadastrar a <b>grade</b> de uma vez, separe por vírgula. Ex.: tamanhos <i>P, M, G, GG</i> e cores <i>Preto, Off-white</i>
-            criam 8 produtos, cada um com seu código de barras.</p>
-          <div class="grade-campos">
-            <label>Tamanho(s)<input name="tamanho" placeholder="P, M, G, GG"></label>
-            <label>Cor(es)<input name="cor" placeholder="Preto, Off-white"></label>
-            <label>Estoque inicial (cada)<input name="estoque" type="number" min="0" value="0"></label>
-          </div>
-          <label>Código de barras <small>(deixe vazio para gerar automático; só para produto único)</small>
-            <input name="codigo" placeholder="Bipe aqui o código do fornecedor, se houver"></label>
+          <legend>Tamanhos, cores e quantidades</legend>
+          <div id="grade-editor"></div>
+          <label class="check"><input type="checkbox" id="criar-zeradas" checked> Cadastrar também as combinações com quantidade 0 (para repor depois)</label>
+          <p class="dica">Cada combinação vira um produto com seu próprio código de barras. Peças sem etiqueta do fornecedor
+            recebem um código da loja automaticamente.</p>
         </fieldset>` : `
         <label>Tamanho<input name="tamanho" value="${esc(p.tamanho)}"></label>
         <label>Cor<input name="cor" value="${esc(p.cor)}"></label>
@@ -141,9 +158,12 @@ Telas.produtos = (() => {
           <button type="button" class="btn" data-fechar>Cancelar</button>
           <button class="btn btn-primario">Salvar</button>
         </div>
-      </form>`, { largura: '760px' });
+      </form>`, { largura: novo ? '920px' : '760px' });
 
     const form = corpo.querySelector('form');
+    const editor = novo
+      ? GradeEditor.criar(corpo.querySelector('#grade-editor'), { existentes, tamanhos: tamIniciais, cores: corIniciais, codigoPendente: opcoes.codigo })
+      : null;
     const margem = () => {
       const c = U.paraCentavos(form.preco_custo.value);
       const v = U.paraCentavos(form.preco_venda.value);
@@ -220,20 +240,11 @@ Telas.produtos = (() => {
           await salvarFoto(ids);
           aviso('Produto atualizado.');
         } else {
-          const tamanhos = listaCsv(d.tamanho);
-          const cores = listaCsv(d.cor);
-          const combos = [];
-          for (const t of tamanhos.length ? tamanhos : [null]) {
-            for (const c of cores.length ? cores : [null]) combos.push({ tamanho: t, cor: c });
+          const variantes = editor.variantes(corpo.querySelector('#criar-zeradas').checked);
+          if (!variantes.length) {
+            return aviso(opcoes.base ? 'Escolha pelo menos um tamanho ou cor novo.' : 'Coloque a quantidade de pelo menos uma combinação (ou marque "cadastrar com quantidade 0").', 'erro');
           }
-          if (combos.length > 1 && d.codigo) return aviso('Código de barras manual só vale para um produto único.', 'erro');
-          const criados = [];
-          for (const c of combos) {
-            criados.push(await api('/api/produtos', {
-              metodo: 'POST',
-              corpo: { ...base, ...c, codigo: d.codigo, estoque: Number(d.estoque || 0) },
-            }));
-          }
+          const criados = await api('/api/produtos/grade', { metodo: 'POST', corpo: { ...base, variantes } });
           await salvarFoto(criados.map((x) => x.id));
           aviso(criados.length > 1 ? `${criados.length} produtos criados.` : 'Produto criado.');
           const qtdEtiquetas = criados.reduce((a, x) => a + x.estoque, 0);
@@ -245,6 +256,98 @@ Telas.produtos = (() => {
         if (raiz) carregar();
       } catch (e) { erro(e); }
     };
+  }
+
+  /**
+   * Entrada de mercadoria bipando: cada bipe soma +1 na peça. Código desconhecido pode virar
+   * um produto novo na hora. Ao confirmar, o estoque é atualizado de uma vez.
+   */
+  function entradaBipagem() {
+    const itens = new Map(); // produto_id -> { produto, quantidade }
+    const corpo = abrirModal('📦 Entrada por bipagem', `
+      <p class="dica">Bipe a etiqueta de cada peça que chegou. Pode usar <b>3*código</b> para várias iguais.
+        Nada muda no estoque até você clicar em <b>Confirmar entrada</b>.</p>
+      <div class="pdv-busca"><span class="pdv-busca-ico">⌕</span><input id="ent-leitor" autocomplete="off" placeholder="Bipe as peças aqui" autofocus></div>
+      <div id="ent-msg" class="ent-msg"></div>
+      <div class="tabela-rolagem baixa"><table class="tabela"><thead><tr><th></th><th>Produto</th><th class="r">Estoque atual</th><th class="c">Chegou</th><th></th></tr></thead>
+        <tbody id="ent-lista"></tbody></table></div>
+      <div class="ent-total" id="ent-total"></div>
+      <label class="check"><input type="checkbox" id="ent-etq"> Mandar etiquetas dessas peças para a fila de impressão</label>
+      <label>Observação<input id="ent-motivo" placeholder="Ex.: NF 1234 do fornecedor"></label>
+      <div class="acoes">
+        <button class="btn" data-fechar>Cancelar</button>
+        <button class="btn btn-primario btn-grande" id="ent-ok" disabled>Confirmar entrada</button>
+      </div>`, { largura: '820px' });
+    const leitor = corpo.querySelector('#ent-leitor');
+    const msg = (html, tipo = '') => { corpo.querySelector('#ent-msg').innerHTML = html ? `<span class="ge-msg ${tipo}">${html}</span>` : ''; };
+    const desenhar = () => {
+      const lista = [...itens.values()].reverse();
+      corpo.querySelector('#ent-lista').innerHTML = lista.map(({ produto: p, quantidade }) => `<tr>
+        <td class="td-foto">${U.miniatura(p)}</td>
+        <td><b>${esc(p.nome)}</b> ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}<br><small>${esc(p.codigo)}</small></td>
+        <td class="r">${p.estoque}</td>
+        <td class="c"><input type="number" min="0" class="qtd-input" data-id="${p.id}" value="${quantidade}"></td>
+        <td><button class="mini perigo" data-rm="${p.id}">×</button></td></tr>`).join('')
+        || '<tr><td colspan="5" class="vazio">Nenhuma peça bipada ainda.</td></tr>';
+      const pecas = lista.reduce((a, x) => a + x.quantidade, 0);
+      corpo.querySelector('#ent-total').innerHTML = `<b>${pecas}</b> peça(s) de <b>${lista.length}</b> produto(s)`;
+      corpo.querySelector('#ent-ok').disabled = !pecas;
+    };
+    corpo.querySelector('#ent-lista').addEventListener('input', (ev) => {
+      const id = Number(ev.target.dataset.id);
+      if (itens.has(id)) itens.get(id).quantidade = Math.max(0, Math.floor(Number(ev.target.value) || 0));
+      const pecas = [...itens.values()].reduce((a, x) => a + x.quantidade, 0);
+      corpo.querySelector('#ent-total').innerHTML = `<b>${pecas}</b> peça(s) de <b>${itens.size}</b> produto(s)`;
+      corpo.querySelector('#ent-ok').disabled = !pecas;
+    });
+    corpo.querySelector('#ent-lista').addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-rm]');
+      if (b) { itens.delete(Number(b.dataset.rm)); desenhar(); leitor.focus(); }
+    });
+    leitor.addEventListener('keydown', async (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      let txt = leitor.value.trim();
+      leitor.value = '';
+      if (!txt) return;
+      let n = 1;
+      const m = txt.match(/^(\d{1,3})\s*[*xX]\s*(.+)$/);
+      if (m) { n = Number(m[1]); txt = m[2].trim(); }
+      try {
+        const p = await api(`/api/produtos/codigo/${encodeURIComponent(txt)}`);
+        const it = itens.get(p.id) || { produto: p, quantidade: 0 };
+        it.quantidade += n;
+        itens.delete(p.id);
+        itens.set(p.id, it);
+        U.som('ok');
+        msg(`+${n} <b>${esc(p.nome)} ${esc([p.tamanho, p.cor].filter(Boolean).join(' '))}</b> — chegaram ${it.quantidade}`, 'ok');
+        desenhar();
+      } catch (e) {
+        U.som('erro');
+        if (e.status !== 404) return msg(esc(e.message), 'erro');
+        msg(`Código <b>${esc(txt)}</b> não está cadastrado. <button type="button" class="btn btn-peq" id="ent-novo">Cadastrar produto novo com este código</button>`, 'erro');
+        corpo.querySelector('#ent-novo').onclick = () => {
+          if (itens.size && !confirm('As peças já bipadas nesta entrada serão descartadas. Continuar?')) return;
+          formulario(null, { codigo: txt });
+        };
+      }
+      leitor.focus();
+    });
+    corpo.querySelector('#ent-ok').onclick = async () => {
+      const lista = [...itens.values()].filter((x) => x.quantidade > 0);
+      try {
+        const r = await api('/api/produtos/entrada-lote', {
+          metodo: 'POST',
+          corpo: { itens: lista.map((x) => ({ produto_id: x.produto.id, quantidade: x.quantidade })), motivo: corpo.querySelector('#ent-motivo').value },
+        });
+        const pecas = lista.reduce((a, x) => a + x.quantidade, 0);
+        if (corpo.querySelector('#ent-etq').checked) lista.forEach((x) => Telas.etiquetas.adicionar(x.produto, x.quantidade));
+        fecharModal();
+        aviso(`Entrada lançada: ${pecas} peça(s) em ${r.length} produto(s).`);
+        if (raiz) carregar();
+      } catch (e) { erro(e); }
+    };
+    desenhar();
   }
 
   /** Liquidação em lote nos produtos que estão na lista (use a busca para filtrar antes). */
@@ -335,7 +438,9 @@ Telas.produtos = (() => {
           <tfoot><tr><th>Total</th>${g.tamanhos.map((t) => `<td class="grade-total">${totTam(t)}</td>`).join('')}<td class="grade-total"><b>${g.total}</b></td></tr></tfoot>
         </table>
       </div>
-      <p class="dica so-admin">Clique em um número para lançar entrada ou ajuste daquele tamanho/cor.</p>`, { largura: '720px' });
+      <p class="dica so-admin">Clique em um número para lançar entrada ou ajuste daquele tamanho/cor.</p>
+      <div class="acoes so-admin"><button type="button" class="btn" id="grade-add">+ Adicionar tamanhos ou cores</button></div>`, { largura: '720px' });
+    corpo.querySelector('#grade-add').onclick = () => formulario(null, { base: p });
     corpo.querySelector('tbody').onclick = async (ev) => {
       const b = ev.target.closest('[data-id]');
       if (!b || !U.sessao.ehAdmin()) return;

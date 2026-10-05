@@ -85,3 +85,31 @@ test('backup: manual, ao fechar o caixa, mantém só as últimas N cópias e cop
   assert.match(comAviso.aviso, /segunda pasta/);
   assert.ok(fs.existsSync(comAviso.arquivo));
 });
+
+test('cadastro da grade com quantidade por tamanho/cor e códigos do fornecedor', () => {
+  const { chamar } = novaApi();
+  const r = chamar('POST', '/api/produtos/grade', {
+    nome: 'Calça Wide', referencia: '77', preco_venda: 19990,
+    variantes: [
+      { tamanho: '38', cor: 'Bege', quantidade: 2, codigo: '7891234567895' },
+      { tamanho: '40', cor: 'Bege', quantidade: 0 },
+      { tamanho: '38', cor: 'Preto', quantidade: 5 },
+    ],
+  });
+  assert.equal(r.status, 200, JSON.stringify(r.corpo));
+  assert.deepEqual(r.corpo.map((p) => [p.tamanho, p.cor, p.estoque]), [['38', 'Bege', 2], ['40', 'Bege', 0], ['38', 'Preto', 5]]);
+  assert.equal(r.corpo[0].codigo, '7891234567895');
+  assert.match(r.corpo[1].codigo, /^2\d{12}$/);
+
+  // Repetido na grade, código usado duas vezes, ou variação que já existe: nada é gravado.
+  assert.equal(chamar('POST', '/api/produtos/grade', { nome: 'X', variantes: [{ tamanho: 'P' }, { tamanho: 'p' }] }).status, 400);
+  assert.equal(chamar('POST', '/api/produtos/grade', { nome: 'X', variantes: [{ tamanho: 'P', codigo: '1' }, { tamanho: 'M', codigo: '1' }] }).status, 400);
+  const dup = chamar('POST', '/api/produtos/grade', { nome: 'calça wide', referencia: '77', variantes: [{ tamanho: '42', cor: 'Bege' }, { tamanho: '38', cor: 'bege' }] });
+  assert.equal(dup.status, 409);
+  assert.equal(chamar('GET', '/api/produtos?q=Calça').corpo.length, 3); // o 42 não ficou gravado
+
+  // Entrada por bipagem soma no estoque e registra o movimento.
+  const e = chamar('POST', '/api/produtos/entrada-lote', { itens: [{ produto_id: r.corpo[1].id, quantidade: 3 }] }).corpo;
+  assert.equal(e[0].estoque, 3);
+  assert.equal(chamar('GET', `/api/produtos/${r.corpo[1].id}/movimentos`).corpo[0].motivo, 'Entrada por bipagem');
+});
