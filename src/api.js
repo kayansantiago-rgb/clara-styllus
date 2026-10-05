@@ -1256,6 +1256,21 @@ function criarApi(db, opcoes = {}) {
     return { ok: true };
   };
 
+  /**
+   * Impressora de cupom: a escolhida em Configurações ou, se ainda não escolheram,
+   * a térmica encontrada no Windows (fica salva para as próximas vezes).
+   */
+  const imprimirCupom = async (cfg, dados, nome) => {
+    let nomeImpressora = cfg.impressora_cupom;
+    if (!nomeImpressora) {
+      try {
+        nomeImpressora = await impressora.detectarImpressoraCupom();
+      } catch { /* sem lista de impressoras: cai no erro de "nenhuma impressora" */ }
+      if (nomeImpressora) salvarConfig({ impressora_cupom: nomeImpressora });
+    }
+    return imprimir(nomeImpressora, dados, nome);
+  };
+
   rota('GET', '/api/impressoras', async () => {
     try {
       return await impressora.listarImpressoras();
@@ -1268,7 +1283,7 @@ function criarApi(db, opcoes = {}) {
     const cfg = config();
     const venda = buscarVenda(params.id);
     if (corpo.tipo === 'troca') {
-      return imprimir(cfg.impressora_cupom, documentos.cupomTroca(venda, cfg).bytes(), `troca-${venda.id}`);
+      return imprimirCupom(cfg, documentos.cupomTroca(venda, cfg).bytes(), `troca-${venda.id}`);
     }
     const vias = Math.max(1, Number(cfg.cupom_vias) || 1);
     const comCrediario = venda.crediario.length > 0;
@@ -1283,24 +1298,24 @@ function criarApi(db, opcoes = {}) {
         abrirGaveta: i === 0 && corpo.gaveta !== false && pagouDinheiro && cfg.gaveta_abrir === '1',
       }).bytes());
     }
-    return imprimir(cfg.impressora_cupom, Buffer.concat(partes), `venda-${venda.id}`);
+    return imprimirCupom(cfg, Buffer.concat(partes), `venda-${venda.id}`);
   });
 
   rota('POST', '/api/imprimir/caixa/:id', ({ params }) => {
     const cfg = config();
-    return imprimir(cfg.impressora_cupom, documentos.fechamentoCaixa(resumoCaixa(params.id), cfg).bytes(), `caixa-${params.id}`);
+    return imprimirCupom(cfg, documentos.fechamentoCaixa(resumoCaixa(params.id), cfg).bytes(), `caixa-${params.id}`);
   });
 
   rota('POST', '/api/imprimir/recebimento/:id', ({ params }) => {
     const cfg = config();
     const rec = crediario.buscarRecebimento(params.id);
-    return imprimir(cfg.impressora_cupom, documentos.recebimentoCrediario(rec, cfg).bytes(), `recibo-${rec.id}`);
+    return imprimirCupom(cfg, documentos.recebimentoCrediario(rec, cfg).bytes(), `recibo-${rec.id}`);
   });
 
   rota('POST', '/api/imprimir/troca/:id', ({ params }) => {
     const cfg = config();
     const t = trocas.buscarTroca(params.id);
-    return imprimir(cfg.impressora_cupom, documentos.valeTroca(t, cfg).bytes(), `troca-${t.id}`);
+    return imprimirCupom(cfg, documentos.valeTroca(t, cfg).bytes(), `troca-${t.id}`);
   });
 
   rota('POST', '/api/imprimir/condicional/:id', ({ params }) => {
@@ -1308,12 +1323,12 @@ function criarApi(db, opcoes = {}) {
     const c = condicional.buscar(params.id);
     // Duas vias: uma vai com a cliente, a outra fica assinada na loja.
     const partes = [documentos.condicional(c, cfg, 'Via da cliente'), documentos.condicional(c, cfg, 'Via da loja')];
-    return imprimir(cfg.impressora_cupom, Buffer.concat(partes.map((d) => d.bytes())), `condicional-${c.id}`);
+    return imprimirCupom(cfg, Buffer.concat(partes.map((d) => d.bytes())), `condicional-${c.id}`);
   });
 
   rota('POST', '/api/imprimir/gaveta', () => {
     const cfg = config();
-    return imprimir(cfg.impressora_cupom, Buffer.from([0x1b, 0x70, 0x00, 0x19, 0xfa]), 'gaveta');
+    return imprimirCupom(cfg, Buffer.from([0x1b, 0x70, 0x00, 0x19, 0xfa]), 'gaveta');
   });
 
   rota('POST', '/api/imprimir/etiquetas', ({ corpo }) => {
@@ -1345,7 +1360,7 @@ function criarApi(db, opcoes = {}) {
       };
       return imprimir(cfg.impressora_etiqueta, gerarEtiquetas([{ produto: exemplo, quantidade: 1 }], cfg), 'teste-etiqueta');
     }
-    return imprimir(cfg.impressora_cupom, documentos.teste(cfg).bytes(), 'teste-cupom');
+    return imprimirCupom(cfg, documentos.teste(cfg).bytes(), 'teste-cupom');
   });
 
   /**

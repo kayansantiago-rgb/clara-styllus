@@ -850,7 +850,8 @@ Telas.pdv = (() => {
   async function vendaConcluida(venda) {
     const cfg = await U.config();
     U.som('sucesso');
-    if (cfg.impressao_automatica === '1') Impressao.cupom(venda);
+    const automatica = cfg.impressao_automatica === '1';
+    const impressao = automatica ? Impressao.cupom(venda) : null;
     const cred = venda.crediario || [];
     const corpo = abrirModal(`Venda nº ${venda.id} concluída`, `
       <div class="concluida ${venda.troco ? 'com-troco' : ''}">
@@ -864,13 +865,28 @@ Telas.pdv = (() => {
       ${cred.length ? `<div class="info-cred">Crediário: ${cred.length}x — ${cred.map((p) =>
     `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}<br>
           <small>Peça para o cliente assinar a via da loja.</small></div>` : ''}
+      ${automatica ? '<div class="status-impressao" id="st-imp">🖨️ Imprimindo o cupom…</div>' : ''}
       <div class="acoes">
-        <button class="btn" id="imp">🧾 Imprimir cupom</button>
+        <button class="btn" id="imp">🧾 ${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</button>
         <button class="btn" id="troca">🎁 Cupom de troca</button>
         <button class="btn btn-primario btn-grande" data-fechar autofocus>Nova venda (Enter)</button>
       </div>`, { largura: '560px', aoFechar: () => raiz && abrir(raiz) });
     corpo.querySelector('#imp').onclick = () => Impressao.cupom(venda, { gaveta: false });
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(venda);
+    if (impressao) {
+      impressao.then((ok) => {
+        const st = corpo.querySelector('#st-imp');
+        if (!st) return;
+        if (ok === false) {
+          st.classList.add('falhou');
+          st.innerHTML = '⚠️ O cupom não foi impresso. Confira se a impressora está ligada e com papel'
+            + (U.ehAdmin() ? ' (Configurações → Impressão)' : '')
+            + ' e clique em “Imprimir de novo”.';
+        } else {
+          st.textContent = '✓ Cupom enviado para a impressora';
+        }
+      });
+    }
   }
 
   function tecla(ev) {

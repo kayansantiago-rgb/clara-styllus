@@ -96,4 +96,13 @@ async function enviar(impressora, dados, nome = 'impressao') {
   return { ok: true };
 }
 
-module.exports = { listarImpressoras, enviar };
+/** Nomes típicos de impressoras térmicas de cupom (Elgin, Bematech, Epson TM, Daruma, POS-80...). */
+const TERMICA = /(elgin|bematech|epson\s*tm|\btm-?t|daruma|tanca|sweda|control\s*id|diebold|knup|jetway|gertec|pos[-\s]?(58|80)|\b(58|80)\s*mm|thermal|t[eé]rmica|receipt|cupom|i9|i7|mp-?4200|generic.*text|gen[eé]rica.*texto)/i;
+
+/** Procura entre as impressoras instaladas uma que pareça ser a térmica de cupom. */
+async function detectarImpressoraCupom() {
+  const lista = await listarImpressoras();
+  return lista.find((n) => TERMICA.test(n)) || (lista.length === 1 ? lista[0] : '');
+}
+
+module.exports = { listarImpressoras, enviar, detectarImpressoraCupom };

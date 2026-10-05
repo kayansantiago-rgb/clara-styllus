@@ -60,12 +60,16 @@ test('rotas de impressão gravam o cupom e as etiquetas na impressora (pasta de 
       pagamentos: [{ forma: 'dinheiro', valor: 10000 }],
     }).corpo;
 
-    const semImpressora = await chamar('POST', `/api/imprimir/venda/${v.id}`, {});
+    // Etiqueta sem impressora escolhida: erro claro.
+    const semImpressora = await chamar('POST', '/api/imprimir/etiquetas', { itens: [{ produto_id: p.id, quantidade: 1 }] });
     assert.equal(semImpressora.status, 502);
 
-    chamar('PUT', '/api/config', { impressora_cupom: 'Arquivo (teste)', impressora_etiqueta: 'Arquivo (teste)' });
+    // Cupom sem impressora escolhida: acha a única impressora instalada e guarda a escolha.
     assert.deepEqual(await (await chamar('GET', '/api/impressoras')).corpo, ['Arquivo (teste)']);
     assert.equal((await chamar('POST', `/api/imprimir/venda/${v.id}`, {})).status, 200);
+    assert.equal(chamar('GET', '/api/config').corpo.impressora_cupom, 'Arquivo (teste)');
+
+    chamar('PUT', '/api/config', { impressora_etiqueta: 'Arquivo (teste)' });
     assert.equal((await chamar('POST', '/api/imprimir/etiquetas', { itens: [{ produto_id: p.id, quantidade: 2 }] })).status, 200);
 
     const arquivos = fs.readdirSync(pasta).sort();

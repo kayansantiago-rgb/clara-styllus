@@ -112,6 +112,15 @@ Como configurar (em **Configurações → Impressora de cupom / Impressora de et
 3. Ajuste o tamanho (80 ou 58 mm; tamanho da etiqueta em mm) e clique em **Imprimir teste**.
 4. Se aparecerem caracteres estranhos no lugar dos acentos, troque **Acentos** para “Sem acentos”.
 
+**Cupom automático ao finalizar a venda:** com “Imprimir o cupom automaticamente” marcado (padrão),
+o cupom sai sozinho na térmica assim que a venda é concluída — sem janela de impressão. Se nenhuma
+impressora de cupom foi escolhida ainda, o sistema procura uma térmica instalada no Windows (Elgin,
+Bematech, Epson TM, POS-80, Generic / Text Only...) e guarda a escolha. A tela de venda concluída
+mostra se o cupom foi enviado ou se deu problema (com o botão **Imprimir de novo**).
+
+> O cupom impresso é um **comprovante de venda (não fiscal)**. O cupom fiscal eletrônico (NFC-e)
+> exige certificado digital A1, CSC da SEFAZ e transmissão à SEFAZ — ainda não está integrado.
+
 O modo **“pelo navegador”** continua disponível (por exemplo, para etiquetas em folha A4 de
 impressora comum). A impressão direta usa o .NET Framework que já vem no Windows 10/11.
 
