@@ -5,6 +5,15 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Troca com vale-troca**: bipe o cupom (V123) ou use 🔁 Troca no caixa, escolha as peças que voltam e sai um
+  vale impresso com código de barras (valor pago, já com desconto). O vale paga outra compra e o saldo que sobrar continua valendo.
+- **Valor rápido no pagamento**: "valor exato" e notas (R$ 50, 100, 200…) com um clique.
+- **Botões rápidos no caixa**: sacola, embrulho, ajuste de barra… Produtos marcados como **serviço** não controlam
+  estoque e, com preço 0, o valor é perguntado na hora.
+- **Condicional (malinha)**: bipe as peças, escolha a cliente e clique em 👜 Condicional. As peças saem do estoque,
+  o comprovante sai em 2 vias e, ao fechar, o que ela ficou vai direto para o caixa.
+- **Lucro real**: vendas − trocas − custo − taxas − despesas (aluguel, luz…, com repetição mensal) nos Relatórios.
+- **Tela cheia** no caixa (botão ⛶ ou atalho "Caixa (tela cheia)" criado pelo instalador).
 - **Cadastro em grade**: escolha os tamanhos (botões prontos: PP–GG, 34–46…) e as cores, e digite a quantidade
   de cada combinação numa tabela. No **modo bipar**, cada bipe da etiqueta do fornecedor soma +1 na combinação
   e guarda o código dela. Dá para **adicionar tamanhos/cores** a um produto que já existe.

@@ -184,6 +184,7 @@ const U = (() => {
     debito: 'Cartão de débito',
     credito: 'Cartão de crédito',
     crediario: 'Crediário',
+    vale: 'Vale-troca',
     outro: 'Outro',
   };
 

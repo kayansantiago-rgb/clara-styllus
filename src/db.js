@@ -231,6 +231,9 @@ const CONFIG_PADRAO = {
   backup_ultimo_arquivo: '',
   backup_ultimo_motivo: '',
   backup_ultimo_erro: '',
+  // Trocas e condicional
+  vale_validade_dias: '90',
+  condicional_prazo_dias: '3',
 };
 
 function abrirBanco(arquivo) {
@@ -256,6 +259,72 @@ function migrar(db) {
   if (!colunas('vendas').includes('usuario_id')) {
     db.exec('ALTER TABLE vendas ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)');
   }
+  if (!colunas('produtos').includes('servico')) {
+    // servico = não controla estoque (ajuste de barra, embrulho…); atalho = botão rápido no PDV
+    db.exec('ALTER TABLE produtos ADD COLUMN servico INTEGER NOT NULL DEFAULT 0');
+    db.exec('ALTER TABLE produtos ADD COLUMN atalho INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!colunas('venda_pagamentos').includes('referencia')) {
+    db.exec('ALTER TABLE venda_pagamentos ADD COLUMN referencia TEXT'); // código do vale usado
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS vales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      valor INTEGER NOT NULL,
+      saldo INTEGER NOT NULL,
+      cliente_id INTEGER REFERENCES clientes(id),
+      origem TEXT NOT NULL DEFAULT 'troca',
+      troca_id INTEGER,
+      validade TEXT,
+      status TEXT NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo','usado','cancelado')),
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS trocas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      venda_id INTEGER NOT NULL REFERENCES vendas(id),
+      cliente_id INTEGER REFERENCES clientes(id),
+      usuario TEXT,
+      valor INTEGER NOT NULL,
+      vale_id INTEGER REFERENCES vales(id),
+      motivo TEXT,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS troca_itens (
+      troca_id INTEGER NOT NULL REFERENCES trocas(id),
+      venda_item_id INTEGER NOT NULL REFERENCES venda_itens(id),
+      produto_id INTEGER NOT NULL REFERENCES produtos(id),
+      quantidade INTEGER NOT NULL,
+      valor INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_troca_venda ON trocas(venda_id);
+    CREATE TABLE IF NOT EXISTS condicionais (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+      usuario TEXT,
+      prazo TEXT,
+      observacao TEXT,
+      status TEXT NOT NULL DEFAULT 'aberta' CHECK (status IN ('aberta','fechada','cancelada')),
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      fechada_em TEXT
+    );
+    CREATE TABLE IF NOT EXISTS condicional_itens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      condicional_id INTEGER NOT NULL REFERENCES condicionais(id),
+      produto_id INTEGER NOT NULL REFERENCES produtos(id),
+      quantidade INTEGER NOT NULL,
+      ficou INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS despesas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      descricao TEXT NOT NULL,
+      categoria TEXT,
+      valor INTEGER NOT NULL,
+      data TEXT NOT NULL,
+      usuario TEXT,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+  `);
   if (!colunas('produtos').includes('preco_anterior')) {
     db.exec('ALTER TABLE produtos ADD COLUMN preco_anterior INTEGER');
   }

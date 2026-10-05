@@ -10,13 +10,15 @@ const { instalarCrediario } = require('./crediario');
 const { instalarInventario } = require('./inventario');
 const taxas = require('./taxas');
 const { criarBackup } = require('./backup');
+const { instalarTrocas } = require('./trocas');
+const { instalarCondicional } = require('./condicional');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
 
 const HORAS_SESSAO = 14;
 
-const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito', 'crediario', 'outro'];
+const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito', 'crediario', 'vale', 'outro'];
 
 class ErroHttp extends Error {
   constructor(status, mensagem) {
@@ -251,6 +253,8 @@ function criarApi(db, opcoes = {}) {
       if (!parcial || c in corpo) p[c] = inteiro(corpo[c], c, { min: 0, padrao: 0 });
     }
     if ('ativo' in corpo) p.ativo = corpo.ativo ? 1 : 0;
+    if ('servico' in corpo) p.servico = corpo.servico ? 1 : 0;
+    if ('atalho' in corpo) p.atalho = corpo.atalho ? 1 : 0;
     if (!parcial || 'preco_anterior' in corpo) {
       // Preço "De" (liquidação): só faz sentido se for maior que o preço atual.
       const ant = inteiro(corpo.preco_anterior, 'preco_anterior', { min: 0, padrao: 0 });
@@ -275,7 +279,7 @@ function criarApi(db, opcoes = {}) {
     const where = [];
     const args = [];
     if (!incluirInativos) where.push('ativo = 1');
-    if (estoqueBaixo) where.push('estoque <= estoque_minimo');
+    if (estoqueBaixo) where.push('servico = 0 AND estoque <= estoque_minimo');
     if (q) {
       where.push(
         '(nome LIKE ? OR codigo = ? OR referencia LIKE ? OR categoria LIKE ? OR cor LIKE ? OR marca LIKE ?)'
@@ -289,6 +293,10 @@ function criarApi(db, opcoes = {}) {
   });
 
   /** Cores, tamanhos, categorias e marcas já usados (sugestões no cadastro). */
+  /** Produtos marcados como botão rápido no PDV (sacola, ajuste de barra…). */
+  rota('GET', '/api/produtos/atalhos', () =>
+    planos(db.prepare('SELECT * FROM produtos WHERE ativo = 1 AND atalho = 1 ORDER BY nome LIMIT 12').all()));
+
   rota('GET', '/api/produtos/atributos', () => {
     const distintos = (col) => db
       .prepare(`SELECT ${col} AS v, COUNT(*) AS n FROM produtos WHERE ativo = 1 AND ${col} IS NOT NULL AND ${col} <> ''
@@ -392,6 +400,9 @@ function criarApi(db, opcoes = {}) {
           p.preco_custo, p.preco_venda, estoqueInicial, p.estoque_minimo, p.ncm,
           p.preco_anterior && p.preco_anterior > p.preco_venda ? p.preco_anterior : null);
       const id = Number(r.lastInsertRowid);
+      if (p.servico || p.atalho) {
+        db.prepare('UPDATE produtos SET servico = ?, atalho = ? WHERE id = ?').run(p.servico || 0, p.atalho || 0, id);
+      }
       if (!p.codigo) {
         db.prepare('UPDATE produtos SET codigo = ? WHERE id = ?').run(gerarEan13Interno(id), id);
       }
@@ -765,6 +776,10 @@ function criarApi(db, opcoes = {}) {
           db.prepare('SELECT * FROM produtos WHERE id = ? AND ativo = 1').get(it.produto_id)
         );
         if (!prod) throw erro(400, `Item ${i + 1}: produto não encontrado ou inativo.`);
+        // Serviço (ajuste, embrulho…) pode ter o preço informado na hora.
+        if (prod.servico && it.preco !== undefined && it.preco !== null && it.preco !== '') {
+          prod.preco_venda = inteiro(it.preco, 'preço', { min: 0 });
+        }
         const quantidade = inteiro(it.quantidade, 'quantidade', { min: 1 });
         const bruto = prod.preco_venda * quantidade;
         const desconto = inteiro(it.desconto, 'desconto', { min: 0, padrao: 0 });
@@ -780,7 +795,7 @@ function criarApi(db, opcoes = {}) {
         }
         for (const [id, qtd] of porProduto) {
           const p = itens.find((it) => it.prod.id === id).prod;
-          if (p.estoque < qtd) {
+          if (!p.servico && p.estoque < qtd) {
             throw erro(409, `Estoque insuficiente de "${p.nome}" (disponível: ${p.estoque}).`);
           }
         }
@@ -807,8 +822,22 @@ function criarApi(db, opcoes = {}) {
           valor: inteiro(p.valor, 'valor do pagamento', { min: 1 }),
           parcelas: parcelado ? inteiro(p.parcelas, 'parcelas', { min: 1, padrao: 1 }) : 1,
           primeiro_vencimento: p.forma === 'crediario' ? texto(p.primeiro_vencimento, 10) : null,
+          referencia: p.forma === 'vale' ? texto(p.codigo || p.referencia, 40) : null,
         };
       });
+      // Vale-troca: confere saldo e validade (o desconto do saldo é feito ao gravar).
+      const hojeStr = new Date().toLocaleDateString('sv-SE');
+      for (const p of pagamentos.filter((x) => x.forma === 'vale')) {
+        if (!p.referencia) throw erro(400, 'Informe o código do vale-troca.');
+        const vale = db.prepare('SELECT * FROM vales WHERE codigo = ? COLLATE NOCASE').get(p.referencia);
+        if (!vale) throw erro(404, `Vale ${p.referencia} não encontrado.`);
+        if (vale.status !== 'ativo') throw erro(409, `O vale ${vale.codigo} já foi ${vale.status === 'usado' ? 'usado' : 'cancelado'}.`);
+        if (vale.validade && vale.validade < hojeStr) throw erro(409, `O vale ${vale.codigo} venceu em ${vale.validade.split('-').reverse().join('/')}.`);
+        const usado = pagamentos.filter((x) => x.forma === 'vale' && x.referencia.toLowerCase() === p.referencia.toLowerCase())
+          .reduce((a, x) => a + x.valor, 0);
+        if (usado > vale.saldo) throw erro(409, `O vale ${vale.codigo} tem só R$ ${(vale.saldo / 100).toFixed(2).replace('.', ',')} de saldo.`);
+        p.referencia = vale.codigo;
+      }
       if (pagamentos.filter((p) => p.forma === 'crediario').length > 1) {
         throw erro(400, 'Use só um lançamento de crediário por venda.');
       }
@@ -853,14 +882,20 @@ function criarApi(db, opcoes = {}) {
         insItem.run(vendaId, p.id, p.codigo, p.nome, p.tamanho, p.cor, it.quantidade,
           p.preco_venda, it.desconto, it.total,
           p.preco_anterior && p.preco_anterior > p.preco_venda ? p.preco_anterior : null);
-        baixa.run(it.quantidade, p.id);
-        mov.run(p.id, -it.quantidade, `Venda #${vendaId}`, vendaId);
+        if (!p.servico) {
+          baixa.run(it.quantidade, p.id);
+          mov.run(p.id, -it.quantidade, `Venda #${vendaId}`, vendaId);
+        }
       }
       const insPag = db.prepare(
-        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa) VALUES (?,?,?,?,?)'
+        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa, referencia) VALUES (?,?,?,?,?,?)'
       );
       for (const p of pagamentos) {
-        insPag.run(vendaId, p.forma, p.valor, p.parcelas, taxas.calcular(cfg, p.forma, p.parcelas, p.valor));
+        insPag.run(vendaId, p.forma, p.valor, p.parcelas, taxas.calcular(cfg, p.forma, p.parcelas, p.valor), p.referencia);
+        if (p.forma === 'vale') {
+          db.prepare(`UPDATE vales SET saldo = saldo - ?, status = CASE WHEN saldo - ? <= 0 THEN 'usado' ELSE 'ativo' END
+                      WHERE codigo = ?`).run(p.valor, p.valor, p.referencia);
+        }
       }
       if (fiado) {
         crediario.lancarParcelas({
@@ -903,13 +938,21 @@ function criarApi(db, opcoes = {}) {
     if (venda.status === 'cancelada') throw erro(409, 'Venda já está cancelada.');
     const motivo = texto(corpo.motivo, 500);
     if (!motivo) throw erro(400, 'Informe o motivo do cancelamento.');
+    if (db.prepare('SELECT 1 FROM trocas WHERE venda_id = ?').get(venda.id)) {
+      throw erro(409, 'Esta venda já teve troca/devolução. Não dá para cancelar a venda inteira.');
+    }
     return transacao(db, () => {
       crediario.cancelarDaVenda(venda.id);
+      // Devolve o saldo dos vales usados nesta venda.
+      for (const p of venda.pagamentos.filter((x) => x.forma === 'vale' && x.referencia)) {
+        db.prepare(`UPDATE vales SET saldo = saldo + ?, status = 'ativo' WHERE codigo = ?`).run(p.valor, p.referencia);
+      }
       db.prepare(
         `UPDATE vendas SET status = 'cancelada', motivo_cancelamento = ?,
            cancelada_em = datetime('now','localtime') WHERE id = ?`
       ).run(motivo, venda.id);
       for (const it of venda.itens) {
+        if (db.prepare('SELECT servico FROM produtos WHERE id = ?').get(it.produto_id)?.servico) continue;
         db.prepare('UPDATE produtos SET estoque = estoque + ? WHERE id = ?').run(
           it.quantidade, it.produto_id
         );
@@ -920,6 +963,43 @@ function criarApi(db, opcoes = {}) {
       }
       return buscarVenda(venda.id);
     });
+  }, 'admin');
+
+  // ------------------------------------------------------- trocas e condicional
+  const trocas = instalarTrocas({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, buscarVenda });
+  const condicional = instalarCondicional({ db, rota, erro, inteiro, texto, plano, planos, transacao, config });
+
+  // -------------------------------------------------------------- despesas
+  rota('GET', '/api/despesas', ({ query }) => {
+    const hoje = new Date().toLocaleDateString('sv-SE');
+    const de = texto(query.get('de'), 10) || hoje.slice(0, 8) + '01';
+    const ate = texto(query.get('ate'), 10) || hoje;
+    return planos(db.prepare('SELECT * FROM despesas WHERE data BETWEEN ? AND ? ORDER BY data DESC, id DESC').all(de, ate));
+  }, 'admin');
+
+  rota('POST', '/api/despesas', ({ corpo, usuario }) => {
+    const descricao = texto(corpo.descricao, 200);
+    if (!descricao) throw erro(400, 'Informe a descrição da despesa.');
+    const valor = inteiro(corpo.valor, 'valor', { min: 1 });
+    const data = texto(corpo.data, 10) || new Date().toLocaleDateString('sv-SE');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw erro(400, 'Data inválida.');
+    const repetir = Math.min(24, Math.max(1, inteiro(corpo.repetir, 'repetir', { min: 1, padrao: 1 })));
+    return transacao(db, () => {
+      const [a, m, d] = data.split('-').map(Number);
+      for (let i = 0; i < repetir; i++) {
+        // Repetição mensal (ex.: aluguel), mantendo o dia ou o último dia do mês.
+        const ult = new Date(a, m - 1 + i + 1, 0).getDate();
+        const dt = new Date(a, m - 1 + i, Math.min(d, ult)).toLocaleDateString('sv-SE');
+        db.prepare('INSERT INTO despesas (descricao, categoria, valor, data, usuario) VALUES (?,?,?,?,?)')
+          .run(descricao, texto(corpo.categoria, 60), valor, dt, usuario.nome);
+      }
+      return { ok: true, lancadas: repetir };
+    });
+  }, 'admin');
+
+  rota('DELETE', '/api/despesas/:id', ({ params }) => {
+    db.prepare('DELETE FROM despesas WHERE id = ?').run(params.id);
+    return { ok: true };
   }, 'admin');
 
   // ------------------------------------------------------------ relatórios
@@ -1022,9 +1102,31 @@ function criarApi(db, opcoes = {}) {
     const totalTaxas = linhasTaxa.reduce((a, l) => a + l.taxa, 0);
     totais.taxas = totalTaxas;
     totais.lucro_apos_taxas = totais.lucro_bruto - totalTaxas;
+    // Lucro real = vendas − trocas (com o custo das peças que voltaram) − custo − taxas − despesas.
+    const tr = db
+      .prepare(
+        `SELECT COALESCE(SUM(ti.valor),0) AS valor, COALESCE(SUM(ti.quantidade * p.preco_custo),0) AS custo
+         FROM troca_itens ti JOIN trocas t ON t.id = ti.troca_id JOIN produtos p ON p.id = ti.produto_id
+         WHERE date(t.criado_em) BETWEEN ? AND ?`
+      )
+      .get(de, ate);
+    const despesasPorCategoria = planos(
+      db
+        .prepare(
+          `SELECT COALESCE(categoria, 'Outras') AS categoria, SUM(valor) AS valor FROM despesas
+           WHERE data BETWEEN ? AND ? GROUP BY COALESCE(categoria, 'Outras') ORDER BY valor DESC`
+        )
+        .all(de, ate)
+    );
+    const despesas = despesasPorCategoria.reduce((a, d) => a + d.valor, 0);
+    totais.trocas = tr.valor;
+    totais.custo_trocas = tr.custo;
+    totais.despesas = despesas;
+    totais.lucro_real = totais.faturamento - tr.valor - (totais.custo - tr.custo) - totalTaxas - despesas;
     return {
       de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor,
       crediario: crediario.resumoGeral(de, ate),
+      despesas_por_categoria: despesasPorCategoria,
       taxas: {
         linhas: linhasTaxa,
         total: totalTaxas,
@@ -1103,7 +1205,7 @@ function criarApi(db, opcoes = {}) {
         .all(hoje)
     );
     const estoqueBaixo = db
-      .prepare('SELECT COUNT(*) AS n FROM produtos WHERE ativo = 1 AND estoque <= estoque_minimo')
+      .prepare('SELECT COUNT(*) AS n FROM produtos WHERE ativo = 1 AND servico = 0 AND estoque <= estoque_minimo')
       .get().n;
     const meta = cfg.meta_mensal ? Number(cfg.meta_mensal) : null;
     return {
@@ -1193,6 +1295,20 @@ function criarApi(db, opcoes = {}) {
     const cfg = config();
     const rec = crediario.buscarRecebimento(params.id);
     return imprimir(cfg.impressora_cupom, documentos.recebimentoCrediario(rec, cfg).bytes(), `recibo-${rec.id}`);
+  });
+
+  rota('POST', '/api/imprimir/troca/:id', ({ params }) => {
+    const cfg = config();
+    const t = trocas.buscarTroca(params.id);
+    return imprimir(cfg.impressora_cupom, documentos.valeTroca(t, cfg).bytes(), `troca-${t.id}`);
+  });
+
+  rota('POST', '/api/imprimir/condicional/:id', ({ params }) => {
+    const cfg = config();
+    const c = condicional.buscar(params.id);
+    // Duas vias: uma vai com a cliente, a outra fica assinada na loja.
+    const partes = [documentos.condicional(c, cfg, 'Via da cliente'), documentos.condicional(c, cfg, 'Via da loja')];
+    return imprimir(cfg.impressora_cupom, Buffer.concat(partes.map((d) => d.bytes())), `condicional-${c.id}`);
   });
 
   rota('POST', '/api/imprimir/gaveta', () => {

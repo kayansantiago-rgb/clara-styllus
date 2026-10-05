@@ -62,7 +62,10 @@ Telas.pdv = (() => {
           <div class="pdv-topo-acoes">
             <button class="btn btn-topo" id="t-sangria" title="Retirar dinheiro da gaveta">➖ Sangria</button>
             <button class="btn btn-topo" id="t-suprimento" title="Colocar troco na gaveta">➕ Suprimento</button>
+            <button class="btn btn-topo" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">🔁 Troca</button>
+            <button class="btn btn-topo" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">👜 Condicional</button>
             <button class="btn btn-topo" id="t-gaveta" title="Abrir a gaveta">🗄️ Gaveta</button>
+            <button class="btn btn-topo" id="t-tela" title="Tela cheia (F11)">⛶</button>
             <button class="btn btn-topo btn-topo-perigo" id="t-fechar">🔒 Fechar caixa</button>
             <span class="pdv-relogio" id="relogio"></span>
           </div>
@@ -77,6 +80,7 @@ Telas.pdv = (() => {
             <div id="sugestoes" class="sugestoes" hidden></div>
           </div>
           <div class="pdv-ultimo" id="ultimo"></div>
+          <div class="pdv-atalhos" id="atalhos"></div>
           <div class="pdv-itens tabela-rolagem">
             <table class="tabela itens">
               <thead><tr><th>#</th><th>Produto</th><th class="c">Qtd</th><th class="r">Unit.</th>
@@ -144,6 +148,10 @@ Telas.pdv = (() => {
     raiz.querySelector('#t-sangria').onclick = () => Telas.caixa.movimento('sangria', recarregar);
     raiz.querySelector('#t-suprimento').onclick = () => Telas.caixa.movimento('suprimento', recarregar);
     raiz.querySelector('#t-gaveta').onclick = () => Impressao.abrirGaveta();
+    raiz.querySelector('#t-troca').onclick = () => Trocas.perguntarVenda();
+    raiz.querySelector('#t-condicional').onclick = () => enviarCondicional();
+    raiz.querySelector('#t-tela').onclick = alternarTelaCheia;
+    carregarAtalhos();
     raiz.querySelector('#t-fechar').onclick = async () => {
       if (carrinho.itens.length && !(await U.confirmar('Fechar caixa',
         'Há uma venda em andamento. Ela continua guardada e volta quando o caixa for aberto de novo. Fechar mesmo assim?',
@@ -253,15 +261,20 @@ Telas.pdv = (() => {
       porProduto.set(it.produto.id, x);
     }
     for (const { p, qtd } of porProduto.values()) {
+      if (p.servico) continue; // serviço não tem estoque
       const nome = esc([p.nome, p.tamanho, p.cor].filter(Boolean).join(' '));
       if (qtd > p.estoque) alertas.push(['perigo', `📦 <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.`]);
       else if (p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `📦 <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
     }
+    const pendente = local.ler('pdv_vale_pendente', null);
+    if (pendente) alertas.push(['ok', `🎟️ Vale-troca <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);
     const aberto = caixa ? new Date(caixa.aberto_em.replace(' ', 'T')) : null;
     if (aberto && Date.now() - aberto.getTime() > 12 * 36e5) {
       alertas.push(['alerta', `💰 O caixa nº ${caixa.id} está aberto desde ${U.dataHora(caixa.aberto_em)}. Feche o caixa do dia anterior.`]);
     }
     el.innerHTML = alertas.map(([tipo, txt]) => `<div class="pdv-alerta ${tipo}">${txt}</div>`).join('');
+    const tirar = el.querySelector('#tirar-vale');
+    if (tirar) tirar.onclick = () => { local.gravar('pdv_vale_pendente', null); desenharAlertas(); };
   }
 
   function desenharTotais() {
@@ -275,8 +288,38 @@ Telas.pdv = (() => {
   }
 
   // -------------------------------------------------------------- busca
-  function adicionar(produto, quantidade = 1) {
-    const existente = carrinho.itens.find((it) => it.produto.id === produto.id && !it.desconto);
+  /** Botões rápidos (sacola, ajuste de barra…) configurados no cadastro do produto. */
+  async function carregarAtalhos() {
+    let lista = [];
+    try { lista = await api('/api/produtos/atalhos'); } catch { /* sem atalhos */ }
+    const el = raiz && raiz.querySelector('#atalhos');
+    if (!el) return;
+    el.innerHTML = lista.map((p, i) => `<button class="pdv-atalho" data-i="${i}" title="${esc(p.nome)}">
+      ${U.miniatura(p)}<span>${esc(p.nome)}<small>${p.servico && !p.preco_venda ? 'preço na hora' : brl(p.preco_venda)}</small></span></button>`).join('');
+    el.onclick = async (ev) => {
+      const b = ev.target.closest('[data-i]');
+      if (!b) return;
+      const p = lista[Number(b.dataset.i)];
+      if (p.servico && !p.preco_venda) {
+        const v = await U.perguntar(p.nome, 'Valor cobrado (R$):', { tipo: 'text' });
+        if (v === null) return;
+        const c = U.paraCentavos(v);
+        if (!(c >= 0) || Number.isNaN(c)) return aviso('Valor inválido.', 'erro');
+        adicionar({ ...p, preco_venda: c }, 1, c);
+      } else adicionar(p, 1);
+      raiz.querySelector('#busca').focus();
+    };
+  }
+
+  function alternarTelaCheia() {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    } catch { aviso('Use a tecla F11 para tela cheia.', 'alerta'); }
+  }
+
+  function adicionar(produto, quantidade = 1, preco) {
+    const existente = carrinho.itens.find((it) => it.produto.id === produto.id && !it.desconto && (it.preco ?? null) === (preco ?? null));
     const jaNoCarrinho = carrinho.itens.filter((it) => it.produto.id === produto.id)
       .reduce((a, it) => a + it.quantidade, 0);
     if (existente) {
@@ -284,9 +327,9 @@ Telas.pdv = (() => {
       carrinho.itens.splice(carrinho.itens.indexOf(existente), 1);
       carrinho.itens.push(existente);
     } else {
-      carrinho.itens.push({ produto, quantidade, desconto: 0 });
+      carrinho.itens.push({ produto, quantidade, desconto: 0, preco });
     }
-    U.som(jaNoCarrinho + quantidade > produto.estoque ? 'erro' : 'ok');
+    U.som(!produto.servico && jaNoCarrinho + quantidade > produto.estoque ? 'erro' : 'ok');
     salvar();
     desenhar();
     const tabela = raiz.querySelector('.pdv-itens');
@@ -296,6 +339,22 @@ Telas.pdv = (() => {
   async function lerEntrada(valor) {
     let texto = valor.trim();
     if (!texto) return;
+    // Código do cupom (V123): abre a troca. Código de vale (VT000123): usa no pagamento.
+    if (/^VT\d+$/i.test(texto)) {
+      if (!carrinho.itens.length) {
+        try {
+          const v = await api(`/api/vales/${encodeURIComponent(texto)}`);
+          aviso(`Vale ${v.codigo}: saldo ${brl(v.saldo)} (${v.status}). Bipe as peças e depois o vale de novo.`, v.status === 'ativo' ? 'ok' : 'alerta');
+        } catch (e) { erro(e); }
+        return true;
+      }
+      finalizar('vale', texto.toUpperCase());
+      return true;
+    }
+    if (/^V\d+$/i.test(texto)) {
+      Trocas.abrirVenda(Number(texto.slice(1)));
+      return true;
+    }
     let qtd = 1;
     const m = texto.match(/^(\d{1,3})\s*[*xX]\s*(.+)$/);
     if (m) {
@@ -479,8 +538,14 @@ Telas.pdv = (() => {
   }
 
   // ------------------------------------------------------------ finalizar
-  async function finalizar(formaInicial = 'dinheiro') {
+  async function finalizar(formaInicial = 'dinheiro', valeCodigo) {
     if (!carrinho.itens.length) return aviso('Adicione itens antes de finalizar.', 'alerta');
+    // Vale gerado numa troca e marcado para "usar agora".
+    const pendente = local.ler('pdv_vale_pendente', null);
+    if (!valeCodigo && pendente && formaInicial === 'dinheiro') {
+      formaInicial = 'vale';
+      valeCodigo = pendente.codigo;
+    }
     const t = totais();
     if (Number.isNaN(lerDesconto(carrinho.desconto, t.subtotal))) return aviso('Desconto da venda inválido.', 'erro');
     if (formaInicial === 'crediario' && !carrinho.cliente) {
@@ -496,7 +561,7 @@ Telas.pdv = (() => {
 
     const corpo = abrirModal('Pagamento', `
       <div class="pag-total">Total a pagar <b>${brl(t.total)}</b></div>
-      <div class="formas formas-6">
+      <div class="formas formas-7">
         ${formas.map(([k, v], i) =>
     `<button class="forma ${k === forma ? 'sel' : ''}" data-forma="${k}"><kbd>${i + 1}</kbd>${v}</button>`).join('')}
       </div>
@@ -504,17 +569,81 @@ Telas.pdv = (() => {
         <label>Valor<input id="pag-valor" inputmode="decimal" autofocus></label>
         <label id="lbl-parc" hidden>Parcelas<select id="pag-parc"></select></label>
         <label id="lbl-venc" hidden>1º vencimento<input type="date" id="pag-venc" value="${vencPadrao}"></label>
+        <label id="lbl-vale" hidden>Código do vale<input id="pag-vale" autocomplete="off" placeholder="Bipe o vale-troca"></label>
         <button class="btn">Adicionar (Enter)</button>
       </form>
+      <div class="valores-rapidos" id="rapidos"></div>
+      <div id="info-vale" class="info-cred" hidden></div>
       <div id="info-cred" class="info-cred" hidden></div>
       <div id="lista-pag" class="lista-pag"></div>
       <div class="pag-resumo" id="pag-resumo"></div>
       <div class="acoes">
         <button class="btn" data-fechar>Voltar (Esc)</button>
         <button class="btn btn-primario btn-grande" id="concluir" disabled>Concluir venda</button>
-      </div>`, { largura: '680px' });
+      </div>`, { largura: '780px' });
 
     const valorEl = corpo.querySelector('#pag-valor');
+    const valeEl = corpo.querySelector('#pag-vale');
+    let valeAtual = null;
+    const infoVale = () => {
+      const box = corpo.querySelector('#info-vale');
+      box.hidden = forma !== 'vale';
+      if (box.hidden) return;
+      box.innerHTML = valeAtual
+        ? `Vale <b>${esc(valeAtual.codigo)}</b>${valeAtual.cliente_nome ? ` de ${esc(valeAtual.cliente_nome)}` : ''} · saldo <b>${brl(valeAtual.saldo - usadoDoVale(valeAtual.codigo))}</b>${valeAtual.validade ? ` · válido até ${valeAtual.validade.split('-').reverse().join('/')}` : ''}`
+        : 'Bipe ou digite o código do vale (VT…) e aperte Enter.';
+    };
+    const usadoDoVale = (cod) => pagamentos.filter((p) => p.forma === 'vale' && p.codigo === cod).reduce((a, p) => a + p.valor, 0);
+    const buscarVale = async () => {
+      const cod = valeEl.value.trim().toUpperCase();
+      if (!cod) return false;
+      try {
+        const v = await api(`/api/vales/${encodeURIComponent(cod)}`);
+        if (v.status !== 'ativo') throw new Error(`O vale ${v.codigo} já foi ${v.status === 'usado' ? 'usado' : 'cancelado'}.`);
+        if (v.validade && v.validade < U.hoje()) throw new Error(`O vale ${v.codigo} venceu.`);
+        valeAtual = v;
+        const disp = v.saldo - usadoDoVale(v.codigo);
+        valorEl.value = num(Math.max(0, Math.min(disp, restante())));
+        infoVale();
+        valorEl.focus();
+        valorEl.select();
+        return true;
+      } catch (e) {
+        valeAtual = null;
+        infoVale();
+        U.som('erro');
+        erro(e);
+        return false;
+      }
+    };
+    valeEl.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      buscarVale();
+    });
+
+    // Botões de valor rápido: "valor exato" e notas comuns acima do que falta.
+    const desenharRapidos = () => {
+      const r = restante();
+      const el = corpo.querySelector('#rapidos');
+      if (r <= 0 || forma === 'vale') { el.innerHTML = ''; return; }
+      const opcoes = [r];
+      if (forma === 'dinheiro') {
+        for (const passo of [1000, 5000, 10000]) {
+          const v = Math.ceil(r / passo) * passo;
+          if (v > r) opcoes.push(v);
+        }
+        for (const nota of [5000, 10000, 20000]) if (nota > r) opcoes.push(nota);
+      }
+      const unicos = [...new Set(opcoes)].sort((a, b) => a - b).slice(0, 5);
+      el.innerHTML = unicos.map((v, i) => `<button type="button" class="btn valor-rapido ${i === 0 ? 'exato' : ''}" data-v="${v}">${i === 0 ? 'Valor exato ' : ''}${brl(v)}</button>`).join('');
+    };
+    corpo.querySelector('#rapidos').onclick = (ev) => {
+      const b = ev.target.closest('[data-v]');
+      if (!b) return;
+      valorEl.value = num(Number(b.dataset.v));
+      corpo.querySelector('#f-pag').requestSubmit();
+    };
     const parcEl = corpo.querySelector('#pag-parc');
     const vencEl = corpo.querySelector('#pag-venc');
     const pago = () => pagamentos.reduce((a, p) => a + p.valor, 0);
@@ -551,15 +680,19 @@ Telas.pdv = (() => {
       corpo.querySelectorAll('.forma').forEach((b) => b.classList.toggle('sel', b.dataset.forma === f));
       corpo.querySelector('#lbl-parc').hidden = f !== 'credito' && f !== 'crediario';
       corpo.querySelector('#lbl-venc').hidden = f !== 'crediario';
+      corpo.querySelector('#lbl-vale').hidden = f !== 'vale';
       preencherParcelas();
       infoCrediario();
+      infoVale();
+      desenharRapidos();
+      if (f === 'vale' && !valeAtual) { valeEl.focus(); return; }
       valorEl.focus();
       valorEl.select();
     };
 
     const atualizar = () => {
       corpo.querySelector('#lista-pag').innerHTML = pagamentos.map((p, i) => `
-        <div class="linha"><span>${U.FORMAS[p.forma]}${p.parcelas > 1 ? ` (${p.parcelas}x)` : ''}${
+        <div class="linha"><span>${U.FORMAS[p.forma]}${p.codigo ? ` ${esc(p.codigo)}` : ''}${p.parcelas > 1 ? ` (${p.parcelas}x)` : ''}${
   p.forma === 'crediario' ? ` · 1º venc. ${p.primeiro_vencimento.split('-').reverse().join('/')}` : ''}</span>
         <span>${brl(p.valor)} <button class="mini perigo" data-rm="${i}">×</button></span></div>`).join('');
       const r = restante();
@@ -570,6 +703,8 @@ Telas.pdv = (() => {
       valorEl.value = r > 0 ? num(r) : '';
       valorEl.select();
       infoCrediario();
+      infoVale();
+      desenharRapidos();
     };
 
     corpo.querySelector('.formas').onclick = (e) => {
@@ -591,24 +726,31 @@ Telas.pdv = (() => {
         escolherForma(formas[n - 1][0]);
       }
     });
-    corpo.querySelector('#f-pag').onsubmit = (e) => {
+    corpo.querySelector('#f-pag').onsubmit = async (e) => {
       e.preventDefault();
       if (!valorEl.value.trim() && restante() <= 0) return concluir();
+      if (forma === 'vale' && (!valeAtual || valeAtual.codigo !== valeEl.value.trim().toUpperCase())) {
+        if (!(await buscarVale())) return;
+        return; // primeiro mostra o saldo; o próximo Enter adiciona
+      }
       const v = U.paraCentavos(valorEl.value);
       if (!v || Number.isNaN(v) || v < 0) return aviso('Valor inválido.', 'erro');
+      if (forma === 'vale' && v > valeAtual.saldo - usadoDoVale(valeAtual.codigo)) return aviso('Valor maior que o saldo do vale.', 'erro');
       if (forma !== 'dinheiro' && v > restante()) return aviso('Só pagamento em dinheiro pode ter troco.', 'erro');
       if (forma === 'crediario' && pagamentos.some((p) => p.forma === 'crediario')) {
         return aviso('Já existe um lançamento no crediário nesta venda.', 'erro');
       }
       const parcelas = forma === 'credito' || forma === 'crediario' ? Number(parcEl.value) : 1;
-      const igual = forma !== 'crediario' && pagamentos.find((p) => p.forma === forma && p.parcelas === parcelas);
+      const codigo = forma === 'vale' ? valeAtual.codigo : undefined;
+      const igual = forma !== 'crediario' && pagamentos.find((p) => p.forma === forma && p.parcelas === parcelas && p.codigo === codigo);
       if (igual) igual.valor += v;
       else {
         pagamentos.push({
-          forma, valor: v, parcelas,
+          forma, valor: v, parcelas, codigo,
           primeiro_vencimento: forma === 'crediario' ? vencEl.value : undefined,
         });
       }
+      if (forma === 'vale' && restante() > 0) escolherForma('dinheiro'); // completa o resto em outra forma
       atualizar();
       if (restante() <= 0) concluir();
     };
@@ -621,7 +763,7 @@ Telas.pdv = (() => {
         const venda = await api('/api/vendas', {
           metodo: 'POST',
           corpo: {
-            itens: carrinho.itens.map((it) => ({ produto_id: it.produto.id, quantidade: it.quantidade, desconto: it.desconto || 0 })),
+            itens: carrinho.itens.map((it) => ({ produto_id: it.produto.id, quantidade: it.quantidade, desconto: it.desconto || 0, preco: it.preco })),
             desconto: t.descontoGeral,
             pagamentos,
             cliente_id: carrinho.cliente ? carrinho.cliente.id : null,
@@ -631,6 +773,7 @@ Telas.pdv = (() => {
         carrinho = novoCarrinho();
         saldoCliente = null;
         salvar();
+        if (pagamentos.some((p) => p.forma === 'vale')) local.gravar('pdv_vale_pendente', null);
         fecharModal();
         vendaConcluida(venda);
       } catch (e) {
@@ -641,6 +784,67 @@ Telas.pdv = (() => {
     corpo.querySelector('#concluir').onclick = concluir;
     escolherForma(forma);
     atualizar();
+    if (valeCodigo) {
+      valeEl.value = valeCodigo;
+      buscarVale();
+    }
+  }
+
+  /** Manda as peças do carrinho como condicional (malinha) para a cliente identificada. */
+  async function enviarCondicional() {
+    const pecas = carrinho.itens.filter((it) => !it.produto.servico);
+    if (!pecas.length) {
+      location.hash = '#/condicional';
+      return;
+    }
+    if (!carrinho.cliente) {
+      aviso('Escolha a cliente que vai levar as peças.', 'alerta');
+      return escolherCliente(() => enviarCondicional());
+    }
+    const cfg = await U.config();
+    const prazo = new Date(Date.now() + (Number(cfg.condicional_prazo_dias) || 3) * 864e5).toLocaleDateString('sv-SE');
+    const total = pecas.reduce((a, it) => a + it.produto.preco_venda * it.quantidade, 0);
+    const corpo = abrirModal('👜 Condicional (malinha)', `
+      <p><b>${esc(carrinho.cliente.nome)}</b> vai levar <b>${pecas.reduce((a, it) => a + it.quantidade, 0)} peça(s)</b> para provar (${brl(total)}).
+        As peças saem do estoque até ela devolver ou comprar.</p>
+      <form class="form">
+        <label>Devolver até<input type="date" name="prazo" value="${prazo}" required></label>
+        <label>Observação<input name="obs" placeholder="Ex.: vai mostrar para a irmã"></label>
+        <div class="acoes"><button type="button" class="btn" data-fechar>Voltar</button>
+          <button class="btn btn-primario btn-grande">👜 Registrar e imprimir (2 vias)</button></div>
+      </form>`, { largura: '520px' });
+    corpo.querySelector('form').onsubmit = async (ev) => {
+      ev.preventDefault();
+      try {
+        const c = await api('/api/condicionais', {
+          metodo: 'POST',
+          corpo: {
+            cliente_id: carrinho.cliente.id, prazo: ev.target.prazo.value, observacao: ev.target.obs.value,
+            itens: pecas.map((it) => ({ produto_id: it.produto.id, quantidade: it.quantidade })),
+          },
+        });
+        Impressao.condicional(c);
+        carrinho = novoCarrinho();
+        saldoCliente = null;
+        salvar();
+        fecharModal();
+        aviso(`Condicional nº ${c.id} registrada para ${c.cliente_nome} (devolver até ${c.prazo.split('-').reverse().join('/')}).`);
+        if (raiz) abrir(raiz);
+      } catch (e) { erro(e); }
+    };
+  }
+
+  /** Coloca peças no carrinho (ex.: o que a cliente ficou da condicional) e abre o caixa. */
+  function carregarVenda({ itens, cliente }) {
+    const c = novoCarrinho();
+    c.itens = itens.map(({ produto, quantidade }) => ({ produto, quantidade, desconto: 0 }));
+    if (cliente) {
+      c.cliente = { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf };
+      if (cliente.cpf) c.cpf_nota = U.cpf(cliente.cpf);
+    }
+    local.gravar(CHAVE, c);
+    if (location.hash === '#/pdv' && raiz) abrir(raiz);
+    else location.hash = '#/pdv';
   }
 
   async function vendaConcluida(venda) {
@@ -690,5 +894,9 @@ Telas.pdv = (() => {
     }
   }
 
-  return { abrir, tecla, sair: () => { raiz = null; pararRelogio(); } };
+  return {
+    abrir, tecla, carregarVenda,
+    recarregar: () => raiz && abrir(raiz),
+    sair: () => { raiz = null; pararRelogio(); },
+  };
 })();

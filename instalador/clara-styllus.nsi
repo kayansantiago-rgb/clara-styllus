@@ -162,6 +162,11 @@ Section "Instalar"
   CreateDirectory "$SMPROGRAMS\${APP}"
   !insertmacro CriarAtalho "$SMPROGRAMS\${APP}\${APP}.lnk"
   !insertmacro CriarAtalho "$DESKTOP\${APP}.lnk"
+  ; Atalho do caixa em tela cheia (F11 sai da tela cheia).
+  ${If} $Navegador != ""
+    CreateShortCut "$SMPROGRAMS\${APP}\${APP} - Caixa (tela cheia).lnk" "$Navegador" "--app=${URL}/#/pdv --start-fullscreen" "$INSTDIR\icone.ico" 0
+    CreateShortCut "$DESKTOP\${APP} - Caixa.lnk" "$Navegador" "--app=${URL}/#/pdv --start-fullscreen" "$INSTDIR\icone.ico" 0
+  ${EndIf}
   CreateShortCut "$SMPROGRAMS\${APP}\Pasta de dados e backups.lnk" "$WINDIR\explorer.exe" '"$Dados"'
   CreateShortCut "$SMPROGRAMS\${APP}\Desinstalar.lnk" "$INSTDIR\Desinstalar.exe"
 
@@ -188,6 +193,7 @@ Section "Uninstall"
   !insertmacro PararServico
 
   Delete "$DESKTOP\${APP}.lnk"
+  Delete "$DESKTOP\${APP} - Caixa.lnk"
   RMDir /r "$SMPROGRAMS\${APP}"
   ; Apaga só o que o instalador colocou (nunca a pasta inteira escolhida pelo usuário).
   RMDir /r "$INSTDIR\app"

@@ -16,6 +16,8 @@
 }
 
 * { box-sizing: border-box; }
+/* "hidden" sempre esconde, mesmo em elementos com display definido (label, flex…). */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { margin: 0; display: flex; background: var(--fundo); font-size: 15px; }
 h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; margin: 0; font-size: 28px; }
@@ -430,6 +432,30 @@ tr.linha-vermelho td { background: #fff7f6; }
 .ge-rodape { font-size: 14px; color: var(--suave); }
 .ent-msg { min-height: 24px; margin: 8px 0; font-size: 14px; }
 .ent-total { margin: 8px 0; }
+
+/* Troca, vale, atalhos, valores rápidos, condicional e lucro real */
+.formas-7 { grid-template-columns: repeat(7, 1fr); }
+.formas-7 .forma { font-size: 12px; padding: 10px 4px; }
+.valores-rapidos { display: flex; gap: 6px; flex-wrap: wrap; margin: -2px 0 10px; }
+.valores-rapidos:empty { display: none; }
+.valor-rapido { font-weight: 700; padding: 10px 14px; font-size: 15px; }
+.valor-rapido.exato { background: #e2f4ea; border-color: #b8e0c8; color: #1f6b40; }
+.pdv-atalhos { display: flex; gap: 6px; overflow-x: auto; }
+.pdv-atalhos:empty { display: none; }
+.pdv-atalho { display: flex; align-items: center; gap: 8px; font: inherit; font-size: 13px; text-align: left; background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 5px 10px 5px 5px; cursor: pointer; white-space: nowrap; }
+.pdv-atalho:hover { border-color: var(--rosa); background: var(--rosa-claro); }
+.pdv-atalho .mini-foto { width: 30px; height: 30px; font-size: 14px; }
+.pdv-atalho span { display: flex; flex-direction: column; font-weight: 600; }
+.pdv-atalho small { font-weight: 400; }
+.pdv-alerta.ok { background: #e7f6ee; border-color: var(--ok); color: #1f6b40; }
+.troca-total { font-size: 20px; margin: 10px 0; text-align: right; }
+.troca-total:empty { display: none; }
+.opcoes-produto { display: flex; flex-direction: column; gap: 6px; background: var(--fundo); border-radius: 10px; padding: 10px; }
+.dre .linha { padding: 6px 0; border-bottom: 1px dashed #eee3e7; }
+.dre .total { font-size: 20px; border-bottom: 0; }
+.cabecalho-cartao { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cabecalho-cartao h3 { margin: 0; }
+.cartao > .cabecalho-cartao { margin-bottom: 12px; }
 
 /* -------------------------------------------------------- etiquetas */
 .qtd-input { width: 80px; text-align: center; }

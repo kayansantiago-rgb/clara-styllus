@@ -5,7 +5,7 @@
 const { Cupom } = require('./escpos');
 
 const nomeForma = (f) =>
-  ({ dinheiro: 'Dinheiro', pix: 'PIX', debito: 'Cartão de débito', credito: 'Cartão de crédito', crediario: 'Crediário', outro: 'Outro' })[f] || f;
+  ({ dinheiro: 'Dinheiro', pix: 'PIX', debito: 'Cartão de débito', credito: 'Cartão de crédito', crediario: 'Crediário', vale: 'Vale-troca', outro: 'Outro' })[f] || f;
 
 const num = (c) => ((Number(c) || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const brl = (c) => 'R$ ' + num(c);
@@ -190,6 +190,55 @@ function recebimentoCrediario(rec, cfg) {
   return finalizar(c, cfg);
 }
 
+function valeTroca(t, cfg) {
+  const c = novo(cfg);
+  cabecalho(c, cfg);
+  c.tamanho('grande').negrito().centro('VALE-TROCA').negrito(false).tamanho('normal');
+  c.separador();
+  c.par(`Troca nº ${t.id}`, dataBr(t.criado_em));
+  c.linha(`Venda de origem: nº ${t.venda_id}`);
+  if (t.cliente_nome) c.linha(`Cliente: ${t.cliente_nome}`);
+  c.separador();
+  c.negrito().linha('Peças devolvidas').negrito(false);
+  for (const it of t.itens) c.par(`${it.quantidade}x ${descItem(it)}`, num(it.valor));
+  c.separador();
+  if (t.vale) {
+    c.tamanho('grande').negrito().centro(brl(t.vale.valor)).negrito(false).tamanho('normal');
+    c.centro(`Código: ${t.vale.codigo}`);
+    c.codigoBarras(t.vale.codigo, 70);
+    if (t.vale.validade) c.centro(`Válido até ${dataBr(t.vale.validade)}`);
+    c.pular(1);
+    c.centro('Use este vale como pagamento em uma próxima compra.');
+    c.centro('Se sobrar saldo, ele continua valendo.');
+  }
+  return finalizar(c, cfg);
+}
+
+function condicional(cd, cfg, via = '') {
+  const c = novo(cfg);
+  cabecalho(c, cfg);
+  c.tamanho('grande').negrito().centro('CONDICIONAL').negrito(false).tamanho('normal');
+  c.separador();
+  c.par(`Nº ${cd.id}`, dataBr(cd.criado_em));
+  c.linha(`Cliente: ${cd.cliente_nome}`);
+  if (cd.cliente_telefone) c.linha(`Telefone: ${cd.cliente_telefone}`);
+  c.negrito().linha(`Devolver até: ${dataBr(cd.prazo)}`).negrito(false);
+  c.separador();
+  for (const it of cd.itens) {
+    c.linha(`${it.quantidade}x ${descItem(it)}`);
+    c.par(`   ${it.codigo}`, num(it.quantidade * it.preco_venda));
+  }
+  c.separador();
+  c.par(`${cd.pecas} peça(s)`, brl(cd.valor));
+  c.pular(1);
+  c.linha('Recebi as peças acima para provar. Devolvo até a data combinada ou pago as que ficarem comigo.');
+  c.pular(2);
+  c.centro('_'.repeat(Math.min(36, c.cols)));
+  c.centro(cd.cliente_nome);
+  if (via) c.centro(via);
+  return finalizar(c, cfg);
+}
+
 function teste(cfg) {
   const c = novo(cfg);
   cabecalho(c, cfg);
@@ -204,4 +253,4 @@ function teste(cfg) {
   return finalizar(c, cfg);
 }
 
-module.exports = { cupomVenda, cupomTroca, fechamentoCaixa, recebimentoCrediario, teste };
+module.exports = { cupomVenda, cupomTroca, fechamentoCaixa, recebimentoCrediario, valeTroca, condicional, teste };

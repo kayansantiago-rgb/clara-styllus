@@ -94,11 +94,14 @@ Telas.vendas = (() => {
           <span>${brl(p.valor)} ${p.status === 'paga' ? '<span class="selo ok">paga</span>' : p.status === 'cancelada' ? '<span class="selo perigo">cancelada</span>' : p.valor_pago ? `<small>pago ${brl(p.valor_pago)}</small>` : ''}</span></div>`).join('')}` : ''}
       <div class="acoes">
         ${v.status === 'concluida' && U.sessao.ehAdmin() ? '<button class="btn btn-perigo-claro" id="cancelar">Cancelar venda</button>' : ''}
+        ${v.status === 'concluida' ? '<button class="btn" id="devolver">🔁 Troca / devolução</button>' : ''}
         <button class="btn" id="troca">🎁 Cupom de troca</button>
         <button class="btn btn-primario" id="cupom">🧾 Reimprimir cupom</button>
       </div>`, { largura: '760px' });
     corpo.querySelector('#cupom').onclick = () => Impressao.cupom(v);
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(v);
+    const dev = corpo.querySelector('#devolver');
+    if (dev) dev.onclick = () => Trocas.abrirVenda(v.id);
     const btnCancelar = corpo.querySelector('#cancelar');
     if (btnCancelar) {
       btnCancelar.onclick = async () => {

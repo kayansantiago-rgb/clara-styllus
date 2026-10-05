@@ -274,6 +274,18 @@ const Impressao = (() => {
     return enviar(`/api/imprimir/recebimento/${rec.id}`, {});
   }
 
+  async function troca(t) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return U.aviso(`Vale-troca ${t.vale ? t.vale.codigo : ''}: configure a impressão direta para imprimir o vale.`, 'alerta');
+    return enviar(`/api/imprimir/troca/${t.id}`, {}, 'Vale-troca enviado para a impressora.');
+  }
+
+  async function condicional(c) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return U.aviso('Comprovante da condicional só sai na impressão direta (Configurações → Impressão).', 'alerta');
+    return enviar(`/api/imprimir/condicional/${c.id}`, {}, 'Comprovante da condicional enviado (2 vias).');
+  }
+
   async function abrirGaveta() {
     return enviar('/api/imprimir/gaveta', {}, 'Gaveta aberta.');
   }
@@ -289,6 +301,6 @@ const Impressao = (() => {
   }
 
   return {
-    cupom, cupomTroca, fechamentoCaixa, recebimento, abrirGaveta, etiquetas, htmlEtiqueta, cssEtiquetas,
+    cupom, cupomTroca, fechamentoCaixa, recebimento, abrirGaveta, troca, condicional, etiquetas, htmlEtiqueta, cssEtiquetas,
   };
 })();

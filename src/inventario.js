@@ -22,7 +22,7 @@ function instalarInventario({ db, rota, erro, inteiro, texto, plano, planos, tra
 
   /** Produtos que entram neste inventário (todos os ativos ou só da categoria). */
   const filtroEscopo = (inv) =>
-    inv.categoria ? { sql: 'p.ativo = 1 AND p.categoria = ? COLLATE NOCASE', args: [inv.categoria] } : { sql: 'p.ativo = 1', args: [] };
+    inv.categoria ? { sql: 'p.ativo = 1 AND p.servico = 0 AND p.categoria = ? COLLATE NOCASE', args: [inv.categoria] } : { sql: 'p.ativo = 1 AND p.servico = 0', args: [] };
 
   const contado = (invId, produtoId) =>
     db.prepare('SELECT COALESCE(SUM(quantidade),0) AS n FROM inventario_leituras WHERE inventario_id = ? AND produto_id = ?')

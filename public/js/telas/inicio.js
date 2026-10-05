@@ -43,7 +43,10 @@ Telas.inicio = (() => {
   }
 
   async function abrir(raiz) {
-    const [r, bk] = await Promise.all([api('/api/painel'), api('/api/backup/status').catch(() => null)]);
+    const [r, bk, conds] = await Promise.all([
+      api('/api/painel'), api('/api/backup/status').catch(() => null), api('/api/condicionais').catch(() => []),
+    ]);
+    const condAtrasadas = conds.filter((c) => c.prazo < U.hoje());
     const semBackup = bk && (bk.horas_desde_ultimo == null || bk.horas_desde_ultimo > 72);
     const nome = (U.sessao.usuario.nome || '').split(' ')[0];
     const hojeTxt = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -58,6 +61,8 @@ Telas.inicio = (() => {
         <div class="ferramentas"><a class="btn btn-primario btn-grande" href="#/pdv">🛍️ Ir para o caixa</a></div>
       </div>
 
+      ${condAtrasadas.length ? `<div class="pdv-alerta alerta painel-alerta">👜 ${condAtrasadas.length} condicional(is) passou do prazo de devolução:
+        ${condAtrasadas.slice(0, 3).map((c) => esc(c.cliente_nome)).join(', ')}${condAtrasadas.length > 3 ? '…' : ''}. <a href="#/condicional">Ver condicionais →</a></div>` : ''}
       ${semBackup ? `<div class="pdv-alerta perigo painel-alerta">💾 ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}
         Se o computador der defeito, os dados podem se perder. <a href="#/config">Fazer backup agora →</a></div>`
     : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta">💾 ${esc(bk.ultimo_erro)}</div>` : ''}

@@ -123,7 +123,7 @@ Telas.produtos = (() => {
         <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}"></label>
         <label>NCM<input name="ncm" value="${esc(p.ncm)}" inputmode="numeric" placeholder="Para nota fiscal (opcional)"></label>
         <label>Preço de custo (R$)<input name="preco_custo" inputmode="decimal" value="${p.preco_custo ? num(p.preco_custo) : ''}"></label>
-        <label>Preço de venda (R$) *<input name="preco_venda" inputmode="decimal" required value="${p.preco_venda ? num(p.preco_venda) : ''}">
+        <label>Preço de venda (R$) *<input name="preco_venda" inputmode="decimal" value="${p.preco_venda ? num(p.preco_venda) : ''}">
           <span class="sugestao-preco" id="sugestao-preco" hidden></span></label>
         <label class="so-admin">Preço "De" — liquidação (R$) <small>vazio = sem liquidação</small>
           <input name="preco_anterior" inputmode="decimal" value="${p.preco_anterior ? num(p.preco_anterior) : ''}" placeholder="Preço antigo, sai riscado na etiqueta"></label>
@@ -153,6 +153,10 @@ Telas.produtos = (() => {
         <label>Cor<input name="cor" value="${esc(p.cor)}"></label>
         <label class="col2">Código de barras<input name="codigo" required value="${esc(p.codigo)}"></label>
         <label class="check col2"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}> Produto ativo (aparece no PDV)</label>`}
+        <div class="col2 opcoes-produto">
+          <label class="check"><input type="checkbox" name="atalho" ${p.atalho ? 'checked' : ''}> ⚡ Mostrar como <b>botão rápido</b> no caixa (sacola, embrulho…)</label>
+          <label class="check"><input type="checkbox" name="servico" ${p.servico ? 'checked' : ''}> 🧵 É <b>serviço</b>: não controla estoque (ajuste de barra…). Com preço 0, o valor é perguntado na hora.</label>
+        </div>
         <div class="acoes col2">
           <span class="margem" id="margem"></span>
           <button type="button" class="btn" data-fechar>Cancelar</button>
@@ -221,6 +225,9 @@ Telas.produtos = (() => {
         estoque_minimo: Number(d.estoque_minimo || 0),
       };
       if ('preco_anterior' in d) base.preco_anterior = U.paraCentavos(d.preco_anterior);
+      base.atalho = !!d.atalho;
+      base.servico = !!d.servico;
+      if (base.servico && Number.isNaN(base.preco_venda)) base.preco_venda = 0;
       if ([base.preco_custo, base.preco_venda, base.preco_anterior ?? 0].some(Number.isNaN)) return aviso('Preço inválido.', 'erro');
       if (base.preco_anterior && base.preco_anterior <= base.preco_venda) {
         return aviso('O preço "De" precisa ser maior que o preço de venda (ou deixe vazio).', 'erro');
