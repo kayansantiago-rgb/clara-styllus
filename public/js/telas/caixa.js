@@ -24,7 +24,7 @@ Telas.caixa = (() => {
           <tbody id="hist">${historico.map((c) => `
             <tr><td>${c.id}</td><td>${esc(c.operador || '')}</td><td>${dataHora(c.aberto_em)}</td>
             <td>${c.fechado_em ? dataHora(c.fechado_em) : '<span class="selo ok">Aberto</span>'}</td>
-            <td class="r"><button class="btn-ico" data-imp="${c.id}" title="Imprimir resumo">🖨️</button></td></tr>`).join('')}</tbody>
+            <td class="r"><button class="btn-ico" data-imp="${c.id}" title="Imprimir resumo">${Icone('impressora')}</button></td></tr>`).join('')}</tbody>
         </table>
       </div>`;
     raiz.querySelector('#hist').onclick = async (ev) => {
@@ -46,13 +46,16 @@ Telas.caixa = (() => {
   // --------------------------------------------------------------- abrir
   function formAbrir() {
     return `
-      <div class="cartao cartao-estreito caixa-abrir">
-        <h2>🔒 Caixa fechado</h2>
-        <p>Conte o dinheiro que está na gaveta (troco) e abra o caixa para começar a vender.</p>
+      <div class="cartao caixa-abrir">
+        <div class="caixa-abrir-ico">${Icone('carteira')}</div>
+        <h2>Caixa fechado</h2>
+        <p>Conte o dinheiro que está na gaveta (o troco) e abra o caixa para começar a vender.</p>
         <form id="f-abrir" class="form">
-          <p>Operador(a): <b>${esc(U.sessao.usuario.nome)}</b></p>
-          <label>Troco inicial na gaveta (R$)<input name="valor" inputmode="decimal" placeholder="0,00" autofocus></label>
-          <button class="btn btn-primario btn-grande">🔓 Abrir caixa</button>
+          <div class="caixa-abrir-op"><span class="avatar">${esc(String(U.sessao.usuario.nome || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase())}</span>
+            <span><small>Operador(a)</small><b>${esc(U.sessao.usuario.nome)}</b></span>
+            <span class="caixa-abrir-data">${new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span></div>
+          <label>Troco inicial na gaveta<div class="campo-moeda"><span>R$</span><input name="valor" inputmode="decimal" placeholder="0,00" autofocus class="campo-destaque"></div></label>
+          <button class="btn btn-primario btn-grande">${Icone('cadeado')} Abrir caixa</button>
         </form>
       </div>`;
   }
