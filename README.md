@@ -102,8 +102,9 @@ Não passam pelo diálogo de impressão do navegador, por isso não saem com mar
 
 - **Cupom (ESC/POS)**: Elgin i7/i8/i9, Epson TM-T20, Bematech MP-4200 (em modo ESC/POS), Daruma, Tanca,
   Knup e a maioria das térmicas de 58/80 mm. Também corta o papel e **abre a gaveta** nas vendas em dinheiro.
-- **Etiquetas (ZPL ou EPL/PPLB)**: Zebra, Elgin L42/L42 Pro, Argox e similares. Funciona com rolo de
-  1 ou mais etiquetas lado a lado.
+- **Etiquetas (ZPL, EPL/PPLB ou TSPL)**: Zebra, Elgin L42/L42 Pro, Argox e similares (ZPL/EPL);
+  TSC, Gprinter, Xprinter, iDPRT, Beeprt e as etiquetadoras genéricas de marketplace (TSPL).
+  Funciona com rolo de 1 ou mais etiquetas lado a lado.
 
 Como configurar (em **Configurações → Impressora de cupom / Impressora de etiquetas**):
 

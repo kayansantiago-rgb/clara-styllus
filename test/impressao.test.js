@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Cupom } = require('../src/impressao/escpos');
-const { zpl, epl } = require('../src/impressao/etiquetas');
+const { zpl, epl, tspl } = require('../src/impressao/etiquetas');
 const { novaApi } = require('./ajuda');
 
 test('ESC/POS: acentos em CP850, colunas e corte', () => {
@@ -39,6 +39,16 @@ test('ZPL: duas colunas lado a lado, EAN-13 e preço', () => {
   assert.match(z, /\^BEN,\d+,Y,N\^FD200000000001\^FS/);
   assert.match(z, /R\$ 89,90/);
   assert.match(z, /OFF-WHITE/);
+});
+
+test('TSPL: tamanho do rolo em mm, EAN-13, Code128 e uma PRINT por linha', () => {
+  const t = tspl([prod, { ...prod, codigo: 'ABC-123' }, prod], cfgEtq).toString('latin1');
+  assert.match(t, /^SIZE 82 mm,30 mm\r\nGAP 3 mm,0 mm\r\n/); // 2 x 40 mm + 2 de espaço
+  assert.equal((t.match(/^CLS\r$/gm) || []).length, 2);
+  assert.equal((t.match(/^PRINT 1,1\r$/gm) || []).length, 2);
+  assert.match(t, /BARCODE \d+,\d+,"EAN13",\d+,1,0,\d,\d,"200000000001"/);
+  assert.match(t, /BARCODE \d+,\d+,"128",\d+,1,0,\d,\d,"ABC-123"/);
+  assert.match(t, /TEXT \d+,\d+,"\d",0,1,1,"R\$ 89,90"/);
 });
 
 test('EPL: Code128 para código que não é EAN', () => {

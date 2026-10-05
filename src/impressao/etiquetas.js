@@ -4,6 +4,8 @@
  * Etiquetas em linguagem de impressora térmica:
  *  - ZPL: Zebra, Elgin L42 Pro, Argox (modo ZPL), Tanca, Gainscha…
  *  - EPL: Zebra LP/TLP, Elgin L42, Argox em PPLB (compatível com EPL2).
+ *  - TSPL: impressoras genéricas de etiqueta (TSC, Gprinter, Xprinter, iDPRT, Beeprt, HPRT
+ *    e as "térmicas de etiqueta adesiva" vendidas em marketplaces).
  * Suporta rolo com 1 ou mais colunas (etiquetas lado a lado).
  */
 
@@ -156,6 +158,57 @@ function epl(lista, cfg) {
   return Buffer.from(e, 'latin1');
 }
 
+// ------------------------------------------------------------------ TSPL
+// Fontes internas (203 dpi): largura e altura do caractere em pontos.
+const FONTES_TSPL = [
+  { n: '1', w: 8, h: 12 },
+  { n: '2', w: 12, h: 20 },
+  { n: '3', w: 16, h: 24 },
+  { n: '4', w: 24, h: 32 },
+  { n: '5', w: 32, h: 48 },
+];
+
+function fonteTspl(alturaDesejada, texto, larguraUtil) {
+  let i = 0;
+  FONTES_TSPL.forEach((f, j) => { if (f.h <= alturaDesejada) i = j; });
+  while (i > 0 && texto.length * FONTES_TSPL[i].w > larguraUtil) i--;
+  return FONTES_TSPL[i];
+}
+
+function tspl(lista, cfg) {
+  const m = medidas(cfg);
+  const limpa = (s) => String(s).replace(/["\\]/g, ' ');
+  const mmTotal = (Number(cfg.etiqueta_largura_mm) || 40) * m.colunas + (Number(cfg.etiqueta_espaco_mm) || 0) * (m.colunas - 1);
+  const mmAltura = Number(cfg.etiqueta_altura_mm) || 30;
+  const mmGap = Number(cfg.etiqueta_gap_mm) || 3;
+  let t = `SIZE ${mmTotal} mm,${mmAltura} mm\r\nGAP ${mmGap} mm,0 mm\r\nDIRECTION 1,0\r\nREFERENCE 0,0\r\n`;
+  for (const grupo of agrupar(lista, m.colunas)) {
+    t += 'CLS\r\n';
+    grupo.forEach((p, col) => {
+      const x0 = col * (m.largura + m.espaco);
+      const util = m.largura - 2 * m.margem;
+      let y = m.margem;
+      for (const l of conteudo(p, cfg, m)) {
+        const f = fonteTspl(l.alt, l.texto, util);
+        const tx = l.texto.slice(0, Math.floor(util / f.w));
+        const x = x0 + m.margem + Math.max(0, Math.round((util - tx.length * f.w) / 2));
+        t += `TEXT ${x},${y},"${f.n}",0,1,1,"${limpa(tx)}"\r\n`;
+        if (l.riscado) t += `BAR ${x},${y + Math.round(f.h / 2)},${tx.length * f.w},2\r\n`;
+        y += f.h + 3;
+      }
+      const codigo = semAcento(p.codigo);
+      const bar = barras(codigo, util);
+      const alt = Math.max(20, m.altura - m.margem - y - 26);
+      const x = x0 + Math.max(m.margem, Math.round((m.largura - bar.largura) / 2));
+      t += bar.ean
+        ? `BARCODE ${x},${y + 2},"EAN13",${alt},1,0,${bar.modulo},${bar.modulo},"${codigo.slice(0, 12)}"\r\n`
+        : `BARCODE ${x},${y + 2},"128",${alt},1,0,${bar.modulo},${bar.modulo},"${limpa(codigo)}"\r\n`;
+    });
+    t += 'PRINT 1,1\r\n';
+  }
+  return Buffer.from(t, 'latin1');
+}
+
 /** Divide a lista de etiquetas em linhas de N colunas. */
 function agrupar(lista, colunas) {
   const linhas = [];
@@ -167,7 +220,9 @@ function agrupar(lista, colunas) {
 function gerarEtiquetas(itens, cfg) {
   const lista = itens.flatMap(({ produto, quantidade }) => Array(Math.max(0, quantidade)).fill(produto));
   if (!lista.length) return null;
-  return cfg.impressao_etiqueta_modo === 'epl' ? epl(lista, cfg) : zpl(lista, cfg);
+  if (cfg.impressao_etiqueta_modo === 'epl') return epl(lista, cfg);
+  if (cfg.impressao_etiqueta_modo === 'tspl') return tspl(lista, cfg);
+  return zpl(lista, cfg);
 }
 
-module.exports = { gerarEtiquetas, zpl, epl, medidas };
+module.exports = { gerarEtiquetas, zpl, epl, tspl, medidas };

@@ -89,7 +89,7 @@ Telas.config = (() => {
           <p class="dica"><b>ZPL</b>: Zebra, Elgin L42 Pro, Argox e a maioria das atuais. <b>EPL</b>: Zebra LP/TLP antigas,
             Elgin L42 e Argox em modo PPLB. <b>Navegador</b>: só para etiquetas em folha A4 de impressora comum.</p>
           <div class="grade-form tres">
-            ${sel('impressao_etiqueta_modo', 'Linguagem', [['zpl', 'ZPL (recomendado)'], ['epl', 'EPL / PPLB'], ['navegador', 'Folha A4 pelo navegador']])}
+            ${sel('impressao_etiqueta_modo', 'Linguagem', [['zpl', 'ZPL (recomendado)'], ['epl', 'EPL / PPLB'], ['tspl', 'TSPL (etiquetadoras genéricas, TSC, Gprinter, Xprinter)'], ['navegador', 'Folha A4 pelo navegador']])}
             <label class="col2">Impressora
               <span class="campo-com-botao">
                 <select name="impressora_etiqueta" data-impressoras>${opcaoAtual(c.impressora_etiqueta)}</select>
