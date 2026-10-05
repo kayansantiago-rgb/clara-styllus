@@ -2,7 +2,7 @@
 (() => {
   const { esc, api, aviso, erro } = U;
   const conteudo = document.getElementById('conteudo');
-  const ROTAS_ADMIN = ['inicio', 'relatorios', 'usuarios', 'config'];
+  const ROTAS_ADMIN = ['inicio', 'relatorios', 'usuarios', 'config', 'historico'];
   let telaAtual = null;
 
   // --------------------------------------------------------------- login

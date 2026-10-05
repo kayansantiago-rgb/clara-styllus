@@ -12,6 +12,7 @@ const taxas = require('./taxas');
 const { criarBackup } = require('./backup');
 const { instalarTrocas } = require('./trocas');
 const { instalarCondicional } = require('./condicional');
+const { instalarAuditoria } = require('./auditoria');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
@@ -78,7 +79,7 @@ function criarApi(db, opcoes = {}) {
     const re = new RegExp(
       '^' + padrao.replace(/:(\w+)/g, (_, n) => (nomes.push(n), '([^/]+)')) + '$'
     );
-    rotas.push({ metodo, re, nomes, fn, acesso });
+    rotas.push({ metodo, padrao, re, nomes, fn, acesso });
   };
 
   const config = () => {
@@ -173,6 +174,7 @@ function criarApi(db, opcoes = {}) {
     const login = texto(ctx.corpo.login, 40);
     const u = login && plano(db.prepare('SELECT * FROM usuarios WHERE login = ?').get(login));
     if (!u || !u.ativo || !conferirSenha(ctx.corpo.senha ?? '', u.senha_hash)) {
+      auditoria.loginFalhou(login);
       throw erro(401, 'Usuário ou senha incorretos.');
     }
     return abrirSessao(ctx, u);
@@ -574,15 +576,23 @@ function criarApi(db, opcoes = {}) {
     };
   };
 
+  // Resumo de compras de cada cliente (para a lista e a ficha).
+  const RESUMO_CLIENTE = `
+    (SELECT COUNT(*) FROM vendas v WHERE v.cliente_id = clientes.id AND v.status = 'concluida') AS compras,
+    (SELECT COALESCE(SUM(total),0) FROM vendas v WHERE v.cliente_id = clientes.id AND v.status = 'concluida') AS total_comprado,
+    (SELECT MAX(criado_em) FROM vendas v WHERE v.cliente_id = clientes.id AND v.status = 'concluida') AS ultima_compra,
+    (SELECT COALESCE(SUM(valor - valor_pago),0) FROM crediario_parcelas p WHERE p.cliente_id = clientes.id AND p.status = 'aberta') AS deve`;
+
   rota('GET', '/api/clientes', ({ query }) => {
     const q = texto(query.get('q'));
-    if (!q) return planos(db.prepare('SELECT * FROM clientes ORDER BY nome LIMIT 300').all());
+    const ordem = { recentes: 'ultima_compra IS NULL, ultima_compra DESC', valor: 'total_comprado DESC' }[query.get('ordem')] || 'nome';
+    if (!q) return planos(db.prepare(`SELECT *, ${RESUMO_CLIENTE} FROM clientes ORDER BY ${ordem} LIMIT 300`).all());
     const dig = q.replace(/\D/g, '');
     return planos(
       db
         .prepare(
-          `SELECT * FROM clientes WHERE nome LIKE ? OR (? <> '' AND (cpf LIKE ? OR telefone LIKE ?))
-           ORDER BY nome LIMIT 100`
+          `SELECT *, ${RESUMO_CLIENTE} FROM clientes WHERE nome LIKE ? OR (? <> '' AND (cpf LIKE ? OR telefone LIKE ?))
+           ORDER BY ${ordem} LIMIT 100`
         )
         .all(`%${q}%`, dig, `%${dig}%`, `%${dig}%`)
     );
@@ -595,11 +605,34 @@ function criarApi(db, opcoes = {}) {
     c.compras = planos(
       db
         .prepare(
-          `SELECT id, total, status, criado_em FROM vendas WHERE cliente_id = ?
-           ORDER BY id DESC LIMIT 50`
+          `SELECT v.id, v.total, v.status, v.criado_em, v.vendedor,
+             (SELECT SUM(quantidade) FROM venda_itens i WHERE i.venda_id = v.id) AS pecas
+           FROM vendas v WHERE v.cliente_id = ? ORDER BY v.criado_em DESC, v.id DESC LIMIT 50`
         )
         .all(params.id)
     );
+    Object.assign(c, plano(db.prepare(`SELECT ${RESUMO_CLIENTE} FROM clientes WHERE id = ?`).get(params.id)));
+    // O que ela costuma levar: tamanhos, cores e categorias mais comprados.
+    const preferidos = (coluna, de = 'i') => planos(
+      db.prepare(
+        `SELECT ${de}.${coluna} AS nome, SUM(i.quantidade) AS pecas
+         FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
+         WHERE v.cliente_id = ? AND v.status = 'concluida' AND COALESCE(${de}.${coluna}, '') <> ''
+         GROUP BY ${de}.${coluna} ORDER BY pecas DESC LIMIT 6`
+      ).all(params.id)
+    );
+    c.tamanhos = preferidos('tamanho');
+    c.cores = preferidos('cor');
+    c.categorias = preferidos('categoria', 'p');
+    c.pecas_compradas = planos(
+      db.prepare(
+        `SELECT i.produto_id, i.nome, i.tamanho, i.cor, i.quantidade, i.total, v.criado_em, p.foto_versao
+         FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
+         WHERE v.cliente_id = ? AND v.status = 'concluida' ORDER BY v.criado_em DESC, i.id DESC LIMIT 12`
+      ).all(params.id)
+    );
+    c.vales = planos(db.prepare(`SELECT codigo, saldo, validade FROM vales WHERE cliente_id = ? AND status = 'ativo' AND saldo > 0`).all(params.id));
+    c.condicionais = planos(db.prepare(`SELECT id, prazo, criado_em FROM condicionais WHERE cliente_id = ? AND status = 'aberta'`).all(params.id));
     return c;
   });
 
@@ -1164,7 +1197,30 @@ function criarApi(db, opcoes = {}) {
     totais.custo_trocas = tr.custo;
     totais.despesas = despesas;
     totais.lucro_real = totais.faturamento - tr.valor - (totais.custo - tr.custo) - totalTaxas - despesas;
+    // Horário de pico, dia da semana e categorias.
+    const porHora = planos(db.prepare(
+      `SELECT CAST(strftime('%H', criado_em) AS INTEGER) AS hora, COUNT(*) AS vendas, SUM(total) AS faturamento
+       FROM vendas v WHERE ${filtro} GROUP BY hora ORDER BY hora`
+    ).all(de, ate));
+    const porSemana = planos(db.prepare(
+      `SELECT CAST(strftime('%w', criado_em) AS INTEGER) AS dia, COUNT(*) AS vendas, SUM(total) AS faturamento
+       FROM vendas v WHERE ${filtro} GROUP BY dia ORDER BY dia`
+    ).all(de, ate));
+    const porCategoria = planos(db.prepare(
+      `SELECT COALESCE(NULLIF(p.categoria, ''), 'Sem categoria') AS categoria, SUM(i.quantidade) AS pecas, SUM(i.total) AS total
+       FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
+       WHERE ${filtro} GROUP BY 1 ORDER BY total DESC`
+    ).all(de, ate));
+    // Período anterior do mesmo tamanho, para comparar.
+    const dias = Math.round((new Date(ate + 'T12:00') - new Date(de + 'T12:00')) / 864e5) + 1;
+    const desloca = (d, n) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return x.toLocaleDateString('sv-SE'); };
+    const anterior = plano(db.prepare(
+      `SELECT COUNT(*) AS vendas, COALESCE(SUM(total),0) AS faturamento FROM vendas v WHERE ${filtro}`
+    ).get(desloca(de, -dias), desloca(de, -1)));
+    anterior.de = desloca(de, -dias);
+    anterior.ate = desloca(de, -1);
     return {
+      por_hora: porHora, por_semana: porSemana, por_categoria: porCategoria, anterior,
       de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor,
       crediario: crediario.resumoGeral(de, ate),
       despesas_por_categoria: despesasPorCategoria,
@@ -1408,6 +1464,8 @@ function criarApi(db, opcoes = {}) {
    * Resolve uma requisição; devolve { status, corpo, sessao } ou null se a rota não existir.
    * `sessao` vem preenchido (token, ou null para apagar) quando o cookie precisa mudar.
    */
+  const auditoria = instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, buscarProduto });
+
   function despachar(metodo, caminho, query, corpo, token) {
     for (const r of rotas) {
       if (r.metodo !== metodo) continue;
@@ -1426,11 +1484,12 @@ function criarApi(db, opcoes = {}) {
         if (r.acesso === 'admin' && ctx.usuario.perfil !== 'admin') {
           throw erro(403, 'Só o administrador pode fazer isso.');
         }
+        const auditar = metodo === 'GET' ? null : auditoria.preparar(metodo, r.padrao, ctx);
         const resultado = r.fn(ctx);
         if (resultado && typeof resultado.then === 'function') {
           // Rota assíncrona (impressão): devolve uma Promise com a mesma forma de resposta.
           return resultado.then(
-            (c) => ({ ...resposta, corpo: c }),
+            (c) => { if (auditar) auditar(c); return { ...resposta, corpo: c }; },
             (e) => {
               if (e instanceof ErroHttp) return { status: e.status, corpo: { erro: e.message } };
               throw e;
@@ -1438,6 +1497,7 @@ function criarApi(db, opcoes = {}) {
           );
         }
         resposta.corpo = resultado;
+        if (auditar) auditar(resultado);
         return resposta;
       } catch (e) {
         if (e instanceof ErroHttp) return { status: e.status, corpo: { erro: e.message } };

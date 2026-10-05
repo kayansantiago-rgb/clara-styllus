@@ -324,6 +324,19 @@ function migrar(db) {
       usuario TEXT,
       criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
+    -- Histórico de ações (quem fez o quê): cancelamentos, descontos, estoque, caixa…
+    CREATE TABLE IF NOT EXISTS auditoria (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      usuario_id INTEGER,
+      usuario TEXT,
+      tipo TEXT NOT NULL,
+      acao TEXT NOT NULL,
+      descricao TEXT,
+      valor INTEGER,
+      importante INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_auditoria_data ON auditoria(criado_em);
   `);
   if (!colunas('produtos').includes('preco_anterior')) {
     db.exec('ALTER TABLE produtos ADD COLUMN preco_anterior INTEGER');

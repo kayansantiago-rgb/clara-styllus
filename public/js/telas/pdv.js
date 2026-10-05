@@ -888,6 +888,15 @@ Telas.pdv = (() => {
     else location.hash = '#/pdv';
   }
 
+  /** Identifica a cliente na venda atual (mantém as peças que já estão no carrinho). */
+  function usarCliente(cliente) {
+    const c = local.ler(CHAVE, null) || novoCarrinho();
+    c.cliente = { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf };
+    c.cpf_nota = cliente.cpf ? U.cpf(cliente.cpf) : '';
+    local.gravar(CHAVE, c);
+    if (raiz) { carrinho = c; abrir(raiz); }
+  }
+
   async function vendaConcluida(venda) {
     const cfg = await U.config();
     U.som('sucesso');
@@ -952,7 +961,7 @@ Telas.pdv = (() => {
   }
 
   return {
-    abrir, tecla, carregarVenda,
+    abrir, tecla, carregarVenda, usarCliente,
     recarregar: () => raiz && abrir(raiz),
     sair: () => { raiz = null; pararRelogio(); },
   };
