@@ -583,20 +583,28 @@ Telas.pdv = (() => {
   /** Abre a busca de cliente; `depois` é chamado após escolher (usado pelo crediário). */
   function escolherCliente(depois) {
     const corpo = abrirModal('Identificar cliente', `
-      <input id="q-cli" placeholder="Nome, CPF ou telefone" autofocus>
-      <div id="lista-cli" class="lista-escolha"></div>
-      <div class="acoes">
-        ${carrinho.cliente ? '<button class="btn btn-perigo-claro" id="tirar-cli">Remover cliente da venda</button>' : ''}
-        <button class="btn" id="novo-cli">+ Cadastrar cliente</button>
-      </div>`, { largura: '560px' });
+      <div class="ec">
+        <div class="busca-ico ec-busca">${Icone('busca')}<input id="q-cli" placeholder="Nome, CPF ou telefone da cliente" autofocus autocomplete="off"></div>
+        <div id="lista-cli" class="ec-lista"></div>
+        <div class="ec-rodape">
+          ${carrinho.cliente ? `<button class="btn btn-fantasma btn-perigo-claro" id="tirar-cli">${Icone('fechar')} Tirar ${esc(carrinho.cliente.nome.split(' ')[0])} da venda</button>` : '<span></span>'}
+          <button class="btn btn-claro" id="novo-cli">${Icone('mais')} Cadastrar cliente nova</button>
+        </div>
+      </div>`, { largura: '640px' });
     const lista = corpo.querySelector('#lista-cli');
     let encontrados = [];
+    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
     const buscar = async (q) => {
-      encontrados = await api(`/api/clientes?q=${encodeURIComponent(q)}`);
-      lista.innerHTML = encontrados.map((c, i) => `
-        <button class="item-escolha" data-i="${i}"><b>${esc(c.nome)}</b>
-          <small>${esc(U.cpf(c.cpf))} ${esc(c.telefone || '')}</small></button>`).join('') ||
-        '<div class="vazio">Nenhum cliente encontrado.</div>';
+      encontrados = await api(`/api/clientes?q=${encodeURIComponent(q)}${q ? '' : '&ordem=recentes'}`);
+      lista.innerHTML = encontrados.slice(0, 40).map((c, i) => `
+        <button class="ec-item ${carrinho.cliente && carrinho.cliente.id === c.id ? 'atual' : ''}" data-i="${i}">
+          <span class="avatar">${esc(iniciais(c.nome))}</span>
+          <span class="ec-txt"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></span>
+          <span class="ec-info">${c.compras ? `<b>${brl(c.total_comprado)}</b><small>${c.compras} compra(s)</small>` : '<small>ainda não comprou</small>'}</span>
+          ${c.deve > 0 ? `<span class="selo perigo">deve ${brl(c.deve)}</span>` : ''}
+        </button>`).join('') ||
+        `<div class="ec-vazio">${Icone('clientes')}<b>Nenhuma cliente encontrada</b><small>Confira o nome ou cadastre uma cliente nova.</small></div>`;
+      if (!q && encontrados.length) lista.insertAdjacentHTML('afterbegin', '<small class="ec-dica">Últimas clientes que compraram</small>');
     };
     const usar = (c) => {
       carrinho.cliente = { id: c.id, nome: c.nome, cpf: c.cpf };
@@ -984,23 +992,24 @@ Telas.pdv = (() => {
     const automatica = cfg.impressao_automatica === '1';
     const impressao = automatica ? Impressao.cupom(venda) : null;
     const cred = venda.crediario || [];
+    const nomesPag = { debito: 'Débito', credito: 'Crédito' };
     const corpo = abrirModal(`Venda nº ${venda.id} concluída`, `
-      <div class="concluida ${venda.troco ? 'com-troco' : ''}">
-        <div class="sucesso-ico">${Icone('check')}</div>
+      <div class="vc ${venda.troco ? 'com-troco' : ''}">
+        <div class="vc-ico">${Icone('check')}</div>
         ${venda.troco
-    ? `<div class="concluida-rotulo">TROCO</div><div class="concluida-valor">${brl(venda.troco)}</div>
-           <div class="concluida-det">Total ${brl(venda.total)} · recebido ${brl(venda.total + venda.troco)}</div>`
-    : `<div class="concluida-rotulo">TOTAL DA VENDA</div><div class="concluida-valor">${brl(venda.total)}</div>
-           <div class="concluida-det">${venda.pagamentos.map((p) => U.FORMAS[p.forma] + (p.parcelas > 1 ? ` ${p.parcelas}x` : '')).join(' + ')}</div>`}
+    ? `<div class="vc-rotulo">Devolva de troco</div><div class="vc-valor">${brl(venda.troco)}</div>
+           <div class="vc-det">Recebido ${brl(venda.total + venda.troco)} · total ${brl(venda.total)}</div>`
+    : `<div class="vc-rotulo">Venda registrada</div><div class="vc-valor">${brl(venda.total)}</div>
+           <div class="vc-det">${venda.pagamentos.map((p) => esc(nomesPag[p.forma] || U.FORMAS[p.forma]) + (p.parcelas > 1 ? ` ${p.parcelas}x` : '')).join(' + ')}</div>`}
       </div>
-      ${cred.length ? `<div class="info-cred">Crediário: ${cred.length}x — ${cred.map((p) =>
+      ${cred.length ? `<div class="info-cred">${Icone('caderno')} Crediário em ${cred.length}x — ${cred.map((p) =>
     `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}<br>
-          <small>Peça para o cliente assinar a via da loja.</small></div>` : ''}
+          <small>Peça para a cliente assinar a via da loja.</small></div>` : ''}
       ${automatica ? `<div class="status-impressao" id="st-imp">${Icone('impressora')} Imprimindo o cupom…</div>` : ''}
-      <div class="acoes">
+      <div class="vc-acoes">
         <button class="btn" id="imp">${Icone('impressora')} ${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</button>
         <button class="btn" id="troca">${Icone('presente')} Cupom de troca</button>
-        <button class="btn btn-primario btn-grande" data-fechar autofocus>${Icone('sacola')} Nova venda <kbd>Enter</kbd></button>
+        <button class="btn btn-primario btn-grande vc-nova" data-fechar autofocus>${Icone('sacola')} Próxima venda <kbd>Enter</kbd></button>
       </div>`, { largura: '560px', aoFechar: () => raiz && abrir(raiz) });
     corpo.querySelector('#imp').onclick = () => Impressao.cupom(venda, { gaveta: false });
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(venda);

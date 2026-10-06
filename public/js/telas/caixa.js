@@ -15,10 +15,10 @@ Telas.caixa = (() => {
     raiz = el;
     const [atual, historico] = await Promise.all([api('/api/caixa/atual'), api('/api/caixas')]);
     raiz.innerHTML = `
-      <div class="cabecalho-tela"><h1>Caixa</h1></div>
+      <div class="cabecalho-tela"><div><h1>Caixa</h1><p class="subtitulo">Abertura, sangria, suprimento e fechamento do dia.</p></div></div>
       ${atual.caixa ? painel(atual) : formAbrir()}
       <div class="cartao">
-        <h3>Caixas anteriores</h3>
+        <h3 class="titulo-ico">${Icone('relogio')} Caixas anteriores</h3>
         <table class="tabela">
           <thead><tr><th>Nº</th><th>Operador(a)</th><th>Abertura</th><th>Fechamento</th><th></th></tr></thead>
           <tbody id="hist">${historico.map((c) => `
@@ -76,40 +76,57 @@ Telas.caixa = (() => {
   }
 
   // -------------------------------------------------------------- painel
+  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#e87ba4', vale: '#008300', outro: '#4a3aa7' };
+
   function painel(r) {
     const troco = r.vendas.troco;
     const recebido = (r.recebimentos_crediario || []).reduce((a, f) => a + f.valor, 0);
+    const horas = Math.max(0, Math.round((Date.now() - new Date(r.caixa.aberto_em.replace(' ', 'T')).getTime()) / 36e5));
     return `
-      <div class="cartao">
-        <div class="caixa-topo">
-          <h3><i data-icone="carteira"></i> Caixa nº ${r.caixa.id} — aberto em ${dataHora(r.caixa.aberto_em)} por ${esc(r.caixa.operador || '—')}</h3>
+      <div class="cx-topo">
+        <div class="cx-esperado">
+          <small>${Icone('dinheiro')} Dinheiro que deve ter na gaveta</small>
+          <b>${brl(r.dinheiro_esperado)}</b>
+          <span>Caixa nº ${r.caixa.id} · aberto ${dataHora(r.caixa.aberto_em)} (${horas}h) por ${esc(r.caixa.operador || '—')}</span>
         </div>
-        <div class="cards">
-          <div class="card destaque"><small>Dinheiro esperado na gaveta</small><b>${brl(r.dinheiro_esperado)}</b></div>
-          <div class="card"><small>Vendas</small><b>${r.vendas.quantidade}</b></div>
-          <div class="card"><small>Total vendido</small><b>${brl(r.vendas.total)}</b></div>
-          ${r.formas.map((f) => `<div class="card"><small>${rotulo(f.forma)}</small><b>${brl(f.forma === 'dinheiro' ? f.valor - troco : f.valor)}</b></div>`).join('')}
-          ${recebido ? `<div class="card"><small>Recebido do crediário</small><b>${brl(recebido)}</b></div>` : ''}
+        <div class="cx-botoes">
+          <button class="cx-botao" id="sangria">${Icone('retirar')}<b>Sangria</b><small>retirar dinheiro</small></button>
+          <button class="cx-botao" id="suprimento">${Icone('colocar')}<b>Suprimento</b><small>colocar troco</small></button>
+          <button class="cx-botao" id="gaveta">${Icone('gaveta')}<b>Abrir gaveta</b><small>sem venda</small></button>
+          <button class="cx-botao" id="parcial">${Icone('impressora')}<b>Parcial</b><small>imprimir resumo</small></button>
+          <button class="cx-botao perigo" id="fechar">${Icone('cadeado')}<b>Fechar caixa</b><small>contar e encerrar o dia</small></button>
         </div>
-        ${r.movimentos.length ? `<h4>Sangrias e suprimentos</h4>${r.movimentos.map((m) =>
-    `<div class="linha"><span>${dataHora(m.criado_em)} · ${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '-' : '+'}${brl(m.valor)}</span></div>`).join('')}` : ''}
-        <div class="acoes">
-          <button class="btn" id="sangria"><i data-icone="retirar"></i> Sangria</button>
-          <button class="btn" id="suprimento"><i data-icone="colocar"></i> Suprimento</button>
-          <button class="btn" id="gaveta"><i data-icone="gaveta"></i> Abrir gaveta</button>
-          <button class="btn" id="parcial"><i data-icone="impressora"></i> Imprimir parcial</button>
-          <button class="btn btn-perigo" id="fechar"><i data-icone="cadeado"></i> Fechar caixa</button>
+      </div>
+      <div class="vd-kpis">
+        <div class="vd-kpi"><span>${Icone('recibo')} Vendas</span><b>${r.vendas.quantidade}</b><small>${r.vendas.canceladas ? `${r.vendas.canceladas} cancelada(s)` : 'nenhuma cancelada'}</small></div>
+        <div class="vd-kpi"><span>${Icone('carteira')} Total vendido</span><b>${brl(r.vendas.total)}</b><small>ticket ${brl(r.vendas.quantidade ? Math.round(r.vendas.total / r.vendas.quantidade) : 0)}</small></div>
+        <div class="vd-kpi"><span>${Icone('etiqueta')} Descontos</span><b>${brl(r.vendas.desconto)}</b><small>dados nas vendas</small></div>
+        <div class="vd-kpi"><span>${Icone('caderno')} Crediário recebido</span><b>${brl(recebido)}</b><small>parcelas pagas neste caixa</small></div>
+      </div>
+      <div class="rl-grade">
+        <div class="cartao"><h3 class="titulo-ico">${Icone('cartao')} Como entrou o dinheiro</h3>
+          ${Graficos.rosca(r.formas.map((f) => ({ nome: rotulo(f.forma), valor: f.forma === 'dinheiro' ? f.valor - troco : f.valor, cor: COR_FORMA[f.forma] || '#4a3aa7' })), { centro: 'Vendido' })}</div>
+        <div class="cartao"><h3 class="titulo-ico">${Icone('gaveta')} Movimento da gaveta</h3>
+          <div class="cx-mov">
+            <div class="linha"><span>Troco inicial</span><b>${brl(r.caixa.valor_abertura)}</b></div>
+            <div class="linha"><span>Vendas em dinheiro (já sem o troco)</span><b>${brl((r.formas.find((f) => f.forma === 'dinheiro')?.valor || 0) - troco)}</b></div>
+            ${recebido ? `<div class="linha"><span>Crediário recebido em dinheiro</span><b>${brl((r.recebimentos_crediario || []).find((f) => f.forma === 'dinheiro')?.valor || 0)}</b></div>` : ''}
+            ${r.movimentos.map((m) => `<div class="linha cx-${m.tipo}"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} · ${esc(m.motivo || 'sem motivo')}</span><b>${m.tipo === 'sangria' ? '−' : '+'}${brl(m.valor)}</b></div>`).join('')}
+            <div class="linha total"><span>Esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>
+          </div>
         </div>
       </div>`;
   }
 
   function movimento(tipo, aoConcluir) {
-    const corpo = abrirModal(tipo === 'sangria' ? 'Sangria (retirada de dinheiro)' : 'Suprimento (reforço de troco)', `
-      <form class="form">
-        <label>Valor (R$)<input name="valor" inputmode="decimal" required autofocus></label>
-        <label>Motivo<input name="motivo" placeholder="${tipo === 'sangria' ? 'Ex.: depósito, pagamento de fornecedor' : 'Ex.: troco'}"></label>
-        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Lançar</button></div>
-      </form>`, { largura: '420px' });
+    const sang = tipo === 'sangria';
+    const corpo = abrirModal(sang ? 'Sangria' : 'Suprimento', `
+      <form class="form mv">
+        <div class="mv-cab ${sang ? 'sangria' : ''}">${Icone(sang ? 'retirar' : 'colocar')}<span>${sang ? 'Retirar dinheiro da gaveta (depósito, pagamento…)' : 'Colocar dinheiro na gaveta (reforço de troco)'}</span></div>
+        <label>Valor<div class="campo-moeda"><span>R$</span><input name="valor" inputmode="decimal" required autofocus class="campo-destaque" placeholder="0,00"></div></label>
+        <label>Motivo<input name="motivo" placeholder="${sang ? 'Ex.: depósito no banco, pagamento de fornecedor' : 'Ex.: troco do banco'}"></label>
+        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">${Icone('check')} Lançar ${sang ? 'sangria' : 'suprimento'}</button></div>
+      </form>`, { largura: '440px' });
     corpo.querySelector('form').onsubmit = async (ev) => {
       ev.preventDefault();
       const valor = U.paraCentavos(ev.target.valor.value);
@@ -128,28 +145,63 @@ Telas.caixa = (() => {
       try { r = await api('/api/caixa/atual'); } catch (e) { return erro(e); }
       if (!r.caixa) return aviso('O caixa já está fechado.', 'alerta');
     }
-    const corpo = abrirModal('Fechar caixa', `
-      <div class="resumo-fechar">
-        <div class="linha"><span>Vendas</span><b>${r.vendas.quantidade} · ${brl(r.vendas.total)}</b></div>
-        ${r.formas.map((f) => `<div class="linha"><span>${rotulo(f.forma)}</span><span>${brl(f.forma === 'dinheiro' ? f.valor - r.vendas.troco : f.valor)}</span></div>`).join('')}
-        ${(r.recebimentos_crediario || []).map((f) => `<div class="linha"><span>Recebido do crediário · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
-        ${r.movimentos.map((m) => `<div class="linha"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '-' : '+'}${brl(m.valor)}</span></div>`).join('')}
-        <div class="linha"><span>Troco inicial</span><span>${brl(r.caixa.valor_abertura)}</span></div>
-        <div class="linha total"><span>Dinheiro esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>
-      </div>
-      <form class="form">
-        <label>Dinheiro contado na gaveta (R$)<input name="valor" inputmode="decimal" required autofocus></label>
-        <div id="dif" class="dica"></div>
-        <label>Observação<textarea name="obs" rows="2"></textarea></label>
-        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-perigo"><i data-icone="cadeado"></i> Fechar e imprimir</button></div>
-      </form>`, { largura: '480px' });
+    const NOTAS = [20000, 10000, 5000, 2000, 1000, 500, 200];
+    const MOEDAS = [100, 50, 25, 10, 5];
+    const cel = (v) => `<label class="fc-cel ${v < 200 ? 'moeda' : ''}"><span>${v >= 100 ? `R$ ${v / 100}` : `${v} centavos`}</span>
+      <input type="number" min="0" inputmode="numeric" data-v="${v}" placeholder="0"><small data-sub="${v}"></small></label>`;
+    const corpo = abrirModal('Fechar o caixa', `
+      <form class="fc">
+        <div class="fc-contar">
+          <div class="p4-passo"><span>1</span>Conte o dinheiro da gaveta</div>
+          <p class="dica">Digite quantas notas e moedas de cada valor tem na gaveta — o sistema soma.</p>
+          <div class="fc-grade">${NOTAS.map(cel).join('')}</div>
+          <div class="fc-grade fc-moedas">${MOEDAS.map(cel).join('')}</div>
+          <label class="fc-total">Total contado<div class="campo-moeda"><span>R$</span><input name="valor" inputmode="decimal" required class="campo-destaque" placeholder="0,00"></div>
+            <small>Preenche sozinho pela contagem acima, ou digite o total direto.</small></label>
+        </div>
+        <div class="fc-resumo">
+          <div class="p4-passo"><span>2</span>Confira e feche</div>
+          <div class="cx-mov">
+            <div class="linha"><span>Vendas</span><b>${r.vendas.quantidade} · ${brl(r.vendas.total)}</b></div>
+            ${r.formas.map((f) => `<div class="linha"><span><i class="fc-ponto" style="background:${COR_FORMA[f.forma] || '#4a3aa7'}"></i>${rotulo(f.forma)}</span><span>${brl(f.forma === 'dinheiro' ? f.valor - r.vendas.troco : f.valor)}</span></div>`).join('')}
+            ${(r.recebimentos_crediario || []).map((f) => `<div class="linha"><span>Crediário recebido · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
+            ${r.movimentos.map((m) => `<div class="linha"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '−' : '+'}${brl(m.valor)}</span></div>`).join('')}
+            <div class="linha"><span>Troco inicial</span><span>${brl(r.caixa.valor_abertura)}</span></div>
+            <div class="linha total"><span>Esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>
+          </div>
+          <div class="fc-dif" id="dif"><small>Diferença</small><b>—</b><span>Conte o dinheiro para ver se bate.</span></div>
+          <label>Observação <small>opcional</small><textarea name="obs" rows="2" placeholder="Ex.: faltou R$ 2 de troco"></textarea></label>
+          <button class="btn btn-perigo btn-grande">${Icone('cadeado')} Fechar caixa e imprimir</button>
+        </div>
+      </form>`, { largura: '980px' });
     const form = corpo.querySelector('form');
-    form.valor.oninput = () => {
+    const atualizarDif = () => {
       const v = U.paraCentavos(form.valor.value);
+      const box = corpo.querySelector('#dif');
+      if (Number.isNaN(v) || !form.valor.value) {
+        box.className = 'fc-dif';
+        box.innerHTML = '<small>Diferença</small><b>—</b><span>Conte o dinheiro para ver se bate.</span>';
+        return;
+      }
       const d = v - r.dinheiro_esperado;
-      corpo.querySelector('#dif').innerHTML = Number.isNaN(v) || !form.valor.value ? '' : d === 0 ? '<i data-icone="check"></i> Caixa batendo.'
-        : `Diferença: <b class="${d < 0 ? 'txt-perigo' : ''}">${d > 0 ? 'sobra de ' : 'falta de '}${brl(Math.abs(d))}</b>`;
+      box.className = `fc-dif ${d === 0 ? 'ok' : d < 0 ? 'falta' : 'sobra'}`;
+      box.innerHTML = d === 0 ? `<small>Diferença</small><b>${Icone('check')} Caixa batendo</b><span>O dinheiro contado é igual ao esperado.</span>`
+        : `<small>${d < 0 ? 'Está faltando' : 'Está sobrando'}</small><b>${brl(Math.abs(d))}</b><span>Contado ${brl(v)} · esperado ${brl(r.dinheiro_esperado)}</span>`;
     };
+    form.querySelectorAll('[data-v]').forEach((inp) => {
+      inp.oninput = () => {
+        let total = 0;
+        form.querySelectorAll('[data-v]').forEach((x) => {
+          const n = Math.max(0, Number(x.value) || 0);
+          total += n * Number(x.dataset.v);
+          form.querySelector(`[data-sub="${x.dataset.v}"]`).textContent = n ? brl(n * Number(x.dataset.v)) : '';
+        });
+        form.valor.value = U.num(total);
+        atualizarDif();
+      };
+    });
+    form.valor.oninput = atualizarDif;
+    setTimeout(() => form.querySelector('[data-v]').focus(), 50);
     form.onsubmit = async (ev) => {
       ev.preventDefault();
       const valor = U.paraCentavos(form.valor.value);
