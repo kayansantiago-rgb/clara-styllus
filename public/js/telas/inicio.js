@@ -20,28 +20,6 @@ Telas.inicio = (() => {
     return d.length >= 10 ? `https://wa.me/55${d}?text=${encodeURIComponent(msg)}` : null;
   };
 
-  function graficoDias(dias) {
-    const max = Math.max(1, ...dias.map((d) => d.faturamento));
-    const hoje = U.hoje();
-    const melhor = dias.reduce((a, d) => (d.faturamento > a.faturamento ? d : a), dias[0]);
-    return `
-      <div class="grafico-dias" role="img" aria-label="Faturamento dos últimos 14 dias">
-        ${dias.map((d) => {
-    const [, m, dia] = d.dia.split('-');
-    const sem = new Date(d.dia + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-    const h = d.faturamento ? Math.max(3, (d.faturamento / max) * 100) : 0;
-    const rotulo = d.dia === hoje || (d === melhor && d.faturamento) ? `<span class="barra-valor">${brl(d.faturamento).replace(',00', '')}</span>` : '';
-    return `<div class="dia ${d.dia === hoje ? 'hoje' : ''}" tabindex="0"
-              data-dica="${sem} ${dia}/${m} · ${brl(d.faturamento)} · ${d.vendas} venda${d.vendas === 1 ? '' : 's'}">
-            <div class="coluna"><i style="height:${h}%">${rotulo}</i></div>
-            <small>${dia}</small></div>`;
-  }).join('')}
-        <div class="dica-grafico" hidden></div>
-      </div>
-      <table class="sr-only"><caption>Faturamento por dia</caption>
-        ${dias.map((d) => `<tr><td>${d.dia}</td><td>${brl(d.faturamento)}</td><td>${d.vendas}</td></tr>`).join('')}</table>`;
-  }
-
   async function abrir(raiz) {
     const [r, bk, conds, at] = await Promise.all([
       api('/api/painel'), api('/api/backup/status').catch(() => null), api('/api/condicionais').catch(() => []),
@@ -59,7 +37,6 @@ Telas.inicio = (() => {
     raiz.innerHTML = `
       <div class="cabecalho-tela">
         <div><h1>${saudacao()}, ${esc(nome)}!</h1><p class="dica">${hojeTxt.charAt(0).toUpperCase() + hojeTxt.slice(1)}</p></div>
-        <div class="ferramentas"><a class="btn btn-primario btn-grande" href="#/pdv">${Icone('sacola')} Ir para o caixa</a></div>
       </div>
 
       ${at && at.disponivel ? `<div class="pdv-alerta ok painel-alerta at-aviso"><i data-icone="nuvem"></i>
@@ -70,16 +47,24 @@ Telas.inicio = (() => {
       ${semBackup ? `<div class="pdv-alerta perigo painel-alerta"><i data-icone="nuvem"></i> ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}
         Se o computador der defeito, os dados podem se perder. <a href="#/config">Fazer backup agora →</a></div>`
     : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="nuvem"></i> ${esc(bk.ultimo_erro)}</div>` : ''}
-      <div class="cards painel-kpis">
-        <div class="card destaque"><small>Vendido hoje</small><b>${brl(r.hoje.faturamento)}</b>${variacao(r.hoje.faturamento, r.ontem.faturamento)}</div>
-        <div class="card"><small>Vendas hoje</small><b>${r.hoje.vendas}</b>${variacao(r.hoje.vendas, r.ontem.vendas)}</div>
-        <div class="card"><small>Peças hoje</small><b>${r.hoje.pecas}</b>${variacao(r.hoje.pecas, r.ontem.pecas)}</div>
-        <div class="card"><small>Ticket médio hoje</small><b>${brl(r.hoje.ticket)}</b>${variacao(r.hoje.ticket, r.ontem.ticket)}</div>
+      <div class="in-atalhos">
+        <a class="in-atalho destaque" href="#/pdv">${Icone('sacola')}<b>Vender</b><small>abrir o caixa</small></a>
+        <a class="in-atalho" href="#/produtos">${Icone('roupa')}<b>Produtos</b><small>cadastrar e estoque</small></a>
+        <a class="in-atalho" href="#/etiquetas">${Icone('etiqueta')}<b>Etiquetas</b><small>imprimir</small></a>
+        <a class="in-atalho" href="#/vendas">${Icone('recibo')}<b>Vendas</b><small>histórico e trocas</small></a>
+        <a class="in-atalho" href="#/clientes">${Icone('clientes')}<b>Clientes</b><small>fichas e WhatsApp</small></a>
+        <a class="in-atalho" href="#/relatorios">${Icone('grafico')}<b>Relatórios</b><small>lucro e gráficos</small></a>
+      </div>
+      <div class="vd-kpis in-kpis">
+        <div class="vd-kpi destaque"><span>${Icone('carteira')} Vendido hoje</span><b>${brl(r.hoje.faturamento)}</b><small>${variacao(r.hoje.faturamento, r.ontem.faturamento)}</small></div>
+        <div class="vd-kpi"><span>${Icone('recibo')} Vendas hoje</span><b>${r.hoje.vendas}</b><small>${variacao(r.hoje.vendas, r.ontem.vendas)}</small></div>
+        <div class="vd-kpi"><span>${Icone('roupa')} Peças hoje</span><b>${r.hoje.pecas}</b><small>${variacao(r.hoje.pecas, r.ontem.pecas)}</small></div>
+        <div class="vd-kpi"><span>${Icone('grafico')} Ticket médio hoje</span><b>${brl(r.hoje.ticket)}</b><small>${variacao(r.hoje.ticket, r.ontem.ticket)}</small></div>
       </div>
 
       <div class="painel-grade">
         <div class="cartao painel-meta">
-          <h3>Meta do mês</h3>
+          <h3 class="titulo-ico">${Icone('estrela')} Meta do mês</h3>
           ${meta ? `
             <div class="meta-numeros"><b>${brl(r.mes.faturamento)}</b><span>de ${brl(meta)}</span></div>
             <div class="meta-barra" role="progressbar" aria-valuenow="${pctMeta}" aria-valuemin="0" aria-valuemax="100">
@@ -94,8 +79,13 @@ Telas.inicio = (() => {
         </div>
 
         <div class="cartao">
-          <h3>Vendas dos últimos 14 dias</h3>
-          ${graficoDias(r.ultimos14)}
+          <h3 class="titulo-ico">${Icone('grafico')} Vendas dos últimos 14 dias</h3>
+          ${Graficos.colunas(r.ultimos14.map((d) => ({
+    rotulo: d.dia.slice(8),
+    valor: d.faturamento,
+    destaque: d.dia === U.hoje(),
+    dica: `${new Date(d.dia + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}: ${brl(d.faturamento)} · ${d.vendas} venda(s)`,
+  })), { altura: 170 })}
         </div>
 
         <div class="cartao">
@@ -138,22 +128,7 @@ Telas.inicio = (() => {
         </div>
       </div>`;
 
-    // Dica ao passar o mouse (ou focar com o teclado) nas barras.
     raiz.querySelector('#at-agora')?.addEventListener('click', (ev) => Atualizacao.instalar(ev.currentTarget));
-    const grafico = raiz.querySelector('.grafico-dias');
-    const dica = grafico.querySelector('.dica-grafico');
-    const mostrar = (ev) => {
-      const d = ev.target.closest('.dia');
-      if (!d) { dica.hidden = true; return; }
-      dica.textContent = d.dataset.dica;
-      dica.hidden = false;
-      const g = grafico.getBoundingClientRect();
-      const b = d.getBoundingClientRect();
-      dica.style.left = `${Math.min(g.width - 180, Math.max(0, b.left - g.left + b.width / 2 - 90))}px`;
-    };
-    grafico.addEventListener('mouseover', mostrar);
-    grafico.addEventListener('focusin', mostrar);
-    grafico.addEventListener('mouseleave', () => { dica.hidden = true; });
   }
 
   return { abrir };

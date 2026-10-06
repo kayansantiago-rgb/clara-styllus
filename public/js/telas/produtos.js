@@ -4,31 +4,58 @@ Telas.produtos = (() => {
   let raiz;
   let lista = [];
 
+  let modo = (() => { try { return localStorage.getItem('produtos_modo') || 'lista'; } catch { return 'lista'; } })();
+  let categoria = '';
+  let filtro = ''; // '' | 'baixo' | 'inativos'
+
   async function abrir(el) {
     raiz = el;
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <h1>Produtos</h1>
+        <div><h1>Produtos</h1><p class="subtitulo" id="pr-resumo">Cadastro, estoque, preços e etiquetas.</p></div>
         <div class="ferramentas">
-          <input id="q" type="search" placeholder="Buscar por nome, código, referência, cor…" autofocus>
-          <label class="check"><input type="checkbox" id="baixo"> Só estoque baixo</label>
-          <label class="check so-admin"><input type="checkbox" id="inativos"> Mostrar inativos</label>
           <button class="btn so-admin" id="entrada" title="Somar estoque bipando as peças que chegaram">${Icone('codigo')} Entrada por bipagem</button>
           <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">${Icone('fogo')} Liquidação</button>
           <button class="btn btn-primario so-admin" id="novo">${Icone('mais')} Novo produto</button>
         </div>
       </div>
-      <div class="tabela-rolagem cartao">
-        <table class="tabela">
-          <thead><tr><th></th><th>Código</th><th>Produto</th><th>Tam.</th><th>Cor</th><th class="r">Custo</th>
-            <th class="r">Venda</th><th class="r">Estoque</th><th class="r">Ações</th></tr></thead>
-          <tbody id="lista"></tbody>
-        </table>
-      </div>`;
+      <div class="pr-barra">
+        <div class="busca-ico pr-busca">${Icone('busca')}<input id="q" type="search" placeholder="Buscar por nome, código, referência, cor…" autofocus autocomplete="off"></div>
+        <div class="chips-filtro" id="filtros">
+          <button class="chip-filtro ${filtro === '' ? 'sel' : ''}" data-f="">Ativos</button>
+          <button class="chip-filtro ${filtro === 'baixo' ? 'sel' : ''}" data-f="baixo">${Icone('alerta')} Estoque baixo</button>
+          <button class="chip-filtro so-admin ${filtro === 'inativos' ? 'sel' : ''}" data-f="inativos">Com inativos</button>
+        </div>
+        <div class="segmentos" id="modo">
+          <button class="segmento ${modo === 'lista' ? 'sel' : ''}" data-modo="lista" title="Lista">${Icone('prancheta')} Lista</button>
+          <button class="segmento ${modo === 'vitrine' ? 'sel' : ''}" data-modo="vitrine" title="Vitrine com fotos">${Icone('imagem')} Vitrine</button>
+        </div>
+      </div>
+      <div class="chips-filtro pr-categorias" id="categorias"></div>
+      <div id="lista"></div>`;
     const recarregar = U.debounce(carregar, 200);
     raiz.querySelector('#q').addEventListener('input', recarregar);
-    raiz.querySelector('#baixo').onchange = carregar;
-    raiz.querySelector('#inativos').onchange = carregar;
+    raiz.querySelector('#filtros').onclick = (ev) => {
+      const b = ev.target.closest('[data-f]');
+      if (!b) return;
+      filtro = b.dataset.f;
+      raiz.querySelectorAll('#filtros .chip-filtro').forEach((x) => x.classList.toggle('sel', x === b));
+      carregar();
+    };
+    raiz.querySelector('#modo').onclick = (ev) => {
+      const b = ev.target.closest('[data-modo]');
+      if (!b) return;
+      modo = b.dataset.modo;
+      try { localStorage.setItem('produtos_modo', modo); } catch { /* sem armazenamento */ }
+      raiz.querySelectorAll('#modo .segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      desenhar();
+    };
+    raiz.querySelector('#categorias').onclick = (ev) => {
+      const b = ev.target.closest('[data-cat]');
+      if (!b) return;
+      categoria = b.dataset.cat;
+      desenhar();
+    };
     raiz.querySelector('#novo').onclick = () => formulario(null);
     raiz.querySelector('#liquidacao').onclick = liquidacao;
     raiz.querySelector('#entrada').onclick = entradaBipagem;
@@ -36,30 +63,74 @@ Telas.produtos = (() => {
     await carregar();
   }
 
+  let todos = [];
   async function carregar() {
+    if (!raiz) return;
     const q = raiz.querySelector('#q').value;
-    const baixo = raiz.querySelector('#baixo').checked ? '&estoque_baixo=1' : '';
-    const inat = raiz.querySelector('#inativos').checked ? '&inativos=1' : '';
+    const extra = filtro === 'baixo' ? '&estoque_baixo=1' : filtro === 'inativos' ? '&inativos=1' : '';
     try {
-      lista = await api(`/api/produtos?q=${encodeURIComponent(q)}${baixo}${inat}&limite=1000`);
+      todos = await api(`/api/produtos?q=${encodeURIComponent(q)}${extra}&limite=1000`);
     } catch (e) { return erro(e); }
-    raiz.querySelector('#lista').innerHTML = lista.map((p, i) => `
-      <tr class="${p.ativo ? '' : 'inativo'}">
-        <td class="td-foto">${U.miniatura(p)}</td>
-        <td><code>${esc(p.codigo)}</code>${p.referencia ? `<br><small>Ref ${esc(p.referencia)}</small>` : ''}</td>
-        <td><b>${esc(p.nome)}</b><br><small>${esc([p.categoria, p.marca].filter(Boolean).join(' · '))}</small></td>
-        <td>${esc(p.tamanho || '')}</td>
-        <td>${esc(p.cor || '')}</td>
-        <td class="r">${num(p.preco_custo)}</td>
-        <td class="r">${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${num(p.preco_anterior)}</small><br><b class="preco-por">${num(p.preco_venda)}</b>` : `<b>${num(p.preco_venda)}</b>`}</td>
-        <td class="r ${!p.servico && p.estoque <= p.estoque_minimo ? 'txt-perigo' : ''}">${p.servico ? '<small>serviço</small>' : `<b>${p.estoque}</b>`}</td>
-        <td class="r nowrap">
-          <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">${Icone('grade')}</button>
-          <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">${Icone('caixa')}</button>
-          <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">${Icone('etiqueta')}</button>
-          <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">${Icone('lapis')}</button>
-        </td>
-      </tr>`).join('') || '<tr><td colspan="9" class="vazio">Nenhum produto encontrado.</td></tr>';
+    desenhar();
+  }
+
+  const situacao = (p) => (p.servico ? 'servico' : p.estoque <= 0 ? 'zero' : p.estoque <= p.estoque_minimo ? 'baixo' : 'ok');
+  const pilula = (p) => {
+    const st = situacao(p);
+    if (st === 'servico') return '<span class="pr-estoque servico">serviço</span>';
+    return `<span class="pr-estoque ${st}">${p.estoque} ${st === 'zero' ? '· esgotado' : st === 'baixo' ? '· repor' : 'em estoque'}</span>`;
+  };
+  const precoHtml = (p) => (p.preco_anterior > p.preco_venda
+    ? `<s>${num(p.preco_anterior)}</s><b class="preco-por">${brl(p.preco_venda)}</b>` : `<b>${brl(p.preco_venda)}</b>`);
+  const acoesHtml = (i) => `
+    <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">${Icone('grade')}</button>
+    <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">${Icone('caixa')}</button>
+    <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">${Icone('etiqueta')}</button>
+    <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">${Icone('lapis')}</button>`;
+
+  function desenhar() {
+    // Categorias que existem na busca atual (com contagem).
+    const cats = new Map();
+    for (const p of todos) { const c = p.categoria || 'Sem categoria'; cats.set(c, (cats.get(c) || 0) + 1); }
+    if (categoria && !cats.has(categoria)) categoria = '';
+    raiz.querySelector('#categorias').innerHTML = cats.size > 1
+      ? `<button class="chip-filtro ${categoria ? '' : 'sel'}" data-cat="">Todas <small>${todos.length}</small></button>` +
+        [...cats.entries()].sort((a, b) => b[1] - a[1]).map(([c, n]) => `<button class="chip-filtro ${categoria === c ? 'sel' : ''}" data-cat="${esc(c)}">${esc(c)} <small>${n}</small></button>`).join('')
+      : '';
+    lista = categoria ? todos.filter((p) => (p.categoria || 'Sem categoria') === categoria) : todos;
+    const pecas = lista.reduce((a, p) => a + (p.servico ? 0 : Math.max(0, p.estoque)), 0);
+    const valor = lista.reduce((a, p) => a + (p.servico ? 0 : Math.max(0, p.estoque) * p.preco_venda), 0);
+    const baixos = lista.filter((p) => ['baixo', 'zero'].includes(situacao(p))).length;
+    raiz.querySelector('#pr-resumo').innerHTML = `${lista.length} produto(s) · <b>${pecas}</b> peças em estoque · ${brl(valor)} em preço de venda${baixos ? ` · <span class="txt-perigo">${baixos} para repor</span>` : ''}`;
+    const el = raiz.querySelector('#lista');
+    if (!lista.length) {
+      el.innerHTML = `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('roupa')}</div><b>Nenhum produto encontrado</b><br><small>Mude a busca ou os filtros.</small></div>`;
+      return;
+    }
+    if (modo === 'vitrine') {
+      el.className = 'pr-vitrine';
+      el.innerHTML = lista.map((p, i) => `
+        <div class="pr-card ${p.ativo ? '' : 'inativo'}">
+          <div class="pr-card-foto">${U.miniatura(p, 'pr-foto-g')}${pilula(p)}</div>
+          <div class="pr-card-txt"><b title="${esc(p.nome)}">${esc(p.nome)}</b>
+            <small>${esc([p.tamanho && 'Tam ' + p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small></div>
+          <div class="pr-card-preco">${precoHtml(p)}</div>
+          <div class="pr-card-acoes">${acoesHtml(i)}</div>
+        </div>`).join('');
+      return;
+    }
+    el.className = 'pr-lista';
+    el.innerHTML = `<div class="pr-cab"><span></span><span>Produto</span><span>Tamanho · cor</span><span class="r">Custo</span><span class="r">Venda</span><span class="r">Estoque</span><span></span></div>` +
+      lista.map((p, i) => `
+      <div class="pr-linha ${p.ativo ? '' : 'inativo'}">
+        ${U.miniatura(p, 'pr-foto')}
+        <div class="pr-nome"><b>${esc(p.nome)}</b><small>${esc([p.categoria, p.marca, p.referencia && 'Ref ' + p.referencia].filter(Boolean).join(' · '))} <code>${esc(p.codigo)}</code></small></div>
+        <div class="p4-tags">${p.tamanho ? `<span class="p4-tag">${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${esc(p.cor)}</span>` : ''}</div>
+        <div class="r pr-custo">${p.preco_custo ? num(p.preco_custo) : '—'}</div>
+        <div class="r pr-preco">${precoHtml(p)}</div>
+        <div class="r">${pilula(p)}</div>
+        <div class="r nowrap pr-acoes">${acoesHtml(i)}</div>
+      </div>`).join('');
   }
 
   function acao(ev) {

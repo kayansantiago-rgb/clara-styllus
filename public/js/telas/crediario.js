@@ -20,22 +20,18 @@ Telas.crediario = (() => {
     raiz = el;
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <h1>Crediário</h1>
+        <div><h1>Crediário</h1><p class="subtitulo">Quem está devendo, parcelas, recebimentos e cobrança.</p></div>
         <div class="ferramentas">
-          <input id="q" type="search" placeholder="Buscar cliente por nome, CPF ou telefone" autofocus>
-          <label class="check"><input type="checkbox" id="atraso"> Só em atraso</label>
-          <span class="semaforo-legenda">${selo({ cor: 'verde', txt: 'em dia' })}${selo({ cor: 'amarelo', txt: 'vence em 7 dias' })}${selo({ cor: 'vermelho', txt: 'atrasado' })}</span>
-          <button class="btn so-admin" id="lancar">+ Lançar débito antigo</button>
+          <button class="btn so-admin" id="lancar">${Icone('mais')} Lançar débito antigo</button>
         </div>
       </div>
-      <div class="cards" id="resumo"></div>
-      <div class="cartao tabela-rolagem">
-        <table class="tabela">
-          <thead><tr><th>Situação</th><th>Cliente</th><th>Telefone</th><th class="r">Parcelas</th><th>Próx. vencimento</th>
-            <th class="r">Vencido</th><th class="r">Saldo devedor</th><th></th></tr></thead>
-          <tbody id="lista"></tbody>
-        </table>
-      </div>`;
+      <div class="vd-kpis cr-kpis" id="resumo"></div>
+      <div class="vd-barra-filtros">
+        <div class="busca-ico pr-busca">${Icone('busca')}<input id="q" type="search" placeholder="Buscar cliente por nome, CPF ou telefone" autofocus autocomplete="off"></div>
+        <label class="interruptor vd-canceladas"><input type="checkbox" id="atraso"><span class="trilho"></span><span class="txt"><b>Só quem está em atraso</b></span></label>
+        <span class="semaforo-legenda">${selo({ cor: 'verde', txt: 'em dia' })}${selo({ cor: 'amarelo', txt: 'vence em 7 dias' })}${selo({ cor: 'vermelho', txt: 'atrasado' })}</span>
+      </div>
+      <div class="cr-lista" id="lista"></div>`;
     raiz.querySelector('#q').addEventListener('input', U.debounce(carregar));
     raiz.querySelector('#atraso').onchange = carregar;
     raiz.querySelector('#lancar').onclick = () => escolherClienteParaDebito();
@@ -62,25 +58,24 @@ Telas.crediario = (() => {
     } catch (e) { return erro(e); }
     if (!raiz) return;
     raiz.querySelector('#resumo').innerHTML = `
-      <div class="card destaque"><small>Total a receber</small><b>${brl(resumo.a_receber)}</b></div>
-      <div class="card"><small>Vencido</small><b class="${resumo.vencido ? 'txt-perigo' : ''}">${brl(resumo.vencido)}</b></div>
-      <div class="card"><small>Clientes devendo</small><b>${resumo.clientes}</b></div>
-      <div class="card"><small>Clientes em atraso</small><b class="${resumo.clientes_atraso ? 'txt-perigo' : ''}">${resumo.clientes_atraso}</b></div>
-      <div class="card"><small>Recebido hoje</small><b>${brl(resumo.recebido)}</b></div>`;
+      <div class="vd-kpi destaque"><span>${Icone('caderno')} Total a receber</span><b>${brl(resumo.a_receber)}</b><small>${resumo.clientes} cliente(s) devendo</small></div>
+      <div class="vd-kpi"><span>${Icone('alerta')} Vencido</span><b class="${resumo.vencido ? 'txt-perigo' : ''}">${brl(resumo.vencido)}</b><small>${resumo.clientes_atraso} cliente(s) em atraso</small></div>
+      <div class="vd-kpi"><span>${Icone('dinheiro')} Recebido hoje</span><b>${brl(resumo.recebido)}</b><small>parcelas pagas hoje</small></div>
+      <div class="vd-kpi"><span>${Icone('clientes')} Clientes devendo</span><b>${resumo.clientes}</b><small>com saldo em aberto</small></div>`;
+    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
     raiz.querySelector('#lista').innerHTML = lista.map((c, i) => {
       const sem = semaforo(c.vencido, c.proximo_vencimento, c.dias_atraso);
       return `
-      <tr class="clicavel linha-${sem.cor}" data-i="${i}">
-        <td>${selo(sem)}</td>
-        <td><b>${esc(c.nome)}</b>${c.cpf ? `<br><small>${esc(U.cpf(c.cpf))}</small>` : ''}</td>
-        <td class="nowrap">${esc(c.telefone || '')}</td>
-        <td class="r">${c.parcelas}</td>
-        <td>${dataBr(c.proximo_vencimento)}</td>
-        <td class="r">${c.vencido ? `<b class="txt-perigo">${brl(c.vencido)}</b>` : '—'}</td>
-        <td class="r"><b>${brl(c.saldo)}</b></td>
-        <td class="r"><button class="btn btn-primario btn-peq" data-receber>Receber</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="8" class="vazio">Ninguém devendo no crediário.</td></tr>';
+      <div class="cr-linha cr-${sem.cor}" data-i="${i}" tabindex="0">
+        <span class="avatar">${esc(iniciais(c.nome))}</span>
+        <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></div>
+        <div>${selo(sem)}</div>
+        <div class="cr-num"><small>Próx. vencimento</small><b>${dataBr(c.proximo_vencimento) || '—'}</b><small>${c.parcelas} parcela(s)</small></div>
+        <div class="cr-num r"><small>Vencido</small><b class="${c.vencido ? 'txt-perigo' : ''}">${c.vencido ? brl(c.vencido) : '—'}</b></div>
+        <div class="cr-num r"><small>Deve</small><b class="cr-saldo">${brl(c.saldo)}</b></div>
+        <button class="btn btn-primario" data-receber>${Icone('dinheiro')} Receber</button>
+      </div>`;
+    }).join('') || `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('check')}</div><b>Ninguém devendo no crediário</b><br><small>Quando uma venda for no crediário, a cliente aparece aqui.</small></div>`;
   }
 
   // ------------------------------------------------------------- detalhe
@@ -93,45 +88,46 @@ Telas.crediario = (() => {
     const linhaParcela = (p) => {
       const resta = p.valor - p.valor_pago;
       const atrasada = p.status === 'aberta' && p.vencimento < hoje;
-      return `<tr class="${atrasada ? 'linha-atraso' : ''}">
-        <td>${esc(p.descricao || '')}</td><td class="c">${p.numero}/${p.total_parcelas}</td>
-        <td>${dataBr(p.vencimento)}</td><td class="r">${brl(p.valor)}</td>
-        <td class="r">${p.valor_pago ? brl(p.valor_pago) : ''}</td>
-        <td class="r">${p.status === 'paga' ? '<span class="selo ok">paga</span>' : `<b class="${atrasada ? 'txt-perigo' : ''}">${brl(resta)}</b>`}</td>
-        <td>${p.status === 'aberta' ? selo(semaforo(atrasada ? resta : 0, p.vencimento, -diasAte(p.vencimento))) : ''}</td>
-        <td>${p.status === 'aberta' && !p.venda_id && !p.valor_pago ? `<button class="mini perigo so-admin" data-cancelar-parc="${p.id}" title="Cancelar parcela lançada por engano">×</button>` : ''}</td>
-      </tr>`;
+      const st = p.status === 'paga' ? 'paga' : atrasada ? 'atrasada' : diasAte(p.vencimento) <= 7 ? 'perto' : 'aberta';
+      return `<div class="cr-parc ${st}">
+        <span class="cr-ponto"></span>
+        <div class="cr-parc-data"><b>${dataBr(p.vencimento)}</b><small>${p.numero}/${p.total_parcelas}${p.descricao ? ' · ' + esc(p.descricao) : ''}</small></div>
+        <div class="cr-parc-valor"><b>${brl(p.status === 'paga' ? p.valor : resta)}</b>
+          <small>${p.status === 'paga' ? 'paga' : p.valor_pago ? `pagou ${brl(p.valor_pago)} de ${brl(p.valor)}` : atrasada ? `atrasada ${-diasAte(p.vencimento)} dia(s)` : diasAte(p.vencimento) === 0 ? 'vence hoje' : `em ${diasAte(p.vencimento)} dia(s)`}</small></div>
+        ${p.status === 'aberta' && !p.venda_id && !p.valor_pago ? `<button class="mini perigo so-admin" data-cancelar-parc="${p.id}" title="Cancelar parcela lançada por engano">${Icone('fechar')}</button>` : '<span></span>'}
+      </div>`;
     };
     const tel = (d.cliente.telefone || '').replace(/\D/g, '');
     const msg = encodeURIComponent(`Olá, ${d.cliente.nome.split(' ')[0]}! Aqui é da Clara Styllus. ` +
       `Passando para lembrar do seu crediário: saldo de ${brl(d.saldo.aberto)}` +
       `${d.saldo.vencido ? `, sendo ${brl(d.saldo.vencido)} vencido` : ''}. Qualquer dúvida estamos à disposição!`);
     const corpo = abrirModal(`Crediário — ${d.cliente.nome}`, `
-      <div class="cards cards-mini">
-        <div class="card destaque"><small>Saldo devedor</small><b>${brl(d.saldo.aberto)}</b></div>
-        <div class="card"><small>Vencido</small><b class="${d.saldo.vencido ? 'txt-perigo' : ''}">${brl(d.saldo.vencido)}</b></div>
-        <div class="card"><small>Limite de crédito</small><b>${d.limite == null ? 'sem limite' : brl(d.limite)}</b></div>
+      <div class="cl-kpis cr-det-kpis">
+        <div><small>Deve no total</small><b>${brl(d.saldo.aberto)}</b></div>
+        <div><small>Vencido</small><b class="${d.saldo.vencido ? 'txt-perigo' : ''}">${brl(d.saldo.vencido)}</b></div>
+        <div><small>Limite de crédito</small><b>${d.limite == null ? 'sem limite' : brl(d.limite)}</b></div>
       </div>
       <div class="acoes acoes-esq">
-        <button class="btn btn-primario" id="receber" ${d.saldo.aberto ? '' : 'disabled'}><i data-icone="dinheiro"></i> Receber pagamento</button>
-        <button class="btn so-admin" id="debito">+ Lançar débito</button>
-        ${tel.length >= 10 && d.saldo.aberto ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${tel.replace(/^55/, '')}?text=${msg}"><i data-icone="whatsapp"></i> Cobrar no WhatsApp</a>` : ''}
+        <button class="btn btn-primario" id="receber" ${d.saldo.aberto ? '' : 'disabled'}>${Icone('dinheiro')} Receber pagamento</button>
+        <button class="btn so-admin" id="debito">${Icone('mais')} Lançar débito</button>
+        ${tel.length >= 10 && d.saldo.aberto ? `<a class="btn cl-btn-zap" target="_blank" rel="noopener" href="https://wa.me/55${tel.replace(/^55/, '')}?text=${msg}">${Icone('whatsapp')} Cobrar no WhatsApp</a>` : ''}
       </div>
-      <h3>Parcelas em aberto</h3>
-      <div class="tabela-rolagem baixa"><table class="tabela">
-        <thead><tr><th>Origem</th><th class="c">Parc.</th><th>Vencimento</th><th class="r">Valor</th><th class="r">Pago</th><th class="r">Resta</th><th>Situação</th><th></th></tr></thead>
-        <tbody id="parc">${abertas.map(linhaParcela).join('') || '<tr><td colspan="8" class="vazio">Nenhuma parcela em aberto.</td></tr>'}</tbody>
-      </table></div>
-      <h3>Recebimentos</h3>
-      <div class="tabela-rolagem baixa"><table class="tabela"><tbody id="recs">${d.recebimentos.map((r) => `
-        <tr class="${r.status === 'estornado' ? 'inativo' : ''}"><td>${dataHora(r.criado_em)}</td><td>${U.FORMAS[r.forma] || r.forma}</td>
-          <td>${esc(r.operador || '')}</td><td class="r"><b>${brl(r.valor)}</b>${r.status === 'estornado' ? ' <span class="selo perigo">estornado</span>' : ''}</td>
-          <td class="r nowrap"><button class="btn-ico" data-recibo="${r.id}" title="Imprimir recibo"><i data-icone="impressora"></i></button>
-          ${r.status === 'ok' ? `<button class="btn-ico so-admin" data-estornar="${r.id}" title="Estornar">↩️</button>` : ''}</td></tr>`).join('') ||
-        '<tr><td class="vazio">Nenhum recebimento.</td></tr>'}</tbody></table></div>
-      ${pagas.length ? `<details><summary>Parcelas já pagas (${pagas.length})</summary>
-        <table class="tabela"><tbody>${pagas.map(linhaParcela).join('')}</tbody></table></details>` : ''}`,
-    { largura: '860px' });
+      <div class="cr-det">
+        <div><h4>Parcelas em aberto</h4>
+          <div class="cr-linha-tempo" id="parc">${abertas.map(linhaParcela).join('') || '<div class="vazio">Nenhuma parcela em aberto.</div>'}</div>
+          ${pagas.length ? `<details><summary>Parcelas já pagas (${pagas.length})</summary><div class="cr-linha-tempo">${pagas.map(linhaParcela).join('')}</div></details>` : ''}
+        </div>
+        <div><h4>Recebimentos</h4>
+          <div class="cr-recs" id="recs">${d.recebimentos.map((r) => `
+            <div class="cr-rec ${r.status === 'estornado' ? 'inativo' : ''}">
+              <span class="cr-rec-ico">${Icone('dinheiro')}</span>
+              <div><b>${brl(r.valor)}</b>${r.status === 'estornado' ? ' <span class="selo perigo">estornado</span>' : ''}<small>${dataHora(r.criado_em)} · ${U.FORMAS[r.forma] || r.forma}${r.operador ? ' · ' + esc(r.operador) : ''}</small></div>
+              <span class="nowrap"><button class="btn-ico" data-recibo="${r.id}" title="Imprimir recibo">${Icone('impressora')}</button>
+              ${r.status === 'ok' ? `<button class="btn-ico perigo so-admin" data-estornar="${r.id}" title="Estornar">${Icone('troca')}</button>` : ''}</span>
+            </div>`).join('') || '<div class="vazio">Nenhum recebimento ainda.</div>'}</div>
+        </div>
+      </div>`,
+    { largura: '900px' });
 
     corpo.querySelector('#receber').onclick = () => receber(clienteId);
     corpo.querySelector('#debito').onclick = () => lancarDebito(d.cliente);

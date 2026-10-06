@@ -17,38 +17,52 @@ Telas.condicional = (() => {
     raiz = el;
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <h1>Condicional</h1>
+        <div><h1>Condicional</h1><p class="subtitulo">Peças que as clientes levaram para provar em casa (malinha).</p></div>
         <div class="ferramentas">
-          <select id="status"><option value="aberta">Abertas</option><option value="todas">Todas</option></select>
-          <a class="btn btn-primario" href="#/pdv" title="Bipe as peças no caixa, escolha a cliente e clique em Condicional"><i data-icone="bolsa"></i> Nova condicional</a>
+          <div class="segmentos" id="status">
+            <button class="segmento sel" data-st="aberta">Abertas</button><button class="segmento" data-st="todas">Todas</button>
+          </div>
+          <a class="btn btn-primario" href="#/pdv" title="Bipe as peças no caixa, escolha a cliente e clique em Condicional">${Icone('bolsa')} Nova condicional</a>
         </div>
       </div>
-      <p class="dica">Para criar: no <b>caixa</b>, bipe as peças, escolha a cliente (F6) e clique em <b><i data-icone="bolsa"></i> Condicional</b>.
-        As peças saem do estoque até a cliente devolver; o que ela ficar vai para o caixa como venda.</p>
-      <div class="cartao tabela-rolagem">
-        <table class="tabela">
-          <thead><tr><th>Situação</th><th>Nº</th><th>Cliente</th><th>Saiu em</th><th>Devolver até</th><th class="r">Peças</th><th class="r">Valor</th><th></th></tr></thead>
-          <tbody id="lista"></tbody>
-        </table>
-      </div>`;
-    raiz.querySelector('#status').onchange = carregar;
-    raiz.querySelector('#lista').onclick = (ev) => {
-      const tr = ev.target.closest('[data-i]');
-      if (tr) detalhe(lista[Number(tr.dataset.i)].id);
+      <div class="cd-como">${Icone('bolsa')}<span><b>Como criar:</b> no caixa, bipe as peças, escolha a cliente (F6) e clique em <b>Condicional</b>.
+        As peças saem do estoque até a cliente devolver; o que ela ficar vai para o caixa como venda.</span></div>
+      <div class="cd-grade" id="lista"></div>`;
+    let status = 'aberta';
+    raiz.querySelector('#status').onclick = (ev) => {
+      const b = ev.target.closest('[data-st]');
+      if (!b) return;
+      status = b.dataset.st;
+      raiz.querySelectorAll('#status .segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      carregar(status);
     };
-    await carregar();
+    raiz.querySelector('#lista').onclick = (ev) => {
+      const card = ev.target.closest('[data-i]');
+      if (card) detalhe(lista[Number(card.dataset.i)].id);
+    };
+    await carregar(status);
   }
 
-  async function carregar() {
+  async function carregar(status = 'aberta') {
     if (!raiz) return;
-    try { lista = await api(`/api/condicionais?status=${raiz.querySelector('#status').value}`); } catch (e) { return erro(e); }
-    raiz.querySelector('#lista').innerHTML = lista.map((c, i) => `
-      <tr class="clicavel ${c.status === 'aberta' && diasAte(c.prazo) < 0 ? 'linha-vermelho' : ''}" data-i="${i}">
-        <td>${selo(c)}</td><td>${c.id}</td><td><b>${esc(c.cliente_nome)}</b><br><small>${esc(c.cliente_telefone || '')}</small></td>
-        <td>${dataHora(c.criado_em)}</td><td>${c.prazo.split('-').reverse().join('/')}</td>
-        <td class="r">${c.pecas}</td><td class="r">${brl(c.valor)}</td>
-        <td class="r">${c.status === 'aberta' ? '<button class="btn btn-primario btn-peq">Fechar</button>' : ''}</td>
-      </tr>`).join('') || '<tr><td colspan="8" class="vazio">Nenhuma condicional aberta.</td></tr>';
+    try { lista = await api(`/api/condicionais?status=${status}`); } catch (e) { return erro(e); }
+    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+    raiz.querySelector('#lista').innerHTML = lista.map((c, i) => {
+      const n = diasAte(c.prazo);
+      const st = c.status !== 'aberta' ? 'encerrada' : n < 0 ? 'atrasada' : n <= 1 ? 'perto' : 'ok';
+      const prazo = c.status !== 'aberta' ? (c.status === 'fechada' ? 'Fechada' : 'Cancelada')
+        : n < 0 ? `Atrasada ${-n} dia(s)` : n === 0 ? 'Devolve hoje' : n === 1 ? 'Devolve amanhã' : `Faltam ${n} dias`;
+      const fotos = c.itens.slice(0, 5);
+      return `<div class="cd-card cd-${st}" data-i="${i}" tabindex="0">
+        <div class="cd-topo"><span class="avatar">${esc(iniciais(c.cliente_nome))}</span>
+          <div><b>${esc(c.cliente_nome)}</b><small>nº ${c.id} · saiu ${dataHora(c.criado_em).split(' ')[0]}</small></div>
+          <span class="cd-prazo">${prazo}<small>até ${c.prazo.split('-').reverse().join('/')}</small></span></div>
+        <div class="cd-fotos">${fotos.map((it) => U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao }, 'cd-foto')).join('')}
+          ${c.itens.length > 5 ? `<span class="cd-mais">+${c.itens.length - 5}</span>` : ''}</div>
+        <div class="cd-rodape"><span><b>${c.pecas}</b> peça(s) · <b>${brl(c.valor)}</b></span>
+          ${c.status === 'aberta' ? `<button class="btn btn-primario btn-peq">${Icone('check')} Fechar</button>` : ''}</div>
+      </div>`;
+    }).join('') || `<div class="vd-vazio cd-vazio"><div class="pdv-vazio-ico">${Icone('bolsa')}</div><b>Nenhuma condicional ${status === 'aberta' ? 'aberta' : ''}</b><br><small>Crie pelo caixa: bipe as peças, escolha a cliente e clique em Condicional.</small></div>`;
   }
 
   async function detalhe(id) {
@@ -58,36 +72,55 @@ Telas.condicional = (() => {
     const tel = String(c.cliente_telefone || '').replace(/\D/g, '').replace(/^55/, '');
     const msg = encodeURIComponent(`Olá, ${c.cliente_nome.split(' ')[0]}! Aqui é da Clara Styllus 💕 Passando para lembrar das peças da condicional (devolver até ${c.prazo.split('-').reverse().join('/')}). Gostou de alguma?`);
     const corpo = abrirModal(`Condicional nº ${c.id} — ${c.cliente_nome}`, `
-      <p>${selo(c)} · saiu em ${dataHora(c.criado_em)} por ${esc(c.usuario || '')} · devolver até <b>${c.prazo.split('-').reverse().join('/')}</b>
-        ${c.observacao ? `<br><small>${esc(c.observacao)}</small>` : ''}</p>
-      <table class="tabela">
-        <thead><tr><th></th><th>Peça</th><th class="r">Preço</th><th class="c">Levou</th><th class="c">${aberta ? 'Ficou com' : 'Ficou'}</th></tr></thead>
-        <tbody>${c.itens.map((it) => `<tr>
-          <td class="td-foto">${U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao })}</td>
-          <td><b>${esc(it.nome)}</b> ${esc([it.tamanho, it.cor].filter(Boolean).join(' · '))}<br><small>${esc(it.codigo)}</small></td>
-          <td class="r">${brl(it.preco_venda)}</td><td class="c">${it.quantidade}</td>
-          <td class="c">${aberta ? `<input type="number" class="qtd-input" min="0" max="${it.quantidade}" value="0" data-id="${it.id}">` : (it.ficou ?? '—')}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-      ${aberta ? `<div class="troca-total" id="cond-total"></div>
-      <p class="dica">Coloque quantas peças a cliente <b>ficou</b> (o resto volta para o estoque). As que ela ficou vão para o caixa para receber o pagamento.</p>` : ''}
+      <div class="tr-cab">
+        <span>${selo(c)}</span><span>${Icone('relogio')} saiu ${dataHora(c.criado_em)}${c.usuario ? ` por ${esc(c.usuario)}` : ''}</span>
+        <span>${Icone('caderno')} devolver até <b>&nbsp;${c.prazo.split('-').reverse().join('/')}</b></span>
+      </div>
+      ${c.observacao ? `<p class="dica">${esc(c.observacao)}</p>` : ''}
+      ${aberta ? '<div class="p4-passo"><span>1</span>Quantas peças ela ficou?</div>' : ''}
+      <div class="tr-itens" id="cd-itens">${c.itens.map((it) => `
+        <div class="tr-item" data-linha="${it.id}">
+          ${U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao }, 'p4-item-foto')}
+          <div class="p4-item-txt"><b>${esc(it.nome)}</b>
+            <span class="p4-tags">${it.tamanho ? `<span class="p4-tag">Tam ${esc(it.tamanho)}</span>` : ''}${it.cor ? `<span class="p4-tag">${esc(it.cor)}</span>` : ''}<small>${brl(it.preco_venda)} · levou ${it.quantidade}</small></span></div>
+          ${aberta ? `<span class="qtd-ctrl p4-qtd"><button type="button" class="mini" data-menos="${it.id}">${Icone('menos')}</button><span data-n="${it.id}">0</span><button type="button" class="mini" data-mais="${it.id}">${Icone('mais')}</button></span>
+            <input type="hidden" data-id="${it.id}" value="0"><small class="tr-max">de ${it.quantidade}</small>`
+    : `<b>ficou ${it.ficou ?? 0}</b><span></span>`}
+        </div>`).join('')}</div>
+      ${aberta ? `<div class="tr-rodape"><div class="tr-total" id="cond-total"></div></div>
+      <p class="dica">O que ela não ficou volta para o estoque. As peças que ela ficou vão para o caixa para receber o pagamento.</p>` : ''}
       <div class="acoes">
-        ${aberta ? '<button class="btn btn-perigo-claro so-admin" id="cancelar">Cancelar condicional</button>' : ''}
-        ${tel.length >= 10 && aberta ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${tel}?text=${msg}"><i data-icone="whatsapp"></i> Lembrar no WhatsApp</a>` : ''}
-        <button class="btn" id="reimprimir"><i data-icone="impressora"></i> Imprimir</button>
-        ${aberta ? '<button class="btn btn-primario btn-grande" id="fechar"><i data-icone="check"></i> Fechar condicional</button>' : ''}
+        ${aberta ? `<button class="btn btn-fantasma btn-perigo-claro so-admin" id="cancelar" style="margin-right:auto">${Icone('fechar')} Cancelar condicional</button>` : ''}
+        ${tel.length >= 10 && aberta ? `<a class="btn cl-btn-zap" target="_blank" rel="noopener" href="https://wa.me/55${tel}?text=${msg}">${Icone('whatsapp')} Lembrar no WhatsApp</a>` : ''}
+        <button class="btn" id="reimprimir">${Icone('impressora')} Imprimir</button>
+        ${aberta ? `<button class="btn btn-primario btn-grande" id="fechar">${Icone('check')} Fechar condicional</button>` : ''}
       </div>`, { largura: '820px' });
     corpo.querySelector('#reimprimir').onclick = () => Impressao.condicional(c);
     if (!aberta) return;
     const total = () => {
       let v = 0;
-      corpo.querySelectorAll('[data-id]').forEach((i) => {
+      let n = 0;
+      corpo.querySelectorAll('input[data-id]').forEach((i) => {
         const it = c.itens.find((x) => x.id === Number(i.dataset.id));
-        v += Math.min(it.quantidade, Math.max(0, Number(i.value) || 0)) * it.preco_venda;
+        const q = Math.min(it.quantidade, Math.max(0, Number(i.value) || 0));
+        v += q * it.preco_venda;
+        n += q;
+        corpo.querySelector(`[data-n="${it.id}"]`).textContent = q;
+        corpo.querySelector(`[data-linha="${it.id}"]`).classList.toggle('sel', q > 0);
       });
-      corpo.querySelector('#cond-total').innerHTML = v ? `Ficou com <b>${brl(v)}</b> — vai para o caixa` : 'Devolveu tudo';
+      corpo.querySelector('#cond-total').innerHTML = n
+        ? `<small>Ela ficou com</small><b>${brl(v)}</b><span>${n} peça(s) vão para o caixa · o resto volta para o estoque</span>`
+        : '<small>Ela ficou com</small><b>nada</b><span>Todas as peças voltam para o estoque.</span>';
     };
-    corpo.querySelector('tbody').addEventListener('input', total);
+    corpo.querySelector('#cd-itens').addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-mais],[data-menos]');
+      if (!b) return;
+      const id = b.dataset.mais || b.dataset.menos;
+      const inp = corpo.querySelector(`input[data-id="${id}"]`);
+      const it = c.itens.find((x) => x.id === Number(id));
+      inp.value = Math.max(0, Math.min(it.quantidade, (Number(inp.value) || 0) + (b.dataset.mais ? 1 : -1)));
+      total();
+    });
     total();
     corpo.querySelector('#cancelar').onclick = async () => {
       if (!(await U.confirmar('Cancelar condicional', 'Todas as peças voltam para o estoque. Confirmar?', { ok: 'Cancelar condicional', perigo: true }))) return;
