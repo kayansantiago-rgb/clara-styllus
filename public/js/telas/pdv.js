@@ -676,11 +676,14 @@ Telas.pdv = (() => {
           <form id="f-pag" class="pag2-form">
             <label class="pag2-valor"><span id="pag-rotulo">Valor recebido</span><div class="campo-moeda"><span>R$</span><input id="pag-valor" inputmode="decimal" autocomplete="off" autofocus></div></label>
             <label id="lbl-parc" hidden>Parcelas<select id="pag-parc"></select></label>
+            <div id="lbl-band" class="pag2-band" hidden><span>Bandeira do cartão</span>
+              <div class="segmentos">${Object.entries(U.BANDEIRAS).map(([k, n]) => `<button type="button" class="segmento tx-seg ${k === 'visa_master' ? 'sel' : ''}" data-band="${k}">${n}</button>`).join('')}</div></div>
             <label id="lbl-venc" hidden>1º vencimento<input type="date" id="pag-venc" value="${vencPadrao}"></label>
             <label id="lbl-vale" hidden>Código do vale<input id="pag-vale" autocomplete="off" placeholder="Bipe o vale-troca"></label>
             <button class="btn btn-claro pag2-add">${Icone('mais')} Adicionar <kbd>Enter</kbd></button>
           </form>
           <div class="pag2-dica" id="pag-dica" hidden></div>
+          <div class="pag2-taxa" id="info-taxa" hidden></div>
           <div class="valores-rapidos" id="rapidos"></div>
           <div id="info-vale" class="info-cred" hidden></div>
           <div id="info-cred" class="info-cred" hidden></div>
@@ -768,7 +771,31 @@ Telas.pdv = (() => {
       parcEl.value = String(Math.min(atual, max));
     };
 
+    // Cartão: bandeira escolhida e quanto a maquininha desconta (só informativo para quem está no caixa).
+    let bandeira = 'visa_master';
+    const infoTaxa = () => {
+      const box = corpo.querySelector('#info-taxa');
+      const cartao = forma === 'debito' || forma === 'credito';
+      corpo.querySelector('#lbl-band').hidden = !cartao;
+      const n = forma === 'credito' ? Number(parcEl.value) || 1 : 1;
+      const p = cartao || forma === 'pix' ? U.taxa(cfg, forma, n, bandeira) : 0;
+      box.hidden = !p;
+      if (!p) return;
+      const v = U.paraCentavos(valorEl.value) || 0;
+      const tx = Math.round((v * p) / 100);
+      box.innerHTML = `${Icone('cartao')}<span>Taxa da maquininha <b>${U.pctTxt(p)}</b> (${brl(tx)}) · cai na conta <b>${brl(v - tx)}</b></span>`;
+    };
+    corpo.querySelector('#lbl-band').onclick = (e) => {
+      const b = e.target.closest('[data-band]');
+      if (!b) return;
+      bandeira = b.dataset.band;
+      corpo.querySelectorAll('[data-band]').forEach((x) => x.classList.toggle('sel', x === b));
+      infoTaxa();
+      valorEl.focus();
+    };
+
     const infoCrediario = () => {
+      infoTaxa();
       const box = corpo.querySelector('#info-cred');
       box.hidden = forma !== 'crediario';
       if (box.hidden) return;
@@ -813,7 +840,7 @@ Telas.pdv = (() => {
     const atualizar = () => {
       corpo.querySelector('#lista-pag').innerHTML = pagamentos.length ? pagamentos.map((p, i) => `
         <div class="pag2-item">${Icone(ICONES_PAG[p.forma] || 'carteira')}<span><b>${NOMES_PAG[p.forma] || U.FORMAS[p.forma]}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</b>${
-  p.codigo ? `<small>${esc(p.codigo)}</small>` : ''}${p.forma === 'crediario' ? `<small>1º venc. ${p.primeiro_vencimento.split('-').reverse().join('/')}</small>` : ''}</span>
+  p.codigo ? `<small>${esc(p.codigo)}</small>` : ''}${p.bandeira ? `<small>${U.BANDEIRAS[p.bandeira]}</small>` : ''}${p.forma === 'crediario' ? `<small>1º venc. ${p.primeiro_vencimento.split('-').reverse().join('/')}</small>` : ''}</span>
         <b>${brl(p.valor)}</b><button class="mini perigo" data-rm="${i}" title="Tirar">${Icone('fechar')}</button></div>`).join('')
         : '<div class="pag2-nada">Escolha a forma e o valor ao lado.</div>';
       const r = restante();
@@ -865,11 +892,12 @@ Telas.pdv = (() => {
       }
       const parcelas = forma === 'credito' || forma === 'crediario' ? Number(parcEl.value) : 1;
       const codigo = forma === 'vale' ? valeAtual.codigo : undefined;
-      const igual = forma !== 'crediario' && pagamentos.find((p) => p.forma === forma && p.parcelas === parcelas && p.codigo === codigo);
+      const band = forma === 'debito' || forma === 'credito' ? bandeira : undefined;
+      const igual = forma !== 'crediario' && pagamentos.find((p) => p.forma === forma && p.parcelas === parcelas && p.codigo === codigo && p.bandeira === band);
       if (igual) igual.valor += v;
       else {
         pagamentos.push({
-          forma, valor: v, parcelas, codigo,
+          forma, valor: v, parcelas, codigo, bandeira: band,
           primeiro_vencimento: forma === 'crediario' ? vencEl.value : undefined,
         });
       }

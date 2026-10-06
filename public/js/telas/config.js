@@ -138,6 +138,49 @@ Telas.config = (() => {
     mostrar();
   }
 
+  /** Tabela de taxas por parcela e bandeira: os campos montam o JSON do campo escondido taxas_tabela. */
+  function ligarTaxas(raiz, form) {
+    const oculto = form.elements.taxas_tabela;
+    let t = {};
+    try { t = JSON.parse(oculto.value || '{}') || {}; } catch { t = {}; }
+    const campos = [...raiz.querySelectorAll('#tx-tabela input')];
+    campos.forEach((i) => { i.value = (t[i.dataset.b] || {})[i.dataset.l] ?? ''; });
+    const simular = () => {
+      const cfg = { taxas_tabela: oculto.value, taxa_pix: form.elements.taxa_pix.value };
+      const v = U.paraCentavos(raiz.querySelector('#tx-valor').value) || 0;
+      const f = raiz.querySelector('#tx-forma').value;
+      const p = U.taxa(cfg, f === 'debito' ? 'debito' : 'credito', f === 'debito' ? 1 : Number(f), raiz.querySelector('#tx-band').value);
+      const tx = Math.round((v * p) / 100);
+      const n = f === 'debito' ? 1 : Number(f);
+      raiz.querySelector('#tx-res').innerHTML = `
+        <div><span>Taxa (${U.pctTxt(p)})</span><b class="txt-perigo">− ${U.brl(tx)}</b></div>
+        <div class="tx-cai"><span>Cai na conta</span><b>${U.brl(v - tx)}</b></div>
+        ${n > 1 ? `<small>A cliente paga ${n}x de ${U.brl(Math.round(v / n))}</small>` : ''}`;
+    };
+    const juntar = () => {
+      const novo = {};
+      for (const i of campos) {
+        novo[i.dataset.b] = novo[i.dataset.b] || {};
+        const v = i.value.replace('%', '').trim();
+        if (v) novo[i.dataset.b][i.dataset.l] = v;
+      }
+      oculto.value = JSON.stringify(novo);
+      simular();
+    };
+    raiz.querySelector('#tx-tabela').addEventListener('input', juntar);
+    raiz.querySelector('#tx-tabela').addEventListener('keydown', (ev) => {
+      // Enter desce para a linha de baixo, como numa planilha.
+      if (ev.key !== 'Enter' || !ev.target.matches('input')) return;
+      ev.preventDefault();
+      const i = campos.indexOf(ev.target);
+      const prox = campos[i + Object.keys(U.BANDEIRAS).length];
+      if (prox) { prox.focus(); prox.select(); }
+    });
+    ['#tx-valor', '#tx-forma', '#tx-band'].forEach((s) => raiz.querySelector(s).addEventListener('input', simular));
+    form.elements.taxa_pix.addEventListener('input', simular);
+    simular();
+  }
+
   /** Pré-visualização do cupom com o que está na tela (antes de salvar). */
   function desenharPrevia(raiz, form) {
     const el = raiz.querySelector('#previa-cupom');
@@ -300,15 +343,29 @@ Telas.config = (() => {
         </div>
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('cartao')} Taxas das maquininhas</h3>
-          <p class="dica">Coloque a porcentagem que a maquininha (Stone, Cielo, PagSeguro, Mercado Pago…) desconta.
-            O sistema grava a taxa em cada venda e mostra nos Relatórios quanto realmente cai na conta.
-            Deixe vazio o que não tem taxa.</p>
-          <div class="grade-form tres">
-            ${campo('taxa_debito', 'Débito (%)', 'inputmode="decimal" placeholder="ex.: 1,99"')}
-            ${campo('taxa_credito_vista', 'Crédito à vista (%)', 'inputmode="decimal" placeholder="ex.: 3,19"')}
-            ${campo('taxa_credito_2a6', 'Crédito 2 a 6x (%)', 'inputmode="decimal" placeholder="ex.: 4,59"')}
-            ${campo('taxa_credito_7a12', 'Crédito 7 a 12x (%)', 'inputmode="decimal" placeholder="ex.: 5,99"')}
-            ${campo('taxa_pix', 'PIX (%)', 'inputmode="decimal" placeholder="geralmente 0"')}
+          <p class="dica">A porcentagem que a maquininha desconta em cada forma. O sistema grava a taxa em cada venda
+            e mostra nos Relatórios quanto realmente cai na conta. Na hora de passar o cartão, escolha a bandeira.</p>
+          <input type="hidden" name="taxas_tabela" value="${esc(c.taxas_tabela)}">
+          <div class="tx">
+            <table class="tx-tabela" id="tx-tabela">
+              <thead><tr><th></th>${Object.entries(U.BANDEIRAS).map(([k, n]) => `<th><span class="tx-band tx-${k}">${n}</span></th>`).join('')}</tr></thead>
+              <tbody>${['debito', ...Array.from({ length: 12 }, (_, i) => String(i + 1))].map((l) => `
+                <tr><th>${l === 'debito' ? 'Débito' : `Crédito ${l}x`}</th>${Object.keys(U.BANDEIRAS).map((b) =>
+    `<td><div class="tx-campo"><input inputmode="decimal" data-b="${b}" data-l="${l}" autocomplete="off"><span>%</span></div></td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+            <div class="tx-lado">
+              <label>PIX (%) <small>vazio = sem taxa</small><input name="taxa_pix" inputmode="decimal" value="${esc(c.taxa_pix)}" placeholder="sem taxa"></label>
+              <div class="tx-sim">
+                <b>${Icone('carteira')} Simular</b>
+                <label>Valor da venda<div class="campo-moeda"><span>R$</span><input id="tx-valor" inputmode="decimal" value="100,00"></div></label>
+                <div class="tx-sim-lin">
+                  <select id="tx-forma"><option value="debito">Débito</option>${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i === 2 ? 'selected' : ''}>Crédito ${i + 1}x</option>`).join('')}</select>
+                  <select id="tx-band">${Object.entries(U.BANDEIRAS).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select>
+                </div>
+                <div class="tx-sim-res" id="tx-res"></div>
+              </div>
+            </div>
           </div>
         </div>`)}
         ${secao('crediario', `
@@ -405,6 +462,7 @@ Telas.config = (() => {
       } catch (e) { erro(e); }
       ev.target.disabled = false;
     };
+    ligarTaxas(raiz, form);
     raiz.querySelectorAll('[data-som]').forEach((b) => {
       b.onclick = () => U.som(b.dataset.som, true, form.elements.som_volume.value);
     });

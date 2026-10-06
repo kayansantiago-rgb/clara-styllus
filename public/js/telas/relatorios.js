@@ -161,7 +161,8 @@ Telas.relatorios = (() => {
         <table class="tabela">
           <thead><tr><th>Forma</th><th>Origem</th><th class="r">Taxa</th><th class="r">Valor vendido</th><th class="r">Taxa (R$)</th><th class="r">Líquido</th></tr></thead>
           <tbody>${r.taxas.linhas.map((l) => `<tr>
-            <td>${U.FORMAS[l.forma] || l.forma}${l.forma === 'credito' ? (l.parcelas > 1 ? ` ${l.parcelas}x` : ' à vista') : ''}</td>
+            <td>${U.FORMAS[l.forma] || l.forma}${l.forma === 'credito' ? (l.parcelas > 1 ? ` ${l.parcelas}x` : ' à vista') : ''}
+              ${l.bandeira ? `<span class="tx-band tx-${l.bandeira}">${U.BANDEIRAS[l.bandeira] || l.bandeira}</span>` : ''}</td>
             <td><small>${l.origem === 'crediario' ? 'recebimento do crediário' : 'vendas'}</small></td>
             <td class="r">${l.percentual ? l.percentual.toLocaleString('pt-BR') + '%' : '<small>sem taxa</small>'}</td>
             <td class="r">${brl(l.bruto)}</td><td class="r txt-perigo">− ${brl(l.taxa)}</td><td class="r"><b>${brl(l.liquido)}</b></td></tr>`).join('')}</tbody>

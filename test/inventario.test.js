@@ -65,15 +65,41 @@ test('taxas das maquininhas por forma e parcelas', () => {
   assert.equal(taxas.calcular(cfg, 'dinheiro', 1, 10000), 0);
 });
 
+test('taxas por parcela e bandeira (tabela da maquininha)', () => {
+  const cfg = { taxas_tabela: JSON.stringify(taxas.TABELA_PADRAO), taxa_pix: '' };
+  assert.equal(taxas.percentual(cfg, 'debito', 1), 1.37);
+  assert.equal(taxas.percentual(cfg, 'debito', 1, 'elo_amex'), 2.58);
+  assert.equal(taxas.percentual(cfg, 'credito', 1), 3.15);
+  assert.equal(taxas.percentual(cfg, 'credito', 3), 6.12);
+  assert.equal(taxas.percentual(cfg, 'credito', 12, 'elo_amex'), 13.41);
+  assert.equal(taxas.calcular(cfg, 'credito', 10, 10000, 'visa_master'), 1106);
+  assert.equal(taxas.calcular(cfg, 'pix', 1, 10000), 0);
+  // Bandeira desconhecida usa Visa/Master.
+  assert.equal(taxas.percentual(cfg, 'credito', 2, 'xyz'), 5.39);
+});
+
+test('venda grava a taxa da bandeira escolhida', () => {
+  const { chamar } = novaApi();
+  const p = chamar('POST', '/api/produtos', { nome: 'Vestido', preco_venda: 10000, estoque: 5 }).corpo;
+  chamar('POST', '/api/caixa/abrir', {});
+  const v = chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 1 }], pagamentos: [{ forma: 'credito', valor: 10000, parcelas: 3, bandeira: 'elo_amex' }] }).corpo;
+  const r = chamar('GET', '/api/relatorios').corpo;
+  const l = r.taxas.linhas.find((x) => x.forma === 'credito');
+  assert.equal(l.bandeira, 'elo_amex');
+  assert.equal(l.taxa, 720);
+  assert.equal(l.percentual, 7.2);
+  assert.ok(v.id);
+});
+
 test('relatório mostra taxa gravada na venda e lucro após taxas', () => {
   const { chamar } = novaApi();
-  chamar('PUT', '/api/config', { taxa_debito: '2', taxa_credito_2a6: '5' });
+  chamar('PUT', '/api/config', { taxas_tabela: '', taxa_debito: '2', taxa_credito_2a6: '5' });
   const p = chamar('POST', '/api/produtos', { nome: 'Saia', preco_venda: 10000, preco_custo: 4000, estoque: 5 }).corpo;
   chamar('POST', '/api/caixa/abrir', {});
   chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 1 }], pagamentos: [{ forma: 'debito', valor: 10000 }] });
   chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 2 }], pagamentos: [{ forma: 'credito', valor: 20000, parcelas: 3 }] });
   // Mudar a taxa depois não altera vendas já feitas.
-  chamar('PUT', '/api/config', { taxa_debito: '9' });
+  chamar('PUT', '/api/config', { taxas_tabela: '', taxa_debito: '9' });
 
   const r = chamar('GET', '/api/relatorios').corpo;
   assert.equal(r.taxas.total, 200 + 1000);

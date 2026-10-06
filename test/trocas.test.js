@@ -97,7 +97,7 @@ test('condicional: peças saem do estoque, voltam ao fechar e as que ficaram vã
 
 test('despesas mensais e lucro real', () => {
   const { chamar, vestido } = preparar();
-  chamar('PUT', '/api/config', { taxa_debito: '2' });
+  chamar('PUT', '/api/config', { taxas_tabela: '', taxa_debito: '2' });
   chamar('POST', '/api/vendas', { itens: [{ produto_id: vestido.id, quantidade: 1 }], pagamentos: [{ forma: 'debito', valor: 10000 }] });
   const hoje = new Date().toLocaleDateString('sv-SE');
   assert.equal(chamar('POST', '/api/despesas', { descricao: 'Aluguel', categoria: 'Aluguel', valor: 3000, data: hoje, repetir: 3 }).corpo.lancadas, 3);

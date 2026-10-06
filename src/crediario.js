@@ -213,6 +213,7 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
     if (!['dinheiro', 'pix', 'debito', 'credito', 'outro'].includes(forma)) {
       throw erro(400, 'Forma de pagamento inválida.');
     }
+    const bandeira = forma === 'debito' || forma === 'credito' ? taxas.bandeiraValida(corpo.bandeira) : null;
     return transacao(db, () => {
       const abertas = planos(
         db
@@ -229,11 +230,11 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
       }
       const r = db
         .prepare(
-          `INSERT INTO crediario_recebimentos (cliente_id, caixa_id, usuario_id, operador, valor, forma, observacao, taxa)
-           VALUES (?,?,?,?,?,?,?,?)`
+          `INSERT INTO crediario_recebimentos (cliente_id, caixa_id, usuario_id, operador, valor, forma, observacao, taxa, bandeira)
+           VALUES (?,?,?,?,?,?,?,?,?)`
         )
         .run(params.id, caixa.id, usuario.id, usuario.nome, valor, forma, texto(corpo.observacao, 500),
-          taxas.calcular(config(), forma, 1, valor));
+          taxas.calcular(config(), forma, 1, valor, bandeira), bandeira);
       const recId = Number(r.lastInsertRowid);
       let resta = valor;
       for (const p of abertas) {

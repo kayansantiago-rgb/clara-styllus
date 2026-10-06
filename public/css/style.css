@@ -1830,3 +1830,29 @@ body.menu-recolhido .menu-recolher .i { transform: scaleX(-1); }
 .rm-carregando { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(44,22,33,.45); }
 .girando { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.35); border-top-color: #fff; animation: girar .8s linear infinite; }
 .in-resumo { margin-left: auto; font-size: 12.5px; }
+
+/* ---------- Taxas da maquininha ---------- */
+.tx { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: start; }
+.tx-tabela { width: 100%; border-collapse: separate; border-spacing: 0; }
+.tx-tabela th, .tx-tabela td { padding: 3px 6px; text-align: left; font-size: 13.5px; }
+.tx-tabela tbody th { font-weight: 550; color: #5d5157; white-space: nowrap; }
+.tx-tabela tbody tr:first-child th, .tx-tabela tbody tr:first-child td { padding-bottom: 10px; border-bottom: 1px dashed var(--borda); }
+.tx-tabela tbody tr:nth-child(2) th, .tx-tabela tbody tr:nth-child(2) td { padding-top: 10px; }
+.tx-band { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.tx-visa_master { background: #fff1e0; color: #a3500b; }
+.tx-elo_amex { background: #e4f0ff; color: #1d4f91; }
+.tx-campo { position: relative; }
+.tx-campo input { width: 100%; padding: 7px 26px 7px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+.tx-campo span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--suave); font-size: 12px; pointer-events: none; }
+.tx-lado { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0; }
+.tx-sim { background: var(--fundo); border-radius: var(--raio); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.tx-sim > b { display: flex; align-items: center; gap: 6px; color: var(--rosa-escuro); }
+.tx-sim-lin { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tx-sim-res { background: #fff; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.tx-sim-res div { display: flex; justify-content: space-between; }
+.tx-cai b { font-size: 20px; color: #1d7a4e; }
+@media (max-width: 1000px) { .tx { grid-template-columns: 1fr; } }
+.pag2-band { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #6c5f66; }
+.pag2-band .segmentos { width: fit-content; }
+.pag2-taxa { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border-radius: 10px; background: #f6f2f4; color: #5d5157; font-size: 13px; }
+.pag2-taxa .i { color: var(--rosa); width: 16px; height: 16px; }

@@ -182,12 +182,16 @@ Telas.crediario = (() => {
         <label>Forma<select name="forma">
           ${['dinheiro', 'pix', 'debito', 'credito', 'outro'].map((f) => `<option value="${f}">${U.FORMAS[f]}</option>`).join('')}
         </select></label>
+        <label id="rc-band" hidden>Bandeira do cartão<select name="bandeira">
+          ${Object.entries(U.BANDEIRAS).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}
+        </select></label>
         <label>Observação<input name="observacao"></label>
         <p class="dica">O valor abate primeiro as parcelas mais antigas.</p>
         <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Receber e imprimir recibo</button></div>
       </form>`, { largura: '480px' });
     const form = corpo.querySelector('form');
     form.valor.select();
+    form.forma.onchange = () => { corpo.querySelector('#rc-band').hidden = !['debito', 'credito'].includes(form.forma.value); };
     corpo.querySelector('.atalhos-valor').onclick = (e) => {
       const b = e.target.closest('[data-v]');
       if (b) { form.valor.value = U.num(Number(b.dataset.v)); form.valor.focus(); }
@@ -198,7 +202,7 @@ Telas.crediario = (() => {
       if (!(valor > 0)) return aviso('Valor inválido.', 'erro');
       try {
         const rec = await api(`/api/crediario/clientes/${clienteId}/receber`, {
-          metodo: 'POST', corpo: { valor, forma: form.forma.value, observacao: form.observacao.value },
+          metodo: 'POST', corpo: { valor, forma: form.forma.value, bandeira: form.bandeira.value, observacao: form.observacao.value },
         });
         fecharModal();
         aviso(`Recebido ${brl(rec.valor)}. Saldo restante: ${brl(rec.saldo.aberto)}.`);

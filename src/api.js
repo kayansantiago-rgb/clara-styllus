@@ -900,6 +900,7 @@ function criarApi(db, opcoes = {}) {
           parcelas: parcelado ? inteiro(p.parcelas, 'parcelas', { min: 1, padrao: 1 }) : 1,
           primeiro_vencimento: p.forma === 'crediario' ? texto(p.primeiro_vencimento, 10) : null,
           referencia: p.forma === 'vale' ? texto(p.codigo || p.referencia, 40) : null,
+          bandeira: p.forma === 'debito' || p.forma === 'credito' ? taxas.bandeiraValida(p.bandeira) : null,
         };
       });
       // Vale-troca: confere saldo e validade (o desconto do saldo é feito ao gravar).
@@ -965,10 +966,11 @@ function criarApi(db, opcoes = {}) {
         }
       }
       const insPag = db.prepare(
-        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa, referencia) VALUES (?,?,?,?,?,?)'
+        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa, referencia, bandeira) VALUES (?,?,?,?,?,?,?)'
       );
       for (const p of pagamentos) {
-        insPag.run(vendaId, p.forma, p.valor, p.parcelas, taxas.calcular(cfg, p.forma, p.parcelas, p.valor), p.referencia);
+        insPag.run(vendaId, p.forma, p.valor, p.parcelas, taxas.calcular(cfg, p.forma, p.parcelas, p.valor, p.bandeira),
+          p.referencia, p.bandeira);
         if (p.forma === 'vale') {
           db.prepare(`UPDATE vales SET saldo = saldo - ?, status = CASE WHEN saldo - ? <= 0 THEN 'usado' ELSE 'ativo' END
                       WHERE codigo = ?`).run(p.valor, p.valor, p.referencia);
@@ -1183,11 +1185,11 @@ function criarApi(db, opcoes = {}) {
     const linhasTaxa = [];
     const juntar = (origem, rows) => {
       for (const r of rows) {
-        const taxa = (r.taxa || 0) + taxas.calcular(cfg, r.forma, r.parcelas, r.sem_taxa || 0);
+        const taxa = (r.taxa || 0) + taxas.calcular(cfg, r.forma, r.parcelas, r.sem_taxa || 0, r.bandeira);
         if (!taxa && !['debito', 'credito', 'pix'].includes(r.forma)) continue;
         linhasTaxa.push({
-          origem, forma: r.forma, parcelas: r.parcelas, bruto: r.valor, taxa, liquido: r.valor - taxa,
-          percentual: taxas.percentual(cfg, r.forma, r.parcelas),
+          origem, forma: r.forma, parcelas: r.parcelas, bandeira: r.bandeira || null, bruto: r.valor, taxa, liquido: r.valor - taxa,
+          percentual: taxas.percentual(cfg, r.forma, r.parcelas, r.bandeira || undefined),
         });
       }
     };
@@ -1195,20 +1197,20 @@ function criarApi(db, opcoes = {}) {
     juntar('vendas', planos(
       db
         .prepare(
-          `SELECT p.forma, p.parcelas, SUM(p.valor) AS valor, SUM(p.taxa) AS taxa,
+          `SELECT p.forma, p.parcelas, p.bandeira, SUM(p.valor) AS valor, SUM(p.taxa) AS taxa,
              SUM(CASE WHEN p.taxa IS NULL THEN p.valor END) AS sem_taxa
            FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
-           WHERE ${filtro} GROUP BY p.forma, p.parcelas ORDER BY p.forma, p.parcelas`
+           WHERE ${filtro} GROUP BY p.forma, p.parcelas, p.bandeira ORDER BY p.forma, p.parcelas, p.bandeira`
         )
         .all(de, ate)
     ));
     juntar('crediario', planos(
       db
         .prepare(
-          `SELECT forma, 1 AS parcelas, SUM(valor) AS valor, SUM(taxa) AS taxa,
+          `SELECT forma, 1 AS parcelas, bandeira, SUM(valor) AS valor, SUM(taxa) AS taxa,
              SUM(CASE WHEN taxa IS NULL THEN valor END) AS sem_taxa
            FROM crediario_recebimentos WHERE status = 'ok' AND date(criado_em) BETWEEN ? AND ?
-           GROUP BY forma`
+           GROUP BY forma, bandeira`
         )
         .all(de, ate)
     ));

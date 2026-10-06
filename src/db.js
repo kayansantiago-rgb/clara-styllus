@@ -220,6 +220,7 @@ const CONFIG_PADRAO = {
   meta_mensal: '',
   som_bipe: '1',
   // Taxas das maquininhas (% por venda)
+  taxas_tabela: JSON.stringify(require('./taxas').TABELA_PADRAO), // taxa por parcela e bandeira
   taxa_debito: '',
   taxa_credito_vista: '',
   taxa_credito_2a6: '',
@@ -365,6 +366,13 @@ function migrar(db) {
   }
   if (!colunas('crediario_recebimentos').includes('taxa')) {
     db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN taxa INTEGER');
+  }
+  // Grupo de bandeira do cartão (visa_master / elo_amex) para a taxa certa.
+  if (!colunas('venda_pagamentos').includes('bandeira')) {
+    db.exec('ALTER TABLE venda_pagamentos ADD COLUMN bandeira TEXT');
+  }
+  if (!colunas('crediario_recebimentos').includes('bandeira')) {
+    db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN bandeira TEXT');
   }
   db.exec(`
     CREATE TABLE IF NOT EXISTS inventarios (

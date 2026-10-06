@@ -55,8 +55,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   o "De" e o cupom informa quanto a cliente economizou.
 - **Inventário pelo leitor**: conta a loja toda ou uma categoria bipando as peças, mostra o que está
   faltando/sobrando (em peças e em custo), permite desfazer/corrigir leituras e ajusta o estoque ao finalizar.
-- **Taxas das maquininhas**: cadastre as % de débito, crédito (à vista, 2–6x, 7–12x) e PIX; a taxa fica
-  gravada em cada venda e os Relatórios mostram quanto realmente cai na conta e o lucro depois das taxas.
+- **Taxas das maquininhas**: tabela com a taxa do débito e de cada parcela do crédito (1x a 12x), separada
+  por bandeira (Visa/Master e Elo/Amex), já preenchida com a tabela da maquininha da loja, mais a taxa do PIX
+  e um simulador ("quanto cai na conta"). No pagamento, escolha a bandeira do cartão e veja a taxa na hora;
+  a taxa fica gravada em cada venda e os Relatórios mostram o líquido por forma, parcela e bandeira.
 - **Painel Início** (administrador): vendas de hoje × ontem, meta do mês com projeção, gráfico dos
   últimos 14 dias, mais vendidos, aniversariantes (com mensagem pronta no WhatsApp) e crediário do dia.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda.

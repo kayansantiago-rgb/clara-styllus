@@ -249,6 +249,30 @@ const U = (() => {
     } catch { /* sem áudio: segue sem som */ }
   }
 
+  // -------------------------------------------------------------- taxas
+  // Mesma regra de src/taxas.js: taxa por parcela e grupo de bandeira (tabela da maquininha).
+  const BANDEIRAS = { visa_master: 'Visa / Master', elo_amex: 'Elo / Amex' };
+  const pct = (v) => {
+    const n = Number(String(v ?? '').replace('%', '').replace(',', '.').trim());
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  function taxa(cfg, forma, parcelas = 1, bandeira = 'visa_master') {
+    if (forma === 'pix') return pct(cfg.taxa_pix);
+    if (forma !== 'debito' && forma !== 'credito') return 0;
+    let t = null;
+    try { t = JSON.parse(cfg.taxas_tabela || 'null'); } catch { t = null; }
+    const linha = t && (t[bandeira] || t.visa_master);
+    if (linha) {
+      const k = forma === 'debito' ? 'debito' : String(Math.min(12, Math.max(1, Number(parcelas) || 1)));
+      if (linha[k] !== undefined && linha[k] !== '') return pct(linha[k]);
+    }
+    if (forma === 'debito') return pct(cfg.taxa_debito);
+    if (parcelas <= 1) return pct(cfg.taxa_credito_vista);
+    if (parcelas <= 6) return pct(cfg.taxa_credito_2a6);
+    return pct(cfg.taxa_credito_7a12);
+  }
+  const pctTxt = (n) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+
   // -------------------------------------------------------------- fotos
   const fotoUrl = (p) => (p && p.foto_versao ? `/api/produtos/${p.id}/foto?v=${p.foto_versao}` : null);
 
@@ -284,7 +308,7 @@ const U = (() => {
     sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,
-    dadosForm, FORMAS,
+    dadosForm, FORMAS, taxa, pctTxt, BANDEIRAS,
   };
 })();
 
