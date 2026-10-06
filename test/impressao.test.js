@@ -118,3 +118,17 @@ test('rotas de impressão gravam o cupom e as etiquetas na impressora (pasta de 
     fs.rmSync(pasta, { recursive: true, force: true });
   }
 });
+
+test('etiqueta modelo parcelado: "3X DE" com a parcela arredondada para cima', () => {
+  const { zpl: z, tspl: t, epl: e, valorParcela } = require('../src/impressao/etiquetas');
+  assert.equal(valorParcela(25990, 3), 8664);
+  assert.equal(valorParcela(9000, 3), 3000);
+  const cfg = { ...cfgEtq, etiqueta_colunas: '1', etiqueta_modelo: 'parcelado', etiqueta_mostrar_preco: '1' };
+  const p = { nome: 'Vestido', codigo: '2000000000015', preco_venda: 25990, tamanho: 'M' };
+  for (const saida of [t([p], cfg), z([p], cfg), e([p], cfg)].map((b) => b.toString('latin1'))) {
+    assert.match(saida, /3X DE R\$ 86,64/);
+    assert.match(saida, /SEM JUROS/);
+    assert.match(saida, /R\$ 259,90/);
+  }
+  assert.match(t([p], { ...cfg, etiqueta_parcelas: '5' }).toString('latin1'), /5X DE R\$ 51,98/);
+});

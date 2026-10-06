@@ -196,6 +196,13 @@ const Impressao = (() => {
       <div class="nome">${esc(p.nome)}</div>
       ${detalhes ? `<div class="det">${esc(detalhes)}</div>` : ''}
       ${cfg.etiqueta_mostrar_preco !== '1' ? ''
+    : modelo === 'parcelado' ? (() => {
+      const n = Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
+      return `${p.preco_anterior > p.preco_venda
+        ? `<div class="de">de <s>${brl(p.preco_anterior)}</s> por ${brl(p.preco_venda)}</div>`
+        : `<div class="avista">${brl(p.preco_venda)}</div>`}
+        <div class="parcela">${n}x de ${brl(Math.ceil(p.preco_venda / n))}</div><div class="sjuros">sem juros</div>`;
+    })()
     : p.preco_anterior > p.preco_venda
       ? `<div class="de">de <s>${brl(p.preco_anterior)}</s></div><div class="preco">por ${brl(p.preco_venda)}</div>`
       : `<div class="preco">${brl(p.preco_venda)}</div>`}
@@ -227,6 +234,9 @@ const Impressao = (() => {
       .modelo-preco .nome { font-size: ${Math.max(5, h * 0.17)}pt; }
       .modelo-preco .preco { font-size: ${Math.max(9, h * 0.52)}pt; }
       .modelo-preco .de + .preco { font-size: ${Math.max(8, h * 0.42)}pt; }
+      .avista { font-size: ${Math.max(6, h * 0.24)}pt; font-weight: bold; line-height: 1.1; }
+      .parcela { font-size: ${Math.max(8, h * 0.36)}pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
+      .sjuros { font-size: ${Math.max(5, h * 0.15)}pt; text-transform: uppercase; letter-spacing: .5px; line-height: 1.1; }
     `;
     if (colunas === 1) {
       // Rolo de etiquetas (impressora térmica): uma etiqueta por página.

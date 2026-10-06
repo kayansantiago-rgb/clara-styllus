@@ -20,6 +20,11 @@ const ean13Valido = (c) => {
 
 const preco = (c) => 'R$ ' + ((Number(c) || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/** Número de parcelas do modelo "parcelado" (2 a 12, padrão 3). */
+const parcelasEtiqueta = (cfg) => Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
+/** Valor de cada parcela, arredondado para cima (as parcelas nunca somam menos que o preço). */
+const valorParcela = (centavos, n) => Math.ceil((Number(centavos) || 0) / n);
+
 /** Calcula as medidas (em pontos) a partir da configuração. */
 function medidas(cfg) {
   const dpmm = (Number(cfg.etiqueta_dpi) || 203) / 25.4;
@@ -47,7 +52,17 @@ function conteudo(p, cfg, m) {
   if (cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples') linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: (destaque ? 0.08 : 0.1) * h });
   linhas.push({ texto: p.nome, alt: (destaque ? 0.09 : 0.11) * h });
   if (det) linhas.push({ texto: det, alt: (destaque ? 0.075 : 0.085) * h });
-  if (cfg.etiqueta_mostrar_preco === '1') {
+  if (cfg.etiqueta_mostrar_preco === '1' && modelo === 'parcelado') {
+    // Parcelado: preço à vista menor e "3X DE R$ 86,64" em destaque (sem juros).
+    const n = parcelasEtiqueta(cfg);
+    if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
+      linhas.push({ texto: `DE ${preco(p.preco_anterior)} POR ${preco(p.preco_venda)}`, alt: 0.085 * h });
+    } else {
+      linhas.push({ texto: preco(p.preco_venda), alt: 0.11 * h });
+    }
+    linhas.push({ texto: `${n}X DE ${preco(valorParcela(p.preco_venda, n))}`, alt: 0.16 * h });
+    linhas.push({ texto: 'SEM JUROS', alt: 0.07 * h });
+  } else if (cfg.etiqueta_mostrar_preco === '1') {
     if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
       // Liquidação: "DE R$ 159,90" riscado e "POR R$ 99,90" em destaque.
       linhas.push({ texto: `DE ${preco(p.preco_anterior)}`, alt: 0.085 * h, riscado: true });
@@ -228,4 +243,4 @@ function gerarEtiquetas(itens, cfg) {
   return zpl(lista, cfg);
 }
 
-module.exports = { gerarEtiquetas, zpl, epl, tspl, medidas };
+module.exports = { valorParcela, parcelasEtiqueta, gerarEtiquetas, zpl, epl, tspl, medidas };

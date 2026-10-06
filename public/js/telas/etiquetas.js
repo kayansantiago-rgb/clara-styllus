@@ -44,9 +44,13 @@ Telas.etiquetas = (() => {
             <div class="so-admin">
               <h4>Modelo da etiqueta</h4>
               <div class="et-modelos" id="modelos">
-                ${[['padrao', 'Padrão', 'Loja, nome, tamanho e preço'], ['preco', 'Preço em destaque', 'Preço bem grande'], ['simples', 'Simples', 'Sem o nome da loja']].map(([k, t, d]) =>
+                ${[['padrao', 'Padrão', 'Loja, nome, tamanho e preço'], ['preco', 'Preço em destaque', 'Preço bem grande'],
+    ['parcelado', 'Parcelado', 'Preço e "3x de R$ …" sem juros'], ['simples', 'Simples', 'Sem o nome da loja']].map(([k, t, d]) =>
     `<button class="et-modelo ${k === modelo ? 'sel' : ''}" data-modelo="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}
               </div>
+              <label class="et-parcelas" id="et-parcelas" ${modelo === 'parcelado' ? '' : 'hidden'}>Parcelas na etiqueta
+                <select id="parcelas">${Array.from({ length: 11 }, (_, i) => i + 2).map((n) =>
+    `<option value="${n}" ${String(n) === String(cfg.etiqueta_parcelas || '3') ? 'selected' : ''}>${n}x sem juros</option>`).join('')}</select></label>
             </div>
           </div>
         </aside>
@@ -58,6 +62,14 @@ Telas.etiquetas = (() => {
         await api('/api/config', { metodo: 'PUT', corpo: { etiqueta_modelo: b.dataset.modelo } });
         await U.config(true);
         raiz.querySelectorAll('.et-modelo').forEach((x) => x.classList.toggle('sel', x === b));
+        raiz.querySelector('#et-parcelas').hidden = b.dataset.modelo !== 'parcelado';
+        desenhar();
+      } catch (e) { erro(e); }
+    };
+    raiz.querySelector('#parcelas').onchange = async (ev) => {
+      try {
+        await api('/api/config', { metodo: 'PUT', corpo: { etiqueta_parcelas: ev.target.value } });
+        await U.config(true);
         desenhar();
       } catch (e) { erro(e); }
     };

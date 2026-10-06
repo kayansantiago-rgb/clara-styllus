@@ -32,7 +32,7 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Sons novos** (bipe, venda concluída, erro e meta), com volume baixo/médio/alto e botões para ouvir em
   Configurações → Vendas.
 - **Telas vazias ilustradas**: desenhos delicados quando ainda não há produtos, vendas, clientes etc.
-- **Modelos de etiqueta**: padrão, preço em destaque ou simples (sem o nome da loja).
+- **Modelos de etiqueta**: padrão, preço em destaque, **parcelado** ("3x de R$ 86,64 sem juros", com 2 a 12 parcelas) ou simples (sem o nome da loja).
 - **Login sem senha salva**: o navegador não oferece para guardar a senha; cada pessoa digita a sua ao entrar
   (o ícone do olho mostra o que foi digitado).
 - **Troca com vale-troca**: bipe o cupom (V123) ou use 🔁 Troca no caixa, escolha as peças que voltam e sai um

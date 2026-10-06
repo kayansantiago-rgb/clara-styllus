@@ -1937,3 +1937,4 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .es-ou { display: flex; align-items: center; gap: 10px; color: var(--suave); font-size: 12px; margin: 6px 0; }
 .es-ou::before, .es-ou::after { content: ''; flex: 1; border-top: 1px solid var(--borda); }
 @media (max-width: 1150px) { .es-card { grid-template-columns: 1fr 1fr; } }
+.et-parcelas { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 13px; font-weight: 600; color: #6c5f66; }

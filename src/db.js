@@ -209,6 +209,7 @@ const CONFIG_PADRAO = {
   impressora_etiqueta: '',
   etiqueta_dpi: '203',
   etiqueta_modelo: 'padrao',
+  etiqueta_parcelas: '3', // modelo "parcelado": 3x de R$ …
   etiqueta_espaco_mm: '2',
   etiqueta_gap_mm: '3',
   // Crediário

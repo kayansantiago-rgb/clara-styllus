@@ -13,7 +13,7 @@ const FORMAS = { dinheiro: 'dinheiro', pix: 'PIX', debito: 'débito', credito: '
 // Nomes amigáveis das configurações mais comuns (as demais aparecem pelo nome técnico).
 const NOMES_CONFIG = {
   cupom_logo: 'logo do cupom', cupom_logo_img: 'logo do cupom', cupom_qr_texto: 'QR Code do cupom', cupom_qr_legenda: 'frase do QR Code',
-  etiqueta_modelo: 'modelo da etiqueta', taxas_tabela: 'taxas da maquininha', cupom_mensagem: 'mensagem do cupom',
+  etiqueta_modelo: 'modelo da etiqueta', etiqueta_parcelas: 'parcelas na etiqueta', taxas_tabela: 'taxas da maquininha', cupom_mensagem: 'mensagem do cupom',
   atualizacao_token: 'token de atualização', atualizacao_auto: 'atualização automática', boas_vindas_ok: 'assistente de boas-vindas',
   loja_nome: 'nome da loja', loja_cnpj: 'CNPJ', impressora_cupom: 'impressora de cupom', impressora_etiqueta: 'impressora de etiqueta',
   impressao_automatica: 'impressão automática', desconto_maximo: 'desconto máximo', meta_mensal: 'meta do mês',
