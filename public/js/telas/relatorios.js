@@ -28,12 +28,19 @@ Telas.relatorios = (() => {
     raiz.innerHTML = `
       <div class="cabecalho-tela">
         <div><h1>Relatórios</h1><p class="subtitulo">Como a loja está indo: vendas, horários, categorias, vendedoras e lucro.</p></div>
+        <div class="ferramentas"><button class="btn" id="resumo-img">${Icone('imagem')} Resumo do mês em imagem</button></div>
       </div>
       <div class="vd-filtros">
         <div class="segmentos" id="periodos">${PERIODOS.map(([k, t]) => `<button class="segmento ${k === periodo ? 'sel' : ''}" data-periodo="${k}">${t}</button>`).join('')}</div>
         <div class="vd-datas" id="datas" ${periodo === 'outro' ? '' : 'hidden'}><input type="date" id="de" value="${de}"><span>até</span><input type="date" id="ate" value="${ate}"></div>
       </div>
       <div id="rel"></div>`;
+    raiz.querySelector('#resumo-img').onclick = () => {
+      // "Mês passado" abre no mês anterior; os outros períodos, no mês atual.
+      const h = new Date();
+      if (periodo === 'passado') ResumoMes.abrir(h.getMonth() ? h.getFullYear() : h.getFullYear() - 1, (h.getMonth() + 11) % 12);
+      else ResumoMes.abrir();
+    };
     raiz.querySelector('#de').onchange = carregar;
     raiz.querySelector('#ate').onchange = carregar;
     raiz.querySelector('#periodos').onclick = (ev) => {

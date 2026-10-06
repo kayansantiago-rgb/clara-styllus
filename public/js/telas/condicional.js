@@ -62,7 +62,7 @@ Telas.condicional = (() => {
         <div class="cd-rodape"><span><b>${c.pecas}</b> peça(s) · <b>${brl(c.valor)}</b></span>
           ${c.status === 'aberta' ? `<button class="btn btn-primario btn-peq">${Icone('check')} Fechar</button>` : ''}</div>
       </div>`;
-    }).join('') || `<div class="vd-vazio cd-vazio"><div class="pdv-vazio-ico">${Icone('bolsa')}</div><b>Nenhuma condicional ${status === 'aberta' ? 'aberta' : ''}</b><br><small>Crie pelo caixa: bipe as peças, escolha a cliente e clique em Condicional.</small></div>`;
+    }).join('') || `<div class="vd-vazio cd-vazio">${Ilustracao.svg('bolsa', 150)}<b>Nenhuma condicional ${status === 'aberta' ? 'aberta' : ''}</b><br><small>Crie pelo caixa: bipe as peças, escolha a cliente e clique em Condicional.</small></div>`;
   }
 
   async function detalhe(id) {

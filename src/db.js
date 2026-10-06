@@ -184,6 +184,7 @@ const CONFIG_PADRAO = {
   cupom_mensagem: 'Obrigada pela preferência! Trocas em até 30 dias com etiqueta e este comprovante.',
   cupom_largura_mm: '80',
   cupom_vias: '1',
+  som_volume: 'medio',
   cupom_logo: '', // logo em 1 bit para a térmica (JSON { l, h, d })
   cupom_logo_img: '', // a mesma imagem em PNG (impressão pelo navegador e pré-visualização)
   cupom_qr_texto: '', // link do Instagram / WhatsApp impresso como QR Code

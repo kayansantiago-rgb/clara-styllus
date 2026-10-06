@@ -218,6 +218,10 @@
     document.body.classList.toggle('modo-boas-vindas', nome === 'boas-vindas');
     try {
       await tela.abrir(conteudo);
+      if (telaAtual === tela) {
+        Animacoes.entrarTela(conteudo);
+        Animacoes.contar(conteudo);
+      }
     } catch (e) {
       if (e.status !== 401) {
         conteudo.innerHTML = `<div class="vazio">Não foi possível abrir a tela: ${esc(e.message)}</div>`;
@@ -253,6 +257,36 @@
     }
     if (telaAtual && telaAtual.tecla) telaAtual.tecla(ev);
   });
+
+  // ------------------------------------------------------- menu recolhível
+  (() => {
+    const botao = document.getElementById('menu-recolher');
+    const dica = document.getElementById('menu-dica');
+    const aplicar = (sim) => {
+      document.body.classList.toggle('menu-recolhido', sim);
+      botao.querySelector('span').textContent = sim ? 'Abrir menu' : 'Recolher menu';
+      botao.title = sim ? 'Abrir menu' : 'Recolher menu (só ícones)';
+    };
+    aplicar(!!U.local.ler('menu_recolhido', false));
+    botao.onclick = () => {
+      const sim = !document.body.classList.contains('menu-recolhido');
+      U.local.gravar('menu_recolhido', sim);
+      aplicar(sim);
+      dica.hidden = true;
+    };
+    // Com o menu recolhido, o nome da tela aparece num balãozinho ao passar o mouse no ícone.
+    const menu = document.querySelector('.menu');
+    menu.addEventListener('mouseover', (ev) => {
+      const a = ev.target.closest('nav a, .menu-recolher, .status-caixa');
+      if (!a || !document.body.classList.contains('menu-recolhido')) return;
+      const r = a.getBoundingClientRect();
+      dica.textContent = a.classList.contains('status-caixa') ? a.innerText.split('\n')[0] : a.textContent.trim().replace(/F1$/, '').trim();
+      dica.style.top = `${r.top + r.height / 2}px`;
+      dica.style.left = `${r.right + 10}px`;
+      dica.hidden = false;
+    });
+    menu.addEventListener('mouseleave', () => { dica.hidden = true; });
+  })();
 
   window.addEventListener('hashchange', navegar);
   iniciar();

@@ -74,7 +74,7 @@ Telas.clientes = (() => {
         <div class="cl-tags">${c.deve > 0 ? `<span class="selo perigo">deve ${brl(c.deve)}</span>` : ''}</div>
         ${w ? `<a class="btn-ico cl-zap" href="${w}" target="_blank" rel="noopener" title="Conversar no WhatsApp">${Icone('whatsapp')}</a>` : '<span></span>'}
       </div>`;
-    }).join('') : `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('clientes')}</div><b>Nenhuma cliente encontrada</b></div>`;
+    }).join('') : `<div class="vd-vazio">${Ilustracao.svg('clientes', 150)}<b>Nenhuma cliente encontrada</b></div>`;
   }
 
   /** Ficha completa da cliente. */

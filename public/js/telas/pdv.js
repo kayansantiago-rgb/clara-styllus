@@ -258,7 +258,7 @@ Telas.pdv = (() => {
         </div>`;
       }).join('')
       : `<div class="p4-vazio">
-          <div class="pdv-vazio-ico">${Icone('sacola')}</div>
+          ${Ilustracao.svg('sacola', 150)}
           <b>Caixa livre</b>
           <p>Bipe a etiqueta da peça com o leitor — ela aparece aqui.</p>
           <div class="p4-vazio-passos">

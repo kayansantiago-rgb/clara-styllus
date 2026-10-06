@@ -171,7 +171,7 @@ Telas.inventario = (() => {
         <span class="painel-item-txt"><b>${esc(l.nome)} ${esc([l.tamanho, l.cor].filter(Boolean).join(' · '))}</b>
           <small>${l.quantidade > 0 ? '+' : ''}${l.quantidade} · total contado ${l.contado} (sistema ${l.estoque}) · ${esc(l.usuario || '')} ${l.criado_em.slice(11, 16)}</small></span>
         <button class="btn btn-peq btn-fantasma" data-corrigir="${l.produto_id}" data-nome="${esc(l.nome)}" data-contado="${l.contado}">Corrigir</button>
-      </div>`).join('') || '<div class="vazio">Nenhuma peça bipada ainda.</div>';
+      </div>`).join('') || U.vazio({ ilu: 'prancheta', compacto: true, titulo: 'Nenhuma peça bipada ainda', texto: 'Bipe as peças no campo ao lado.' });
   }
 
   async function corrigir(produtoId, nome, contado) {

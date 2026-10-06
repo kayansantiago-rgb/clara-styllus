@@ -23,6 +23,15 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   alterações não salvas.
 - **Cupom personalizado**: logo da loja no topo (a imagem vira preto e branco sozinha, com ajuste de tom),
   mensagem final em destaque e **QR Code** do Instagram ou WhatsApp no rodapé, com pré-visualização na tela.
+- **Resumo do mês em imagem**: um cartão no formato de post (1080 × 1350) com faturamento, comparação com o
+  mês anterior, meta, vendas, peças, ticket, melhor dia, vendedora destaque e peça campeã. Dá para baixar ou
+  copiar e colar no WhatsApp (Relatórios ou Início → "Resumo em imagem").
+- **Menu recolhível**: só os ícones, com o nome aparecendo ao passar o mouse (a escolha fica guardada).
+- **Animações**: entrada suave das telas, números que sobem, barras que crescem e confete quando a meta do mês
+  é batida (desligadas se o Windows estiver com "reduzir animações").
+- **Sons novos** (bipe, venda concluída, erro e meta), com volume baixo/médio/alto e botões para ouvir em
+  Configurações → Vendas.
+- **Telas vazias ilustradas**: desenhos delicados quando ainda não há produtos, vendas, clientes etc.
 - **Modelos de etiqueta**: padrão, preço em destaque ou simples (sem o nome da loja).
 - **Login sem senha salva**: o navegador não oferece para guardar a senha; cada pessoa digita a sua ao entrar
   (o ícone do olho mostra o que foi digitado).

@@ -64,12 +64,14 @@ Telas.inicio = (() => {
 
       <div class="painel-grade">
         <div class="cartao painel-meta">
-          <h3 class="titulo-ico">${Icone('estrela')} Meta do mês</h3>
+          <h3 class="titulo-ico">${Icone('estrela')} Meta do mês
+            <button class="btn btn-peq btn-fantasma in-resumo" id="resumo-img" title="Resumo do mês em imagem">${Icone('imagem')} Resumo em imagem</button></h3>
           ${meta ? `
             <div class="meta-numeros"><b>${brl(r.mes.faturamento)}</b><span>de ${brl(meta)}</span></div>
             <div class="meta-barra" role="progressbar" aria-valuenow="${pctMeta}" aria-valuemin="0" aria-valuemax="100">
               <i style="width:${pctMeta}%"></i><span class="meta-marca" style="left:${Math.min(100, (esperadoHoje / meta) * 100)}%" title="Onde deveria estar hoje"></span>
             </div>
+            ${r.mes.faturamento >= meta ? '<div class="meta-batida">🎉 Meta batida! Parabéns à equipe.</div>' : ''}
             <div class="meta-rodape"><span><b>${pctMeta}%</b> atingido · ${ritmo}</span>
               <span>Projeção: <b>${brl(r.mes.projecao)}</b></span></div>
             <p class="dica">Faltam ${brl(Math.max(0, meta - r.mes.faturamento))} em ${r.mes.dias - r.mes.dia + 1} dia(s)
@@ -93,7 +95,7 @@ Telas.inicio = (() => {
           ${r.mais_vendidos.map((p, i) => `
             <div class="painel-item"><span class="pos">${i + 1}</span>${U.miniatura({ id: p.produto_id, foto_versao: p.foto_versao })}
               <span class="painel-item-txt"><b>${esc(p.nome)}</b><small>${p.quantidade} peça(s) · ${brl(p.total)}</small></span></div>`).join('')
-    || '<div class="vazio">Nenhuma venda nos últimos 7 dias.</div>'}
+    || U.vazio({ ilu: 'sacola', compacto: true, texto: 'Nenhuma venda nos últimos 7 dias.' })}
         </div>
 
         <div class="cartao">
@@ -103,7 +105,7 @@ Telas.inicio = (() => {
     return `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b>
               <small>${c.em_dias === 0 ? '<b class="txt-rosa">hoje!</b>' : c.em_dias === 1 ? 'amanhã' : `em ${c.em_dias} dias`} · ${c.aniversario.slice(8)}/${c.aniversario.slice(5, 7)}</small></span>
               ${link ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${link}"><i data-icone="whatsapp"></i> Parabéns</a>` : ''}</div>`;
-  }).join('') || '<div class="vazio">Ninguém faz aniversário nos próximos 7 dias.</div>'}
+  }).join('') || U.vazio({ ilu: 'presente', compacto: true, texto: 'Ninguém faz aniversário nos próximos 7 dias.' })}
         </div>
 
         <div class="cartao">
@@ -116,7 +118,7 @@ Telas.inicio = (() => {
           <h4>Vencendo hoje</h4>
           ${r.crediario.vencendo_hoje.map((c) => `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b><small>${brl(c.valor)}</small></span>
             ${whats(c.telefone, '') ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${whats(c.telefone, `Olá, ${c.nome.split(' ')[0]}! Aqui é da Clara Styllus. Lembrando que hoje vence sua parcela do crediário de ${brl(c.valor)}. Obrigada!`)}"><i data-icone="whatsapp"></i> Lembrar</a>` : ''}</div>`).join('')
-    || '<div class="vazio">Nenhuma parcela vence hoje.</div>'}
+    || U.vazio({ ilu: 'caderno', compacto: true, texto: 'Nenhuma parcela vence hoje.' })}
           <a href="#/crediario">Ver crediário completo →</a>
         </div>
 
@@ -128,6 +130,19 @@ Telas.inicio = (() => {
         </div>
       </div>`;
 
+    // Meta batida: festa uma vez por mês.
+    if (meta && r.mes.faturamento >= meta) {
+      const mes = U.hoje().slice(0, 7);
+      if (U.local.ler('meta_festa', '') !== mes) {
+        U.local.gravar('meta_festa', mes);
+        setTimeout(() => {
+          Animacoes.confete();
+          U.som('meta');
+          U.aviso('🎉 Parabéns! A meta do mês foi batida!');
+        }, 500);
+      }
+    }
+    raiz.querySelector('#resumo-img').onclick = () => ResumoMes.abrir();
     raiz.querySelector('#at-agora')?.addEventListener('click', (ev) => Atualizacao.instalar(ev.currentTarget));
   }
 

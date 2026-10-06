@@ -292,6 +292,9 @@ Telas.config = (() => {
               <input name="meta_mensal" inputmode="decimal" value="${c.meta_mensal ? U.num(c.meta_mensal) : ''}"></label>
             ${campo('desconto_maximo_pct', 'Desconto máximo por venda (%)', 'type="number" min="0" max="100"')}
             ${check('som_bipe', 'Tocar som ao bipar produto e ao concluir a venda')}
+            <div class="cfg-sons">${sel('som_volume', 'Volume dos sons', [['baixo', 'Baixo'], ['medio', 'Médio'], ['alto', 'Alto']])}
+              <span class="cfg-sons-teste"><small>Ouvir:</small>${[['ok', 'Bipe'], ['sucesso', 'Venda'], ['erro', 'Erro']].map(([k, t]) =>
+    `<button type="button" class="btn btn-peq" data-som="${k}">${t}</button>`).join('')}</span></div>
             ${check('estoque_negativo', 'Permitir vender produto sem estoque')}
           </div>
         </div>
@@ -402,6 +405,9 @@ Telas.config = (() => {
       } catch (e) { erro(e); }
       ev.target.disabled = false;
     };
+    raiz.querySelectorAll('[data-som]').forEach((b) => {
+      b.onclick = () => U.som(b.dataset.som, true, form.elements.som_volume.value);
+    });
     raiz.querySelectorAll('[data-atualizar-imp]').forEach((b) => { b.onclick = () => carregarImpressoras(raiz, true); });
     raiz.querySelectorAll('[data-teste]').forEach((b) => {
       b.onclick = async () => {

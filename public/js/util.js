@@ -197,26 +197,55 @@ const U = (() => {
   };
 
   // --------------------------------------------------------------- som
+  // Sons sintetizados (sem arquivos): timbre de "marimba" suave, com um eco curto para soar mais redondo.
   let audio = null;
-  /** Bipe curto: 'ok' (agudo), 'erro' (grave, duplo) ou 'sucesso' (dois tons subindo). */
-  function som(tipo = 'ok') {
-    if (cacheConfig && cacheConfig.som_bipe === '0') return;
+  let saida = null;
+  const VOLUME = { baixo: 0.35, medio: 0.7, alto: 1 };
+  const SONS = {
+    ok: [[1568, 0, 0.16, 0.5]], // bipe: uma nota curta (sol)
+    sucesso: [[1047, 0, 0.5, 0.45], [1319, 0.09, 0.5, 0.42], [1568, 0.18, 0.7, 0.45], [2093, 0.3, 0.9, 0.3]], // acorde subindo
+    erro: [[523, 0, 0.22, 0.55], [392, 0.14, 0.35, 0.55]], // duas notas descendo, sem chiado
+    alerta: [[880, 0, 0.18, 0.4], [880, 0.2, 0.25, 0.4]],
+    meta: [[784, 0, 0.3, 0.4], [988, 0.1, 0.3, 0.4], [1175, 0.2, 0.3, 0.4], [1568, 0.32, 1.1, 0.5], [1976, 0.32, 1.1, 0.25]],
+  };
+  function nota(freq, ini, dur, vol) {
+    const t = audio.currentTime + ini;
+    const g = audio.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(saida);
+    // Fundamental + harmônico suave dão o timbre de "madeira/vidro".
+    for (const [mult, tipo, peso] of [[1, 'sine', 1], [2.76, 'sine', 0.18], [1, 'triangle', 0.25]]) {
+      const o = audio.createOscillator();
+      const gp = audio.createGain();
+      o.type = tipo;
+      o.frequency.value = freq * mult;
+      gp.gain.value = peso;
+      o.connect(gp).connect(g);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+  }
+  /** Som de retorno: 'ok' (bipe), 'erro', 'sucesso' (venda concluída), 'alerta' ou 'meta'. */
+  function som(tipo = 'ok', forcar = false, volume = null) {
+    const cfg = cacheConfig || {};
+    if (!forcar && cfg.som_bipe === '0') return;
     try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      const notas = { ok: [[1320, 0, 0.08]], erro: [[220, 0, 0.14], [180, 0.18, 0.2]], sucesso: [[880, 0, 0.1], [1320, 0.11, 0.16]] }[tipo];
-      for (const [freq, ini, dur] of notas) {
-        const o = audio.createOscillator();
-        const g = audio.createGain();
-        o.type = tipo === 'erro' ? 'square' : 'sine';
-        o.frequency.value = freq;
-        const t = audio.currentTime + ini;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        o.connect(g).connect(audio.destination);
-        o.start(t);
-        o.stop(t + dur + 0.02);
+      if (!audio) {
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        const mestre = audio.createGain();
+        const eco = audio.createDelay();
+        const ecoVol = audio.createGain();
+        eco.delayTime.value = 0.09;
+        ecoVol.gain.value = 0.18;
+        mestre.connect(audio.destination);
+        mestre.connect(eco).connect(ecoVol).connect(audio.destination);
+        saida = mestre;
       }
+      if (audio.state === 'suspended') audio.resume();
+      saida.gain.value = 0.22 * (VOLUME[volume || cfg.som_volume] || VOLUME.medio);
+      for (const [f, ini, dur, vol] of SONS[tipo] || SONS.ok) nota(f, ini, dur, vol);
     } catch { /* sem áudio: segue sem som */ }
   }
 

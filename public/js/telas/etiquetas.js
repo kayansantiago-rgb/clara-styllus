@@ -125,7 +125,7 @@ Telas.etiquetas = (() => {
         <span class="qtd-ctrl p4-qtd"><button class="mini" data-menos="${i}">${Icone('menos')}</button>
           <input type="number" min="0" class="et-qtd" data-i="${i}" value="${x.quantidade}"><button class="mini" data-mais="${i}">${Icone('mais')}</button></span>
         <button class="p4-remover" data-rm="${i}" title="Tirar da fila">${Icone('lixeira')}</button>
-      </div>`).join('') || `<div class="p4-vazio"><div class="pdv-vazio-ico">${Icone('etiqueta')}</div><b>Fila vazia</b>
+      </div>`).join('') || `<div class="p4-vazio">${Ilustracao.svg('etiqueta', 150)}<b>Fila vazia</b>
         <p>Bipe a peça acima, ou use o botão de etiqueta na tela de Produtos.<br>Ao cadastrar um produto, o sistema também oferece mandar as etiquetas para cá.</p></div>`;
     atualizarBotao();
 

@@ -77,7 +77,7 @@ Telas.historico = (() => {
   function desenhar(itens) {
     const el = raiz.querySelector('#lista');
     if (!itens.length) {
-      el.innerHTML = `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('relogio')}</div><b>Nada registrado</b><br><small>Mude o período ou os filtros.</small></div>`;
+      el.innerHTML = `<div class="vd-vazio">${Ilustracao.svg('relogio', 150)}<b>Nada registrado</b><br><small>Mude o período ou os filtros.</small></div>`;
       return;
     }
     const dias = new Map();

@@ -161,7 +161,7 @@ Telas.vendas = (() => {
 
     const el = raiz.querySelector('#lista');
     if (!lista.length) {
-      el.innerHTML = `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('recibo')}</div>
+      el.innerHTML = `<div class="vd-vazio">${Ilustracao.svg('recibo', 150)}
         <b>Nenhuma venda encontrada</b><br><small>Mude o período ou os filtros acima.</small></div>`;
       return;
     }

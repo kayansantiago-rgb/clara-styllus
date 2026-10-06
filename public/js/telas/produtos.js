@@ -104,7 +104,7 @@ Telas.produtos = (() => {
     raiz.querySelector('#pr-resumo').innerHTML = `${lista.length} produto(s) · <b>${pecas}</b> peças em estoque · ${brl(valor)} em preço de venda${baixos ? ` · <span class="txt-perigo">${baixos} para repor</span>` : ''}`;
     const el = raiz.querySelector('#lista');
     if (!lista.length) {
-      el.innerHTML = `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('roupa')}</div><b>Nenhum produto encontrado</b><br><small>Mude a busca ou os filtros.</small></div>`;
+      el.innerHTML = `<div class="vd-vazio">${Ilustracao.svg('cabide', 150)}<b>${todos.length ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado ainda'}</b><br><small>${todos.length ? 'Mude a busca ou os filtros.' : 'Clique em <b>Novo produto</b> para cadastrar a primeira peça.'}</small></div>`;
       return;
     }
     if (modo === 'vitrine') {

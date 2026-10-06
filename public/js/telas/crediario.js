@@ -75,7 +75,7 @@ Telas.crediario = (() => {
         <div class="cr-num r"><small>Deve</small><b class="cr-saldo">${brl(c.saldo)}</b></div>
         <button class="btn btn-primario" data-receber>${Icone('dinheiro')} Receber</button>
       </div>`;
-    }).join('') || `<div class="vd-vazio"><div class="pdv-vazio-ico">${Icone('check')}</div><b>Ninguém devendo no crediário</b><br><small>Quando uma venda for no crediário, a cliente aparece aqui.</small></div>`;
+    }).join('') || `<div class="vd-vazio">${Ilustracao.svg('caderno', 150)}<b>Ninguém devendo no crediário</b><br><small>Quando uma venda for no crediário, a cliente aparece aqui.</small></div>`;
   }
 
   // ------------------------------------------------------------- detalhe
