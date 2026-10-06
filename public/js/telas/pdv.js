@@ -67,6 +67,8 @@ Telas.pdv = (() => {
               <a href="#/clientes">${Icone('clientes')} Clientes</a>
               <a href="#/crediario">${Icone('caderno')} Crediário</a>
               <a href="#/condicional">${Icone('bolsa')} Condicional</a>
+              <a href="#/reservas">${Icone('reserva')} Reservas</a>
+              <a href="#/espera">${Icone('sino')} Lista de espera</a>
               <a href="#/etiquetas">${Icone('etiqueta')} Etiquetas</a>
               <a href="#/caixa">${Icone('carteira')} Caixa</a>
               <a href="#/relatorios" data-admin>${Icone('grafico')} Relatórios</a>
@@ -77,6 +79,7 @@ Telas.pdv = (() => {
           <div class="p4-topo-acoes">
             <button class="p4-acao" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')}<span>Troca</span></button>
             <button class="p4-acao" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')}<span>Condicional</span></button>
+            <button class="p4-acao" id="t-reservar" title="Separar as peças com sinal para a cliente buscar depois">${Icone('reserva')}<span>Reservar</span></button>
             <button class="p4-acao" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')}<span>Gaveta</span></button>
             <div class="p3-mais">
               <button class="p4-acao" id="t-mais" title="Sangria, suprimento e fechar o caixa">${Icone('carteira')}<span>Caixa</span></button>
@@ -166,6 +169,7 @@ Telas.pdv = (() => {
     raiz.querySelector('#t-gaveta').onclick = () => Impressao.abrirGaveta();
     raiz.querySelector('#t-troca').onclick = () => Trocas.perguntarVenda();
     raiz.querySelector('#t-condicional').onclick = () => enviarCondicional();
+    raiz.querySelector('#t-reservar').onclick = () => reservar();
     raiz.querySelector('#t-tela').onclick = alternarTelaCheia;
     const menu = raiz.querySelector('#menu-caixa');
     raiz.querySelector('#t-mais').onclick = (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; };
@@ -309,11 +313,12 @@ Telas.pdv = (() => {
     for (const { p, qtd } of porProduto.values()) {
       if (p.servico) continue; // serviço não tem estoque
       const nome = esc([p.nome, p.tamanho, p.cor].filter(Boolean).join(' '));
-      if (qtd > p.estoque) alertas.push(['perigo', `<i data-icone="caixa"></i> <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.`]);
+      if (qtd > p.estoque) alertas.push(['perigo', `<i data-icone="caixa"></i> <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.
+        <button class="link" data-espera="${p.id}">anotar na lista de espera</button>`]);
       else if (p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `<i data-icone="caixa"></i> <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
     }
     const pendente = local.ler('pdv_vale_pendente', null);
-    if (pendente) alertas.push(['ok', `<i data-icone="vale"></i> Vale-troca <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);
+    if (pendente) alertas.push(['ok', `<i data-icone="vale"></i> ${/^RS/i.test(pendente.codigo) ? 'Sinal da reserva' : 'Vale-troca'} <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);
     const aberto = caixa ? new Date(caixa.aberto_em.replace(' ', 'T')) : null;
     if (aberto && Date.now() - aberto.getTime() > 12 * 36e5) {
       alertas.push(['alerta', `<i data-icone="dinheiro"></i> O caixa nº ${caixa.id} está aberto desde ${U.dataHora(caixa.aberto_em)}. Feche o caixa do dia anterior.`]);
@@ -321,6 +326,12 @@ Telas.pdv = (() => {
     el.innerHTML = alertas.map(([tipo, txt]) => `<div class="pdv-alerta ${tipo}">${txt}</div>`).join('');
     const tirar = el.querySelector('#tirar-vale');
     if (tirar) tirar.onclick = () => { local.gravar('pdv_vale_pendente', null); desenharAlertas(); };
+    el.querySelectorAll('[data-espera]').forEach((b) => {
+      b.onclick = () => {
+        const it = carrinho.itens.find((x) => x.produto.id === Number(b.dataset.espera));
+        if (it) Telas.espera.anotar({ produto: it.produto, cliente: carrinho.cliente });
+      };
+    });
   }
 
   function desenharTotais() {
@@ -436,7 +447,7 @@ Telas.pdv = (() => {
     let texto = valor.trim();
     if (!texto) return;
     // Código do cupom (V123): abre a troca. Código de vale (VT000123): usa no pagamento.
-    if (/^VT\d+$/i.test(texto)) {
+    if (/^(VT|RS)\d+$/i.test(texto)) {
       if (!carrinho.itens.length) {
         try {
           const v = await api(`/api/vales/${encodeURIComponent(texto)}`);
@@ -992,10 +1003,33 @@ Telas.pdv = (() => {
     };
   }
 
+  /** Reserva com sinal: as peças do carrinho ficam separadas para a cliente identificada. */
+  function reservar() {
+    const pecas = carrinho.itens.filter((it) => !it.produto.servico);
+    if (!pecas.length) {
+      location.hash = '#/reservas';
+      return;
+    }
+    if (!carrinho.cliente) {
+      aviso('Escolha a cliente da reserva.', 'alerta');
+      return escolherCliente(() => reservar());
+    }
+    Telas.reservas.criar({
+      itens: pecas,
+      cliente: carrinho.cliente,
+      aoCriar: () => {
+        carrinho = novoCarrinho();
+        saldoCliente = null;
+        salvar();
+        if (raiz) abrir(raiz);
+      },
+    });
+  }
+
   /** Coloca peças no carrinho (ex.: o que a cliente ficou da condicional) e abre o caixa. */
   function carregarVenda({ itens, cliente }) {
     const c = novoCarrinho();
-    c.itens = itens.map(({ produto, quantidade }) => ({ produto, quantidade, desconto: 0 }));
+    c.itens = itens.map(({ produto, quantidade, desconto }) => ({ produto, quantidade, desconto: desconto || 0 }));
     if (cliente) {
       c.cliente = { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf };
       if (cliente.cpf) c.cpf_nota = U.cpf(cliente.cpf);

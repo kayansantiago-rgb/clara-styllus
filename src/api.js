@@ -12,6 +12,8 @@ const taxas = require('./taxas');
 const { criarBackup } = require('./backup');
 const { instalarTrocas } = require('./trocas');
 const { instalarCondicional } = require('./condicional');
+const { instalarReservas } = require('./reservas');
+const { instalarEspera } = require('./espera');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
 const documentos = require('./impressao/documentos');
@@ -709,6 +711,8 @@ function criarApi(db, opcoes = {}) {
   });
 
   instalarInventario({ db, rota, erro, inteiro, texto, plano, planos, transacao });
+  const reservas = instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto });
+  instalarEspera({ db, rota, erro, inteiro, texto, plano, planos });
 
   // ----------------------------------------------------------------- caixa
   const resumoCaixa = (caixaId) => {
@@ -744,13 +748,16 @@ function criarApi(db, opcoes = {}) {
     const suprimentos = soma('suprimento');
     const recebimentos = crediario.recebimentosDoCaixa(caixaId);
     const recebidoDinheiro = recebimentos.find((f) => f.forma === 'dinheiro')?.valor || 0;
+    const sinais = reservas.sinaisDoCaixa(caixaId);
+    const sinalDinheiro = sinais.find((f) => f.forma === 'dinheiro')?.valor || 0;
     const dinheiroEsperado =
-      caixa.valor_abertura + suprimentos - sangrias + dinheiro - vendas.troco + recebidoDinheiro;
+      caixa.valor_abertura + suprimentos - sangrias + dinheiro - vendas.troco + recebidoDinheiro + sinalDinheiro;
     return {
       caixa,
       vendas: { ...vendas, canceladas },
       formas,
       recebimentos_crediario: recebimentos,
+      sinais_reserva: sinais,
       movimentos,
       sangrias,
       suprimentos,
@@ -1214,6 +1221,16 @@ function criarApi(db, opcoes = {}) {
         )
         .all(de, ate)
     ));
+    juntar('reserva', planos(
+      db
+        .prepare(
+          `SELECT forma, 1 AS parcelas, bandeira, SUM(valor) AS valor, SUM(taxa) AS taxa,
+             SUM(CASE WHEN taxa IS NULL THEN valor END) AS sem_taxa
+           FROM reserva_sinais WHERE date(criado_em) BETWEEN ? AND ?
+           GROUP BY forma, bandeira`
+        )
+        .all(de, ate)
+    ));
     const totalTaxas = linhasTaxa.reduce((a, l) => a + l.taxa, 0);
     totais.taxas = totalTaxas;
     totais.lucro_apos_taxas = totais.lucro_bruto - totalTaxas;
@@ -1462,6 +1479,13 @@ function criarApi(db, opcoes = {}) {
     // Duas vias: uma vai com a cliente, a outra fica assinada na loja.
     const partes = [documentos.condicional(c, cfg, 'Via da cliente'), documentos.condicional(c, cfg, 'Via da loja')];
     return imprimirCupom(cfg, Buffer.concat(partes.map((d) => d.bytes())), `condicional-${c.id}`);
+  });
+
+  rota('POST', '/api/imprimir/reserva/:id', ({ params }) => {
+    const cfg = config();
+    const r = reservas.buscar(params.id);
+    const partes = [documentos.reserva(r, cfg, 'Via da cliente'), documentos.reserva(r, cfg, 'Via da loja')];
+    return imprimirCupom(cfg, Buffer.concat(partes.map((d) => d.bytes())), `reserva-${r.id}`);
   });
 
   rota('POST', '/api/imprimir/gaveta', () => {

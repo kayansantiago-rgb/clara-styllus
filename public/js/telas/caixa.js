@@ -110,6 +110,7 @@ Telas.caixa = (() => {
           <div class="cx-mov">
             <div class="linha"><span>Troco inicial</span><b>${brl(r.caixa.valor_abertura)}</b></div>
             <div class="linha"><span>Vendas em dinheiro (já sem o troco)</span><b>${brl((r.formas.find((f) => f.forma === 'dinheiro')?.valor || 0) - troco)}</b></div>
+            ${(r.sinais_reserva || []).find((f) => f.forma === 'dinheiro') ? `<div class="linha"><span>Sinais de reserva em dinheiro</span><b>${brl(r.sinais_reserva.find((f) => f.forma === 'dinheiro').valor)}</b></div>` : ''}
             ${recebido ? `<div class="linha"><span>Crediário recebido em dinheiro</span><b>${brl((r.recebimentos_crediario || []).find((f) => f.forma === 'dinheiro')?.valor || 0)}</b></div>` : ''}
             ${r.movimentos.map((m) => `<div class="linha cx-${m.tipo}"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} · ${esc(m.motivo || 'sem motivo')}</span><b>${m.tipo === 'sangria' ? '−' : '+'}${brl(m.valor)}</b></div>`).join('')}
             <div class="linha total"><span>Esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>
@@ -165,6 +166,7 @@ Telas.caixa = (() => {
             <div class="linha"><span>Vendas</span><b>${r.vendas.quantidade} · ${brl(r.vendas.total)}</b></div>
             ${r.formas.map((f) => `<div class="linha"><span><i class="fc-ponto" style="background:${COR_FORMA[f.forma] || '#4a3aa7'}"></i>${rotulo(f.forma)}</span><span>${brl(f.forma === 'dinheiro' ? f.valor - r.vendas.troco : f.valor)}</span></div>`).join('')}
             ${(r.recebimentos_crediario || []).map((f) => `<div class="linha"><span>Crediário recebido · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
+            ${(r.sinais_reserva || []).map((f) => `<div class="linha"><span>Sinal de reserva · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
             ${r.movimentos.map((m) => `<div class="linha"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '−' : '+'}${brl(m.valor)}</span></div>`).join('')}
             <div class="linha"><span>Troco inicial</span><span>${brl(r.caixa.valor_abertura)}</span></div>
             <div class="linha total"><span>Esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>

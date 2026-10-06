@@ -21,10 +21,11 @@ Telas.inicio = (() => {
   };
 
   async function abrir(raiz) {
-    const [r, bk, conds, at] = await Promise.all([
+    const [r, bk, conds, at, esp, res] = await Promise.all([
       api('/api/painel'), api('/api/backup/status').catch(() => null), api('/api/condicionais').catch(() => []),
-      api('/api/atualizacao').catch(() => null),
+      api('/api/atualizacao').catch(() => null), api('/api/espera/resumo').catch(() => null), api('/api/reservas').catch(() => []),
     ]);
+    const resVencidas = res.filter((x) => x.prazo < U.hoje());
     const condAtrasadas = conds.filter((c) => c.prazo < U.hoje());
     const semBackup = bk && (bk.horas_desde_ultimo == null || bk.horas_desde_ultimo > 72);
     const nome = (U.sessao.usuario.nome || '').split(' ')[0];
@@ -42,6 +43,10 @@ Telas.inicio = (() => {
       ${at && at.disponivel ? `<div class="pdv-alerta ok painel-alerta at-aviso"><i data-icone="nuvem"></i>
         <span>Nova versão <b>${esc(at.disponivel.versao)}</b> do sistema disponível (você está na ${esc(at.versao_atual)}).</span>
         <button class="btn btn-peq btn-primario" id="at-agora">Atualizar agora</button> <a href="#/config?aba=atualizacao">detalhes</a></div>` : ''}
+      ${esp && esp.chegaram ? `<div class="pdv-alerta ok painel-alerta"><i data-icone="sino"></i> Chegaram ${esp.chegaram} peça(s) da lista de espera
+        (${esp.nomes.map(esc).join(', ')}${esp.chegaram > 3 ? '…' : ''}). <a href="#/espera">Avisar as clientes →</a></div>` : ''}
+      ${resVencidas.length ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="reserva"></i> ${resVencidas.length} reserva(s) passaram do prazo de retirada:
+        ${resVencidas.slice(0, 3).map((x) => esc(x.cliente_nome)).join(', ')}${resVencidas.length > 3 ? '…' : ''}. <a href="#/reservas">Ver reservas →</a></div>` : ''}
       ${condAtrasadas.length ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="bolsa"></i> ${condAtrasadas.length} condicional(is) passou do prazo de devolução:
         ${condAtrasadas.slice(0, 3).map((c) => esc(c.cliente_nome)).join(', ')}${condAtrasadas.length > 3 ? '…' : ''}. <a href="#/condicional">Ver condicionais →</a></div>` : ''}
       ${semBackup ? `<div class="pdv-alerta perigo painel-alerta"><i data-icone="nuvem"></i> ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}

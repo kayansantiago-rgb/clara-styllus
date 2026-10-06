@@ -297,6 +297,12 @@ const Impressao = (() => {
     return enviar(`/api/imprimir/troca/${t.id}`, {}, 'Vale-troca enviado para a impressora.');
   }
 
+  async function reserva(r) {
+    const cfg = await U.config();
+    if (!direta(cfg)) return U.aviso('Comprovante da reserva só sai na impressão direta (Configurações → Impressoras).', 'alerta');
+    return enviar(`/api/imprimir/reserva/${r.id}`, {}, 'Comprovante da reserva enviado (2 vias).');
+  }
+
   async function condicional(c) {
     const cfg = await U.config();
     if (!direta(cfg)) return U.aviso('Comprovante da condicional só sai na impressão direta (Configurações → Impressão).', 'alerta');
@@ -318,6 +324,6 @@ const Impressao = (() => {
   }
 
   return {
-    cupom, cupomTroca, fechamentoCaixa, recebimento, abrirGaveta, troca, condicional, etiquetas, htmlEtiqueta, cssEtiquetas,
+    cupom, cupomTroca, fechamentoCaixa, recebimento, abrirGaveta, troca, condicional, reserva, etiquetas, htmlEtiqueta, cssEtiquetas,
   };
 })();

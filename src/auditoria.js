@@ -140,6 +140,13 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
       }),
     },
     'POST /api/vendas/:id/troca': { depois: (c, r) => ({ tipo: 'troca', acao: 'Fez troca', descricao: `Venda nº ${r.venda_id} · ${(r.itens || []).length} peça(s)${r.vale ? ` · vale ${r.vale.codigo}` : ''} · ${brl(r.valor)}`, valor: r.valor }) },
+    'POST /api/reservas/:id/cancelar': {
+      depois: (c, r) => ({
+        tipo: 'venda', acao: 'Cancelou reserva',
+        descricao: `Reserva nº ${c.params.id}${r && r.reserva ? ` de ${r.reserva.cliente_nome}` : ''} · sinal: ${{ vale: 'virou vale', dinheiro: 'devolvido em dinheiro', loja: 'ficou com a loja', nenhum: 'sem sinal' }[c.corpo.destino || 'nenhum'] || '-'}`,
+        importante: c.corpo.destino === 'dinheiro',
+      }),
+    },
     'POST /api/vales/:codigo/cancelar': { depois: (c) => ({ tipo: 'troca', acao: 'Cancelou vale-troca', descricao: c.params.codigo, importante: true }) },
     'POST /api/condicionais': { depois: (c, r) => ({ tipo: 'condicional', acao: 'Abriu condicional', descricao: `Nº ${r.id} · ${r.cliente_nome} · ${r.pecas} peça(s) · ${brl(r.valor)}` }) },
     'POST /api/condicionais/:id/fechar': { depois: (c, r) => ({ tipo: 'condicional', acao: 'Fechou condicional', descricao: `Nº ${r.condicional?.id} · ${r.condicional?.cliente_nome} · ficou com ${(r.ficou || []).reduce((a, x) => a + x.quantidade, 0)} peça(s)` }) },

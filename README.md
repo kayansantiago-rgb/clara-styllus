@@ -40,6 +40,13 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Valor rápido no pagamento**: "valor exato" e notas (R$ 50, 100, 200…) com um clique.
 - **Botões rápidos no caixa**: sacola, embrulho, ajuste de barra… Produtos marcados como **serviço** não controlam
   estoque e, com preço 0, o valor é perguntado na hora.
+- **Reserva com sinal**: no caixa, bipe as peças, escolha a cliente e clique em **Reservar**. Ela paga um sinal
+  (sugestão de 30%, em dinheiro, PIX ou cartão), as peças saem do estoque e o comprovante sai em 2 vias. Dá para
+  receber mais, mudar o prazo e mandar lembrete no WhatsApp. Na retirada, as peças vão para o caixa e o sinal já
+  entra como pagamento; se ela desistir, o sinal vira crédito, volta em dinheiro ou fica com a loja.
+- **Lista de espera**: anote quando uma cliente pedir uma peça ou tamanho que acabou (pelo cadastro ou só
+  descrevendo, ex.: "saia plissada P"). Quando a peça volta ao estoque, aparece "Chegou!" com bolinha no menu e
+  aviso no Início, e um clique abre o WhatsApp com a mensagem pronta.
 - **Condicional (malinha)**: bipe as peças, escolha a cliente e clique em 👜 Condicional. As peças saem do estoque,
   o comprovante sai em 2 vias e, ao fechar, o que ela ficou vai direto para o caixa.
 - **Lucro real**: vendas − trocas − custo − taxas − despesas (aluguel, luz…, com repetição mensal) nos Relatórios.

@@ -228,7 +228,20 @@
       }
     }
     atualizarStatusCaixa();
+    atualizarBolinhaEspera();
   }
+
+  /** Bolinha no menu "Lista de espera" com quantas peças pedidas já chegaram. */
+  async function atualizarBolinhaEspera() {
+    const el = document.getElementById('bolinha-espera');
+    try {
+      const r = await api('/api/espera/resumo');
+      el.hidden = !r.chegaram;
+      el.textContent = r.chegaram;
+      el.title = `${r.chegaram} peça(s) da lista de espera chegaram`;
+    } catch { el.hidden = true; }
+  }
+  window.atualizarBolinhaEspera = atualizarBolinhaEspera;
 
   async function atualizarStatusCaixa() {
     const el = document.getElementById('status-caixa');

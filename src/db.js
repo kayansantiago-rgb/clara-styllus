@@ -248,6 +248,8 @@ const CONFIG_PADRAO = {
   atualizacao_token: '',
   atualizacao_verificada_em: '',
   condicional_prazo_dias: '3',
+  reserva_prazo_dias: '7',
+  reserva_sinal_pct: '30', // sinal sugerido (% do total)
 };
 
 function abrirBanco(arquivo) {
@@ -331,6 +333,51 @@ function migrar(db) {
       produto_id INTEGER NOT NULL REFERENCES produtos(id),
       quantidade INTEGER NOT NULL,
       ficou INTEGER
+    );
+    -- Lista de espera: a cliente quer uma peça/tamanho que não tem no estoque.
+    CREATE TABLE IF NOT EXISTS espera (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+      produto_id INTEGER REFERENCES produtos(id),
+      descricao TEXT,
+      tamanho TEXT,
+      cor TEXT,
+      observacao TEXT,
+      usuario TEXT,
+      status TEXT NOT NULL DEFAULT 'aguardando' CHECK (status IN ('aguardando','avisada','atendida','cancelada')),
+      avisado_em TEXT,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );
+    -- Reserva com sinal: as peças ficam separadas (fora do estoque) até a cliente buscar e pagar o resto.
+    CREATE TABLE IF NOT EXISTS reservas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+      usuario TEXT,
+      prazo TEXT,
+      observacao TEXT,
+      status TEXT NOT NULL DEFAULT 'aberta' CHECK (status IN ('aberta','retirada','cancelada')),
+      destino_sinal TEXT,
+      vale_id INTEGER,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      fechada_em TEXT
+    );
+    CREATE TABLE IF NOT EXISTS reserva_itens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reserva_id INTEGER NOT NULL REFERENCES reservas(id),
+      produto_id INTEGER NOT NULL REFERENCES produtos(id),
+      quantidade INTEGER NOT NULL,
+      preco INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS reserva_sinais (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reserva_id INTEGER NOT NULL REFERENCES reservas(id),
+      caixa_id INTEGER REFERENCES caixas(id),
+      operador TEXT,
+      valor INTEGER NOT NULL,
+      forma TEXT NOT NULL,
+      bandeira TEXT,
+      taxa INTEGER,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
     CREATE TABLE IF NOT EXISTS despesas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

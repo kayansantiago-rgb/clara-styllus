@@ -174,6 +174,11 @@ function fechamentoCaixa(r, cfg) {
     c.negrito().linha('Recebimentos do crediário').negrito(false);
     for (const f of r.recebimentos_crediario) c.par(`${nomeForma(f.forma)} (${f.quantidade})`, num(f.valor));
   }
+  if (r.sinais_reserva && r.sinais_reserva.length) {
+    c.separador();
+    c.negrito().linha('Sinais de reserva').negrito(false);
+    for (const f of r.sinais_reserva) c.par(`${nomeForma(f.forma)} (${f.quantidade})`, num(f.valor));
+  }
   c.separador();
   c.negrito().linha('Dinheiro na gaveta').negrito(false);
   c.par('Abertura', num(cx.valor_abertura));
@@ -182,6 +187,8 @@ function fechamentoCaixa(r, cfg) {
   }
   const dinCred = (r.recebimentos_crediario || []).find((f) => f.forma === 'dinheiro');
   if (dinCred) c.par('Crediário em dinheiro', '+' + num(dinCred.valor));
+  const dinSinal = (r.sinais_reserva || []).find((f) => f.forma === 'dinheiro');
+  if (dinSinal) c.par('Sinais em dinheiro', '+' + num(dinSinal.valor));
   c.negrito().par('Esperado', num(r.dinheiro_esperado)).negrito(false);
   if (cx.valor_informado != null) {
     c.par('Contado', num(cx.valor_informado));
@@ -270,6 +277,36 @@ function condicional(cd, cfg, via = '') {
   return finalizar(c, cfg);
 }
 
+function reserva(r, cfg, via = '') {
+  const c = novo(cfg);
+  cabecalho(c, cfg);
+  c.tamanho('grande').negrito().centro('RESERVA').negrito(false).tamanho('normal');
+  c.separador();
+  c.par(`Nº ${r.id}`, dataBr(r.criado_em));
+  c.linha(`Cliente: ${r.cliente_nome}`);
+  if (r.cliente_telefone) c.linha(`Telefone: ${r.cliente_telefone}`);
+  c.negrito().linha(`Buscar até: ${dataBr(r.prazo)}`).negrito(false);
+  c.separador();
+  for (const it of r.itens) {
+    c.linha(`${it.quantidade}x ${descItem(it)}`);
+    c.par(`   ${it.codigo}`, num(it.quantidade * it.preco));
+  }
+  c.separador('=');
+  c.par(`${r.pecas} peça(s)`, brl(r.total));
+  for (const s of r.sinais) c.par(`Sinal ${dataBr(s.criado_em).slice(0, 5)} (${nomeForma(s.forma)})`, '-' + num(s.valor));
+  c.tamanho('grande').negrito().par('FALTA', brl(r.falta)).negrito(false).tamanho('normal');
+  c.separador('=');
+  c.linha('As peças ficam separadas até a data acima. Se a reserva for cancelada, o sinal vira crédito na loja.');
+  if (via === 'Via da loja') {
+    c.pular(2);
+    c.centro('_'.repeat(Math.min(36, c.cols)));
+    c.centro(r.cliente_nome);
+  }
+  c.codigoBarras('R' + r.id);
+  if (via) c.centro(via);
+  return finalizar(c, cfg);
+}
+
 function teste(cfg) {
   const c = novo(cfg);
   cabecalho(c, cfg);
@@ -285,4 +322,4 @@ function teste(cfg) {
   return finalizar(c, cfg);
 }
 
-module.exports = { cupomVenda, cupomTroca, fechamentoCaixa, recebimentoCrediario, valeTroca, condicional, teste };
+module.exports = { cupomVenda, cupomTroca, fechamentoCaixa, recebimentoCrediario, valeTroca, condicional, reserva, teste };
