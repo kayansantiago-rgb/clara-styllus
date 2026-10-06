@@ -140,6 +140,43 @@ class Cupom {
     return this;
   }
 
+  /**
+   * Imagem monocromática (logo) com GS v 0. raster = { largura: bytes por linha, altura, dados: Buffer }
+   * (1 bit por ponto, 1 = preto, linha a linha).
+   */
+  imagem(raster) {
+    const { largura, altura, dados } = raster;
+    if (!largura || !altura || !dados || dados.length < largura * altura) return this;
+    this.alinhar('centro');
+    // Em blocos de até 255 linhas: algumas térmicas não aceitam imagens mais altas num só comando.
+    for (let y = 0; y < altura; y += 255) {
+      const h = Math.min(255, altura - y);
+      this.cmd(0x1d, 0x76, 0x30, 0x00, largura & 0xff, largura >> 8, h & 0xff, h >> 8);
+      this.partes.push(dados.subarray(y * largura, (y + h) * largura));
+    }
+    this.alinhar('esquerda');
+    this.linhas.push(centralizar('[ logo ]', this.cols));
+    return this;
+  }
+
+  /** QR Code nativo da impressora (GS ( k, modelo 2). tamanho = módulo de 1 a 16 pontos. */
+  qrcode(texto, tamanho = 6) {
+    const d = Buffer.from(semAcento(texto), 'latin1');
+    if (!d.length || d.length > 700) return this;
+    const n = d.length + 3;
+    this.alinhar('centro');
+    this.cmd(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // modelo 2
+    this.cmd(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, tamanho); // tamanho do módulo
+    this.cmd(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31); // correção de erro M
+    this.cmd(0x1d, 0x28, 0x6b, n & 0xff, n >> 8, 0x31, 0x50, 0x30);
+    this.partes.push(d);
+    this.cmd(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30); // imprime
+    this.escrever('\n');
+    this.alinhar('esquerda');
+    this.linhas.push(centralizar(`[ QR: ${texto} ]`, this.cols));
+    return this;
+  }
+
   gaveta() {
     return this.cmd(0x1b, 0x70, 0x00, 0x19, 0xfa);
   }

@@ -29,7 +29,21 @@ function novo(cfg) {
   });
 }
 
+/** Logo guardado nas configurações: { l: bytes por linha, h: altura, d: base64 } (feito no navegador). */
+function lerLogo(cfg) {
+  if (!cfg.cupom_logo) return null;
+  try {
+    const j = JSON.parse(cfg.cupom_logo);
+    const dados = Buffer.from(j.d, 'base64');
+    return j.l > 0 && j.h > 0 && dados.length >= j.l * j.h ? { largura: j.l, altura: j.h, dados } : null;
+  } catch {
+    return null;
+  }
+}
+
 function cabecalho(c, cfg) {
+  const logo = lerLogo(cfg);
+  if (logo) c.imagem(logo).pular(1);
   c.tamanho('grande').negrito().centro(cfg.loja_nome || 'Clara Styllus').negrito(false).tamanho('normal');
   if (cfg.loja_razao_social) c.centro(cfg.loja_razao_social);
   if (cfg.loja_cnpj) c.centro('CNPJ: ' + docBr(cfg.loja_cnpj) + (cfg.loja_ie ? '  IE: ' + cfg.loja_ie : ''));
@@ -37,7 +51,23 @@ function cabecalho(c, cfg) {
   if (cfg.loja_cidade) c.centro(cfg.loja_cidade);
   const contato = [cfg.loja_telefone, cfg.loja_instagram].filter(Boolean).join('  ');
   if (contato) c.centro(contato);
-  c.separador();
+  c.separador('=');
+}
+
+/** Mensagem final emoldurada e QR Code (Instagram / WhatsApp) no pé do cupom. */
+function rodape(c, cfg) {
+  if (cfg.cupom_mensagem) {
+    c.pular(1);
+    c.centro('* * *');
+    c.negrito().centro(cfg.cupom_mensagem).negrito(false);
+    c.centro('* * *');
+  }
+  if (cfg.cupom_qr_texto) {
+    c.pular(1);
+    if (cfg.cupom_qr_legenda) c.centro(cfg.cupom_qr_legenda);
+    c.qrcode(cfg.cupom_qr_texto, Number(cfg.cupom_largura_mm) === 58 ? 5 : 6);
+  }
+  c.pular(1);
 }
 
 function finalizar(c, cfg) {
@@ -74,8 +104,9 @@ function cupomVenda(venda, cfg, { via = '', abrirGaveta = false } = {}) {
   if (venda.desconto) c.par('Descontos', '-' + num(venda.desconto));
   const economia = venda.itens.reduce((a, it) =>
     a + (it.preco_anterior > it.preco_unitario ? (it.preco_anterior - it.preco_unitario) * it.quantidade : 0), 0) + (venda.desconto || 0);
+  c.separador('=');
   c.tamanho('grande').negrito().par('TOTAL', brl(venda.total)).negrito(false).tamanho('normal');
-  c.separador();
+  c.separador('=');
   for (const p of venda.pagamentos) {
     c.par(nomeForma(p.forma) + (p.parcelas > 1 ? ` ${p.parcelas}x` : ''), num(p.valor));
   }
@@ -96,8 +127,8 @@ function cupomVenda(venda, cfg, { via = '', abrirGaveta = false } = {}) {
   }
 
   if (venda.status === 'cancelada') c.separador().tamanho('grande').centro('CANCELADA').tamanho('normal');
-  c.separador();
-  if (cfg.cupom_mensagem) c.centro(cfg.cupom_mensagem);
+  c.separador('=');
+  rodape(c, cfg);
   c.codigoBarras('V' + venda.id);
   if (via) c.centro(via);
   return finalizar(c, cfg);
@@ -114,8 +145,8 @@ function cupomTroca(venda, cfg) {
     c.linha(`${it.quantidade}x ${descItem(it)}`);
     c.linha(`   Cód. ${it.codigo}`);
   }
-  c.separador();
-  if (cfg.cupom_mensagem) c.centro(cfg.cupom_mensagem);
+  c.separador('=');
+  rodape(c, cfg);
   c.codigoBarras('V' + venda.id);
   return finalizar(c, cfg);
 }
@@ -248,6 +279,7 @@ function teste(cfg) {
   c.separador('=');
   c.linha('1234567890'.repeat(Math.ceil(c.cols / 10)).slice(0, c.cols));
   c.tamanho('grande').centro('R$ 123,45').tamanho('normal');
+  rodape(c, cfg);
   c.codigoBarras('CLARA123');
   c.centro(`${c.cols} colunas`);
   return finalizar(c, cfg);

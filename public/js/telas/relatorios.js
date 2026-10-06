@@ -160,7 +160,7 @@ Telas.relatorios = (() => {
             <td class="r">${brl(l.bruto)}</td><td class="r txt-perigo">− ${brl(l.taxa)}</td><td class="r"><b>${brl(l.liquido)}</b></td></tr>`).join('')}</tbody>
           <tfoot><tr><th colspan="3">Total</th><th class="r">${brl(r.taxas.bruto)}</th><th class="r txt-perigo">− ${brl(r.taxas.total)}</th><th class="r">${brl(r.taxas.bruto - r.taxas.total)}</th></tr></tfoot>
         </table>
-        ${r.taxas.total ? '' : '<p class="dica">Cadastre as taxas da sua maquininha em <a href="#/config">Configurações → Taxas das maquininhas</a>.</p>'}`
+        ${r.taxas.total ? '' : '<p class="dica">Cadastre as taxas da sua maquininha em <a href="#/config?aba=vendas">Configurações → Vendas</a>.</p>'}`
     : '<div class="vazio">Nenhuma venda em cartão ou PIX no período.</div>'}
       </div>
       <div class="cards">

@@ -12,6 +12,8 @@ const FORMAS = { dinheiro: 'dinheiro', pix: 'PIX', debito: 'débito', credito: '
 
 // Nomes amigáveis das configurações mais comuns (as demais aparecem pelo nome técnico).
 const NOMES_CONFIG = {
+  cupom_logo: 'logo do cupom', cupom_logo_img: 'logo do cupom', cupom_qr_texto: 'QR Code do cupom', cupom_qr_legenda: 'frase do QR Code',
+  etiqueta_modelo: 'modelo da etiqueta', cupom_mensagem: 'mensagem do cupom',
   atualizacao_token: 'token de atualização', atualizacao_auto: 'atualização automática', boas_vindas_ok: 'assistente de boas-vindas',
   loja_nome: 'nome da loja', loja_cnpj: 'CNPJ', impressora_cupom: 'impressora de cupom', impressora_etiqueta: 'impressora de etiqueta',
   impressao_automatica: 'impressão automática', desconto_maximo: 'desconto máximo', meta_mensal: 'meta do mês',
@@ -53,7 +55,7 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
       depois: (c, r, a) => {
         const mudou = Object.keys(c.corpo).filter((k) => !k.startsWith('backup_ultimo') && String(c.corpo[k] ?? '') !== String(a?.[k] ?? ''));
         if (!mudou.length) return null;
-        const lista = mudou.map((k) => NOMES_CONFIG[k] || k.replace(/_/g, ' '));
+        const lista = [...new Set(mudou.map((k) => NOMES_CONFIG[k] || k.replace(/_/g, ' ')))];
         return { tipo: 'config', acao: 'Alterou configurações', descricao: lista.slice(0, 8).join(', ') + (lista.length > 8 ? ` e mais ${lista.length - 8}` : '') };
       },
     },

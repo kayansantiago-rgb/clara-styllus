@@ -46,11 +46,17 @@ const Impressao = (() => {
       .item-nome { word-break: break-word; }
       .codbar { height: 12mm; margin: 4px 6mm 0; }
       .peq { font-size: .85em; }
+      .logo { max-width: 60%; max-height: 22mm; margin-bottom: 2mm; }
+      hr.duplo { border-top: 3px double #000; }
+      .msg { font-weight: bold; margin: 6px 0; }
+      .msg::before, .msg::after { content: '* * *'; display: block; font-weight: normal; }
+      .qr-txt { margin-top: 4px; word-break: break-all; }
     `;
   }
 
   function cabecalho(cfg) {
     const l = [];
+    if (cfg.cupom_logo_img) l.push(`<div class="c"><img class="logo" src="${esc(cfg.cupom_logo_img)}" alt=""></div>`);
     l.push(`<div class="c loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>`);
     if (cfg.loja_razao_social) l.push(`<div class="c">${esc(cfg.loja_razao_social)}</div>`);
     if (cfg.loja_cnpj) l.push(`<div class="c">CNPJ: ${esc(cpf(cfg.loja_cnpj))}</div>`);
@@ -63,6 +69,11 @@ const Impressao = (() => {
   }
 
   const descItem = (it) => [it.nome, it.tamanho, it.cor].filter(Boolean).join(' ');
+
+  /** Mensagem final e o link do Instagram/WhatsApp (o QR Code sai só na impressão direta). */
+  const rodape = (cfg) => `
+      ${cfg.cupom_mensagem ? `<div class="c msg">${esc(cfg.cupom_mensagem)}</div>` : ''}
+      ${cfg.cupom_qr_texto ? `<div class="c qr-txt">${cfg.cupom_qr_legenda ? `${esc(cfg.cupom_qr_legenda)}<br>` : ''}<b>${esc(cfg.cupom_qr_texto)}</b></div>` : ''}`;
 
   function htmlCupom(venda, cfg, via) {
     const itens = venda.itens.map((it, i) => `
@@ -80,7 +91,7 @@ const Impressao = (() => {
 
     return `<div class="cupom">
       ${cabecalho(cfg)}
-      <hr>
+      <hr class="duplo">
       <div class="c b">COMPROVANTE DE VENDA</div>
       <div class="c peq">NÃO É DOCUMENTO FISCAL</div>
       <hr>
@@ -95,13 +106,14 @@ const Impressao = (() => {
       <div class="linha"><span>Qtd. de peças</span><span>${pecas}</span></div>
       <div class="linha"><span>Subtotal</span><span>${num(venda.subtotal)}</span></div>
       ${venda.desconto ? `<div class="linha"><span>Descontos</span><span>-${num(venda.desconto)}</span></div>` : ''}
+      <hr class="duplo">
       <div class="linha b g"><span>TOTAL</span><span>${brl(venda.total)}</span></div>
-      <hr>
+      <hr class="duplo">
       ${pagamentos}
       ${venda.troco ? `<div class="linha b"><span>Troco</span><span>${num(venda.troco)}</span></div>` : ''}
       ${venda.status === 'cancelada' ? '<hr><div class="c b g">*** VENDA CANCELADA ***</div>' : ''}
-      <hr>
-      ${cfg.cupom_mensagem ? `<div class="c">${esc(cfg.cupom_mensagem)}</div>` : ''}
+      <hr class="duplo">
+      ${rodape(cfg)}
       <div class="codbar">${CodigoBarras.svg('V' + venda.id)}</div>
       <div class="c peq">${via ? esc(via) : ''}</div>
     </div>`;
@@ -130,8 +142,8 @@ const Impressao = (() => {
       <div class="linha"><span>Venda nº ${venda.id}</span><span>${esc(dataHora(venda.criado_em))}</span></div>
       <hr>
       ${itens}
-      <hr>
-      ${cfg.cupom_mensagem ? `<div class="c">${esc(cfg.cupom_mensagem)}</div>` : ''}
+      <hr class="duplo">
+      ${rodape(cfg)}
       <div class="codbar">${CodigoBarras.svg('V' + venda.id)}</div>
     </div>`);
   }
@@ -178,8 +190,9 @@ const Impressao = (() => {
   function htmlEtiqueta(p, cfg) {
     const detalhes = [p.tamanho && `Tam ${p.tamanho}`, p.cor, p.referencia && `Ref ${p.referencia}`]
       .filter(Boolean).join(' · ');
-    return `<div class="etq">
-      ${cfg.etiqueta_mostrar_loja === '1' ? `<div class="loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>` : ''}
+    const modelo = cfg.etiqueta_modelo || 'padrao';
+    return `<div class="etq modelo-${esc(modelo)}">
+      ${cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples' ? `<div class="loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>` : ''}
       <div class="nome">${esc(p.nome)}</div>
       ${detalhes ? `<div class="det">${esc(detalhes)}</div>` : ''}
       ${cfg.etiqueta_mostrar_preco !== '1' ? ''
@@ -210,6 +223,10 @@ const Impressao = (() => {
       .de + .preco { font-size: ${Math.max(7, h * 0.3)}pt; }
       .barras { flex: 1; min-height: 5mm; width: 100%; padding: 0.5mm 1mm 0; }
       .cod { font-size: ${Math.max(5, h * 0.17)}pt; letter-spacing: 1px; line-height: 1.1; }
+      .modelo-preco .loja { font-size: ${Math.max(5, h * 0.17)}pt; }
+      .modelo-preco .nome { font-size: ${Math.max(5, h * 0.17)}pt; }
+      .modelo-preco .preco { font-size: ${Math.max(9, h * 0.52)}pt; }
+      .modelo-preco .de + .preco { font-size: ${Math.max(8, h * 0.42)}pt; }
     `;
     if (colunas === 1) {
       // Rolo de etiquetas (impressora térmica): uma etiqueta por página.

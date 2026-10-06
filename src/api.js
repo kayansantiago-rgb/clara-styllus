@@ -198,8 +198,17 @@ function criarApi(db, opcoes = {}) {
     return { ok: true };
   });
 
-  rota('GET', '/api/usuarios', () =>
-    planos(db.prepare('SELECT * FROM usuarios ORDER BY ativo DESC, nome').all()).map(publico), 'admin');
+  rota('GET', '/api/usuarios', () => {
+    // Vendas do mês corrente de cada pessoa (para os cartões da tela Vendedores).
+    const mes = new Map(db.prepare(
+      `SELECT usuario_id, COUNT(*) AS vendas, COALESCE(SUM(total), 0) AS total, MAX(criado_em) AS ultima
+         FROM vendas WHERE status = 'concluida' AND criado_em >= strftime('%Y-%m-01', 'now', 'localtime')
+        GROUP BY usuario_id`).all().map((r) => [r.usuario_id, plano(r)]));
+    return planos(db.prepare('SELECT * FROM usuarios ORDER BY ativo DESC, nome').all()).map((u) => {
+      const m = mes.get(u.id);
+      return { ...publico(u), vendas_mes: m ? m.vendas : 0, total_mes: m ? m.total : 0, ultima_venda: m ? m.ultima : null };
+    });
+  }, 'admin');
 
   rota('POST', '/api/usuarios', ({ corpo }) => {
     const u = lerUsuario(corpo, true);

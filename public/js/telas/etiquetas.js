@@ -21,32 +21,46 @@ Telas.etiquetas = (() => {
   async function abrir(el) {
     raiz = el;
     const cfg = await U.config();
+    const modelo = cfg.etiqueta_modelo || 'padrao';
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <h1>Etiquetas</h1>
-        <div class="ferramentas">
-          <input id="q" placeholder="Bipe o código ou digite o nome e Enter" autofocus>
-          <button class="btn" id="limpar">Limpar fila</button>
-          <button class="btn btn-primario" id="imprimir"><i data-icone="impressora"></i> Imprimir</button>
-        </div>
+        <div><h1>Etiquetas</h1><p class="subtitulo">Monte a fila, confira a etiqueta e imprima com código de barras.</p></div>
       </div>
-      <div class="duas-colunas">
-        <div class="cartao">
-          <table class="tabela">
-            <thead><tr><th>Produto</th><th class="r">Preço</th><th class="c">Qtd. etiquetas</th><th></th></tr></thead>
-            <tbody id="fila"></tbody>
-          </table>
-        </div>
-        <div class="cartao">
-          <h3>Pré-visualização</h3>
-          <p class="dica">Etiqueta de ${esc(cfg.etiqueta_largura_mm)} × ${esc(cfg.etiqueta_altura_mm)} mm,
-            ${cfg.impressao_etiqueta_modo === 'navegador'
-    ? (cfg.etiqueta_colunas === '1' ? 'rolo, pelo navegador' : `folha A4 com ${esc(cfg.etiqueta_colunas)} colunas, pelo navegador`)
-    : `rolo com ${esc(cfg.etiqueta_colunas)} coluna(s), direto na impressora (${cfg.impressao_etiqueta_modo.toUpperCase()}${cfg.impressora_etiqueta ? ' · ' + esc(cfg.impressora_etiqueta) : ' · escolha a impressora!'})`}.
-            Mude em <a href="#/config">Configurações</a>.</p>
-          <div id="previa" class="previa-etiqueta"></div>
-        </div>
+      <div class="et">
+        <section class="et-fila">
+          <div class="busca-ico et-busca">${Icone('codigo')}<input id="q" placeholder="Bipe o código ou digite o nome da peça e Enter" autofocus autocomplete="off"></div>
+          <div class="et-fila-cab"><b>Fila de impressão</b><button class="btn btn-fantasma btn-peq" id="limpar">${Icone('lixeira')} Limpar fila</button></div>
+          <div class="et-lista" id="fila"></div>
+          <button class="btn btn-primario btn-grande et-imprimir" id="imprimir">${Icone('impressora')} Imprimir</button>
+        </section>
+        <aside class="et-lado">
+          <div class="cartao">
+            <h3 class="titulo-ico">${Icone('etiqueta')} Como vai sair</h3>
+            <div id="previa" class="previa-etiqueta et-previa"></div>
+            <p class="dica">${esc(cfg.etiqueta_largura_mm)} × ${esc(cfg.etiqueta_altura_mm)} mm ·
+              ${cfg.impressao_etiqueta_modo === 'navegador'
+    ? (cfg.etiqueta_colunas === '1' ? 'rolo, pelo navegador' : `folha A4 com ${esc(cfg.etiqueta_colunas)} colunas`)
+    : `${esc(cfg.etiqueta_colunas)} coluna(s) · ${cfg.impressao_etiqueta_modo.toUpperCase()}${cfg.impressora_etiqueta ? ' · ' + esc(cfg.impressora_etiqueta) : ' · <b class="txt-perigo">escolha a impressora em Configurações</b>'}`}</p>
+            <div class="so-admin">
+              <h4>Modelo da etiqueta</h4>
+              <div class="et-modelos" id="modelos">
+                ${[['padrao', 'Padrão', 'Loja, nome, tamanho e preço'], ['preco', 'Preço em destaque', 'Preço bem grande'], ['simples', 'Simples', 'Sem o nome da loja']].map(([k, t, d]) =>
+    `<button class="et-modelo ${k === modelo ? 'sel' : ''}" data-modelo="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>`;
+    raiz.querySelector('#modelos').onclick = async (ev) => {
+      const b = ev.target.closest('[data-modelo]');
+      if (!b) return;
+      try {
+        await api('/api/config', { metodo: 'PUT', corpo: { etiqueta_modelo: b.dataset.modelo } });
+        await U.config(true);
+        raiz.querySelectorAll('.et-modelo').forEach((x) => x.classList.toggle('sel', x === b));
+        desenhar();
+      } catch (e) { erro(e); }
+    };
     raiz.querySelector('#q').addEventListener('keydown', async (ev) => {
       if (ev.key !== 'Enter') return;
       const q = ev.target.value.trim();
@@ -82,9 +96,18 @@ Telas.etiquetas = (() => {
       atualizarBotao();
     });
     raiz.querySelector('#fila').addEventListener('click', (ev) => {
+      const f = fila();
+      const mv = ev.target.closest('[data-mais],[data-menos]');
+      if (mv) {
+        const i = Number(mv.dataset.mais ?? mv.dataset.menos);
+        f[i].quantidade = Math.max(0, f[i].quantidade + (mv.dataset.mais !== undefined ? 1 : -1));
+        gravar(f);
+        raiz.querySelector(`input[data-i="${i}"]`).value = f[i].quantidade;
+        atualizarBotao();
+        return;
+      }
       const b = ev.target.closest('[data-rm]');
       if (!b) return;
-      const f = fila();
       f.splice(Number(b.dataset.rm), 1);
       gravar(f);
       desenhar();
@@ -95,13 +118,15 @@ Telas.etiquetas = (() => {
   async function desenhar() {
     const f = fila();
     raiz.querySelector('#fila').innerHTML = f.map((x, i) => `
-      <tr>
-        <td><b>${esc(x.produto.nome)}</b> ${esc([x.produto.tamanho, x.produto.cor].filter(Boolean).join(' · '))}
-          <br><small>${esc(x.produto.codigo)}</small></td>
-        <td class="r">${brl(x.produto.preco_venda)}</td>
-        <td class="c"><input type="number" min="0" class="qtd-input" data-i="${i}" value="${x.quantidade}"></td>
-        <td><button class="mini perigo" data-rm="${i}">×</button></td>
-      </tr>`).join('') || '<tr><td colspan="4" class="vazio">Fila vazia. Bipe produtos aqui ou use <i data-icone="etiqueta"></i> na tela de Produtos.</td></tr>';
+      <div class="et-item">
+        ${U.miniatura(x.produto, 'pr-foto')}
+        <div class="p4-item-txt"><b>${esc(x.produto.nome)}</b>
+          <span class="p4-tags">${x.produto.tamanho ? `<span class="p4-tag">Tam ${esc(x.produto.tamanho)}</span>` : ''}${x.produto.cor ? `<span class="p4-tag">${esc(x.produto.cor)}</span>` : ''}<small>${brl(x.produto.preco_venda)}</small></span></div>
+        <span class="qtd-ctrl p4-qtd"><button class="mini" data-menos="${i}">${Icone('menos')}</button>
+          <input type="number" min="0" class="et-qtd" data-i="${i}" value="${x.quantidade}"><button class="mini" data-mais="${i}">${Icone('mais')}</button></span>
+        <button class="p4-remover" data-rm="${i}" title="Tirar da fila">${Icone('lixeira')}</button>
+      </div>`).join('') || `<div class="p4-vazio"><div class="pdv-vazio-ico">${Icone('etiqueta')}</div><b>Fila vazia</b>
+        <p>Bipe a peça acima, ou use o botão de etiqueta na tela de Produtos.<br>Ao cadastrar um produto, o sistema também oferece mandar as etiquetas para cá.</p></div>`;
     atualizarBotao();
 
     const cfg = await U.config();
@@ -116,7 +141,9 @@ Telas.etiquetas = (() => {
 
   function atualizarBotao() {
     const total = fila().reduce((a, x) => a + x.quantidade, 0);
-    raiz.querySelector('#imprimir').innerHTML = `<i data-icone="impressora"></i> Imprimir ${total} etiqueta${total === 1 ? '' : 's'}`;
+    const btn = raiz.querySelector('#imprimir');
+    btn.innerHTML = `${Icone('impressora')} Imprimir ${total} etiqueta${total === 1 ? '' : 's'}`;
+    btn.disabled = !total;
   }
 
   async function imprimir() {

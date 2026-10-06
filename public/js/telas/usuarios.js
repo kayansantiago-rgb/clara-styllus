@@ -4,26 +4,25 @@ Telas.usuarios = (() => {
   let raiz;
   let lista = [];
 
+  const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+
   async function abrir(el) {
     raiz = el;
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <h1>Vendedores</h1>
-        <div class="ferramentas"><button class="btn btn-primario" id="novo">+ Novo vendedor(a)</button></div>
+        <div><h1>Vendedores</h1><p class="dica">Quem usa o sistema e quanto cada pessoa vendeu este mês.</p></div>
+        <div class="ferramentas"><button class="btn btn-primario" id="novo">${Icone('mais')} Novo vendedor(a)</button></div>
       </div>
-      <p class="dica">Cada pessoa entra com seu usuário e senha; as vendas ficam registradas no nome de quem estava logado.
-        <b>Vendedor(a)</b> vende, abre/fecha caixa, consulta vendas e clientes.
-        <b>Administrador(a)</b> também cadastra produtos, cancela vendas, vê relatórios e muda configurações.</p>
-      <div class="cartao">
-        <table class="tabela">
-          <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Situação</th></tr></thead>
-          <tbody id="lista"></tbody>
-        </table>
+      <div id="ranking"></div>
+      <div class="us-grade" id="lista"></div>
+      <div class="us-ajuda">
+        <div>${Icone('sacola')}<span><b>Vendedor(a)</b> vende, abre e fecha o caixa, consulta vendas e clientes.</span></div>
+        <div>${Icone('chave')}<span><b>Administrador(a)</b> também cadastra produtos, cancela vendas, vê relatórios e muda configurações.</span></div>
       </div>`;
     raiz.querySelector('#novo').onclick = () => formulario(null);
     raiz.querySelector('#lista').onclick = (ev) => {
-      const tr = ev.target.closest('[data-i]');
-      if (tr) formulario(lista[Number(tr.dataset.i)]);
+      const c = ev.target.closest('[data-i]');
+      if (c) formulario(lista[Number(c.dataset.i)]);
     };
     await carregar();
   }
@@ -33,12 +32,41 @@ Telas.usuarios = (() => {
     try {
       lista = await api('/api/usuarios');
     } catch (e) { return erro(e); }
-    raiz.querySelector('#lista').innerHTML = lista.map((u, i) => `
-      <tr class="clicavel ${u.ativo ? '' : 'inativo'}" data-i="${i}">
-        <td><b>${esc(u.nome)}</b></td><td>${esc(u.login)}</td>
-        <td>${u.perfil === 'admin' ? 'Administrador(a)' : 'Vendedor(a)'}</td>
-        <td>${u.ativo ? '<span class="selo ok">Ativo</span>' : '<span class="selo perigo">Desativado</span>'}</td>
-      </tr>`).join('');
+    const maior = Math.max(1, ...lista.map((u) => u.total_mes));
+    const totalLoja = lista.reduce((a, u) => a + u.total_mes, 0);
+    const ativos = lista.filter((u) => u.ativo);
+    const top = [...ativos].sort((a, b) => b.total_mes - a.total_mes)[0];
+    const mesTxt = new Date().toLocaleDateString('pt-BR', { month: 'long' });
+    raiz.querySelector('#ranking').innerHTML = `
+      <div class="vd-kpis">
+        <div class="vd-kpi destaque"><span>${Icone('carteira')} Vendido em ${mesTxt}</span><b>${U.brl(totalLoja)}</b><small>somando toda a equipe</small></div>
+        <div class="vd-kpi"><span>${Icone('clientes')} Pessoas ativas</span><b>${ativos.length}</b><small>${lista.length - ativos.length} desativada(s)</small></div>
+        <div class="vd-kpi"><span>${Icone('estrela')} Destaque do mês</span><b>${top && top.total_mes ? esc(top.nome.split(' ')[0]) : '—'}</b>
+          <small>${top && top.total_mes ? `${U.brl(top.total_mes)} em ${top.vendas_mes} venda(s)` : 'nenhuma venda ainda'}</small></div>
+      </div>`;
+    raiz.querySelector('#lista').innerHTML = lista.map((u, i) => {
+      const pct = Math.round((u.total_mes / maior) * 100);
+      const eu = U.sessao.usuario.id === u.id;
+      return `
+      <button type="button" class="us-card ${u.ativo ? '' : 'inativo'} ${top && top.id === u.id && u.total_mes ? 'top' : ''}" data-i="${i}">
+        <div class="us-cab">
+          <span class="avatar us-avatar">${esc(iniciais(u.nome))}</span>
+          <span class="us-nome"><b>${esc(u.nome)}${eu ? ' <small>(você)</small>' : ''}</b><small>@${esc(u.login)}</small></span>
+          ${top && top.id === u.id && u.total_mes ? `<span class="us-coroa" title="Quem mais vendeu no mês">${Icone('estrela')}</span>` : ''}
+        </div>
+        <div class="us-selos">
+          <span class="us-perfil ${u.perfil}">${u.perfil === 'admin' ? `${Icone('chave')} Administrador(a)` : `${Icone('sacola')} Vendedor(a)`}</span>
+          <span class="us-situacao ${u.ativo ? 'ok' : 'off'}"><i></i>${u.ativo ? 'Ativo' : 'Desativado'}</span>
+        </div>
+        <div class="us-mes">
+          <div><small>Vendas no mês</small><b>${u.vendas_mes}</b></div>
+          <div><small>Total no mês</small><b>${U.brl(u.total_mes)}</b></div>
+        </div>
+        <div class="us-barra"><i style="width:${pct}%"></i></div>
+        <div class="us-rodape"><span>${u.ultima_venda ? `última venda ${U.dataHora(u.ultima_venda)}` : 'sem vendas este mês'}</span>
+          <span class="us-editar">${Icone('lapis')} Editar</span></div>
+      </button>`;
+    }).join('');
   }
 
   function formulario(u) {

@@ -36,6 +36,135 @@ Telas.config = (() => {
     return dados;
   }
 
+  /**
+   * Logo do cupom: a imagem escolhida vira preto e branco (1 bit) do tamanho que a térmica imprime.
+   * Guarda os bits para a impressão direta (cupom_logo) e um PNG igual para o navegador (cupom_logo_img).
+   */
+  function ligarLogo(raiz, form, mudou) {
+    const caixa = raiz.querySelector('#logo-caixa');
+    const tom = raiz.querySelector('#logo-tom');
+    let imagem = null;
+    const mostrar = () => {
+      const src = form.elements.cupom_logo_img.value;
+      caixa.innerHTML = src ? `<img src="${esc(src)}" alt="Logo">` : `<span>${Icone('imagem')}<small>Sem logo</small></span>`;
+      raiz.querySelector('#logo-tirar').hidden = !src;
+      tom.closest('label').hidden = !imagem;
+    };
+    /** Recorta as bordas em branco para o logo sair do maior tamanho possível. */
+    const recorte = (limite) => {
+      const fator = Math.min(1, 1200 / Math.max(imagem.width, imagem.height));
+      const w = Math.round(imagem.width * fator);
+      const h = Math.round(imagem.height * fator);
+      const cv = document.createElement('canvas');
+      cv.width = w;
+      cv.height = h;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(imagem, 0, 0, w, h);
+      const d = ctx.getImageData(0, 0, w, h).data;
+      let x0 = w; let y0 = h; let x1 = -1; let y1 = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2] < limite) {
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            if (y > y1) y1 = y;
+          }
+        }
+      }
+      if (x1 < 0) return { sx: 0, sy: 0, sw: imagem.width, sh: imagem.height };
+      const m = 4;
+      x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+      return { sx: x0 / fator, sy: y0 / fator, sw: (x1 - x0 + 1) / fator, sh: (y1 - y0 + 1) / fator };
+    };
+    const converter = () => {
+      const r = recorte(Number(tom.value));
+      // 320 pontos de largura (4 cm, cabe no papel de 58 e 80 mm) e até 160 de altura, múltiplo de 8.
+      let lg = 320;
+      let alt = Math.round((r.sh * lg) / r.sw);
+      if (alt > 160) { lg = (r.sw * 160) / r.sh; alt = 160; }
+      lg = Math.max(8, Math.floor(lg / 8) * 8);
+      alt = Math.max(1, alt);
+      const cv = document.createElement('canvas');
+      cv.width = lg;
+      cv.height = alt;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, lg, alt);
+      ctx.drawImage(imagem, r.sx, r.sy, r.sw, r.sh, 0, 0, lg, alt);
+      const px = ctx.getImageData(0, 0, lg, alt);
+      const bytesLinha = lg / 8;
+      const bits = new Uint8Array(bytesLinha * alt);
+      const limite = Number(tom.value);
+      for (let y = 0; y < alt; y++) {
+        for (let x = 0; x < lg; x++) {
+          const i = (y * lg + x) * 4;
+          const lum = 0.299 * px.data[i] + 0.587 * px.data[i + 1] + 0.114 * px.data[i + 2];
+          const preto = lum < limite;
+          if (preto) bits[y * bytesLinha + (x >> 3)] |= 0x80 >> (x & 7);
+          px.data[i] = px.data[i + 1] = px.data[i + 2] = preto ? 0 : 255;
+          px.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(px, 0, 0);
+      let bin = '';
+      bits.forEach((b) => { bin += String.fromCharCode(b); });
+      form.elements.cupom_logo.value = JSON.stringify({ l: bytesLinha, h: alt, d: btoa(bin) });
+      form.elements.cupom_logo_img.value = cv.toDataURL('image/png');
+      mostrar();
+      mudou();
+    };
+    raiz.querySelector('#logo-arq').onchange = (ev) => {
+      const arq = ev.target.files[0];
+      if (!arq) return;
+      const url = URL.createObjectURL(arq);
+      const img = new Image();
+      img.onload = () => { imagem = img; converter(); URL.revokeObjectURL(url); };
+      img.onerror = () => aviso('Não consegui abrir essa imagem.', 'erro');
+      img.src = url;
+      ev.target.value = '';
+    };
+    tom.oninput = U.debounce(() => { if (imagem) converter(); }, 80);
+    raiz.querySelector('#logo-tirar').onclick = () => {
+      imagem = null;
+      form.elements.cupom_logo.value = '';
+      form.elements.cupom_logo_img.value = '';
+      mostrar();
+      mudou();
+    };
+    mostrar();
+  }
+
+  /** Pré-visualização do cupom com o que está na tela (antes de salvar). */
+  function desenharPrevia(raiz, form) {
+    const el = raiz.querySelector('#previa-cupom');
+    if (!el) return;
+    const v = (n) => (form.elements[n] ? form.elements[n].value : '');
+    const linha = (a, b, cls = '') => `<div class="cp-l ${cls}"><span>${a}</span><span>${b}</span></div>`;
+    el.innerHTML = `
+      ${v('cupom_logo_img') ? `<img class="cp-logo" src="${esc(v('cupom_logo_img'))}" alt="">` : ''}
+      <div class="cp-loja">${esc(v('loja_nome') || 'Clara Styllus')}</div>
+      ${v('loja_endereco') ? `<div class="cp-c">${esc(v('loja_endereco'))}</div>` : ''}
+      ${[v('loja_telefone'), v('loja_instagram')].filter(Boolean).length ? `<div class="cp-c">${esc([v('loja_telefone'), v('loja_instagram')].filter(Boolean).join('  '))}</div>` : ''}
+      <div class="cp-sep duplo"></div>
+      <div class="cp-c cp-b">COMPROVANTE DE VENDA</div>
+      <div class="cp-sep"></div>
+      <div>01 Vestido midi floral M</div>${linha('&nbsp;&nbsp;&nbsp;1 x 189,90', '189,90')}
+      <div>02 Blusa de linho P</div>${linha('&nbsp;&nbsp;&nbsp;1 x 99,90', '99,90')}
+      <div class="cp-sep duplo"></div>
+      ${linha('TOTAL', 'R$ 289,80', 'cp-total')}
+      <div class="cp-sep duplo"></div>
+      ${linha('PIX', '289,80')}
+      <div class="cp-sep duplo"></div>
+      ${v('cupom_mensagem') ? `<div class="cp-c cp-estrelas">* * *</div><div class="cp-c cp-b">${esc(v('cupom_mensagem'))}</div><div class="cp-c cp-estrelas">* * *</div>` : ''}
+      ${v('cupom_qr_texto') ? `${v('cupom_qr_legenda') ? `<div class="cp-c">${esc(v('cupom_qr_legenda'))}</div>` : ''}
+        <div class="cp-qr" title="${esc(v('cupom_qr_texto'))}">${Icone('codigo')}<small>QR Code</small></div>` : ''}
+      <div class="cp-barras"></div>`;
+  }
+
   async function abrir(raiz) {
     const c = await U.config(true);
     const campo = (nome, rotulo, extra = '') =>
@@ -45,11 +174,24 @@ Telas.config = (() => {
     const sel = (nome, rotulo, opcoes) => `<label>${rotulo}<select name="${nome}">${opcoes.map(([v, t]) =>
       `<option value="${v}" ${c[nome] === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`;
 
+    const ABAS = [
+      ['loja', 'loja', 'Loja'], ['cupom', 'recibo', 'Cupom'], ['impressoras', 'impressora', 'Impressoras'],
+      ['vendas', 'sacola', 'Vendas'], ['crediario', 'caderno', 'Crediário'], ['backup', 'nuvem', 'Backup'],
+      ['atualizacao', 'atualizar', 'Atualização'],
+    ];
+    const pedida = (/[?&]aba=([\w-]+)/.exec(location.hash) || [])[1];
+    let aba = ABAS.some((x) => x[0] === pedida) ? pedida : U.local.ler('config_aba', 'loja');
+    if (!ABAS.some((x) => x[0] === aba)) aba = 'loja';
+    const secao = (id, conteudo) => `<section class="cfg-aba" data-aba="${id}" ${id === aba ? '' : 'hidden'}>${conteudo}</section>`;
+
     raiz.innerHTML = `
-      <div class="cabecalho-tela"><h1>Configurações</h1></div>
+      <div class="cabecalho-tela"><div><h1>Configurações</h1><p class="dica">Tudo o que muda o jeito do sistema funcionar na sua loja.</p></div></div>
+      <nav class="cfg-abas" role="tablist">${ABAS.map(([id, ic, nome]) =>
+    `<button type="button" role="tab" class="cfg-aba-btn ${id === aba ? 'sel' : ''}" data-ir="${id}">${Icone(ic)}<span>${nome}</span></button>`).join('')}</nav>
       <form id="f-cfg">
+        ${secao('loja', `
         <div class="cartao">
-          <h3>Dados da loja (aparecem no cupom)</h3>
+          <h3 class="titulo-ico">${Icone('loja')} Dados da loja <small>aparecem no cupom</small></h3>
           <div class="grade-form">
             ${campo('loja_nome', 'Nome fantasia')}
             ${campo('loja_razao_social', 'Razão social')}
@@ -60,10 +202,42 @@ Telas.config = (() => {
             ${campo('loja_telefone', 'Telefone / WhatsApp')}
             ${campo('loja_instagram', 'Instagram')}
           </div>
-        </div>
+        </div>`)}
+        ${secao('cupom', `
+        <div class="cfg-cupom">
+          <div class="cartao">
+            <h3 class="titulo-ico">${Icone('imagem')} Logo da loja</h3>
+            <p class="dica">Sai no topo do cupom, em preto e branco. Prefira o logo em fundo branco ou transparente.</p>
+            <input type="hidden" name="cupom_logo" value="${esc(c.cupom_logo)}">
+            <input type="hidden" name="cupom_logo_img" value="${esc(c.cupom_logo_img)}">
+            <div class="cfg-logo">
+              <div class="cfg-logo-caixa" id="logo-caixa"></div>
+              <div class="cfg-logo-acoes">
+                <label class="btn">${Icone('camera')} Escolher imagem<input type="file" id="logo-arq" accept="image/*" hidden></label>
+                <label class="cfg-tom">Tom <input type="range" id="logo-tom" min="60" max="230" value="150"></label>
+                <button type="button" class="btn btn-peq" id="logo-tirar">${Icone('lixeira')} Tirar logo</button>
+              </div>
+            </div>
+          </div>
+          <div class="cartao">
+            <h3 class="titulo-ico">${Icone('recibo')} Final do cupom</h3>
+            <div class="grade-form">
+              <label class="col2">Mensagem final<textarea name="cupom_mensagem" rows="2">${esc(c.cupom_mensagem)}</textarea></label>
+              <label class="col2">QR Code — link do Instagram ou WhatsApp <small>vazio = sem QR Code</small>
+                <input name="cupom_qr_texto" value="${esc(c.cupom_qr_texto)}" placeholder="https://instagram.com/clarastyllus  ou  https://wa.me/5563999999999"></label>
+              <label class="col2">Frase acima do QR Code<input name="cupom_qr_legenda" value="${esc(c.cupom_qr_legenda)}" placeholder="Siga a gente no Instagram"></label>
+            </div>
+            <div class="acoes acoes-esq"><button type="button" class="btn" data-teste="cupom">${Icone('impressora')} Imprimir teste de cupom</button></div>
+          </div>
+          <div class="cfg-previa-col">
+            <small class="cfg-previa-tit">Como fica o cupom</small>
+            <div class="cfg-previa" id="previa-cupom"></div>
+          </div>
+        </div>`)}
+        ${secao('impressoras', `
         <div class="cartao">
-          <h3><i data-icone="recibo"></i> Impressora de cupom</h3>
-          <p class="dica"><b>Impressão direta</b> manda o cupom pronto para a térmica (Elgin i7/i8/i9, Epson TM-T20,
+          <h3 class="titulo-ico">${Icone('recibo')} Impressora de cupom</h3>
+          <p class="dica"><b>Impressão direta</b> manda o cupom pronto para a térmica (POS-80 genérica, Elgin i7/i8/i9, Epson TM-T20,
             Bematech MP-4200 em modo ESC/POS, Daruma, Tanca, Knup…): sai sempre do mesmo jeito, sem margens nem
             janela de impressão, e ainda abre a gaveta de dinheiro.</p>
           <div class="grade-form">
@@ -77,19 +251,19 @@ Telas.config = (() => {
             ${sel('cupom_colunas', 'Letras por linha', [['48', '48 (80 mm, padrão)'], ['42', '42 (80 mm, letra maior)'], ['32', '32 (58 mm)']])}
             ${sel('cupom_acentos', 'Acentos', [['cp850', 'Com acentos (página 850)'], ['sem', 'Sem acentos (se sair caractere estranho)']])}
             ${sel('cupom_vias', 'Vias', [['1', '1 via'], ['2', '2 vias (cliente + loja)']])}
-            <label class="col2">Mensagem no rodapé<textarea name="cupom_mensagem" rows="2">${esc(c.cupom_mensagem)}</textarea></label>
             ${check('impressao_automatica', 'Imprimir o cupom automaticamente ao concluir a venda')}
             ${check('cupom_corte', 'Cortar o papel no final (guilhotina)')}
             ${check('gaveta_abrir', 'Abrir a gaveta de dinheiro em venda com dinheiro')}
-            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="cupom"><i data-icone="impressora"></i> Imprimir teste de cupom</button></div>
+            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="cupom">${Icone('impressora')} Imprimir teste de cupom</button></div>
           </div>
         </div>
         <div class="cartao">
-          <h3><i data-icone="etiqueta"></i> Impressora de etiquetas</h3>
-          <p class="dica"><b>ZPL</b>: Zebra, Elgin L42 Pro, Argox e a maioria das atuais. <b>EPL</b>: Zebra LP/TLP antigas,
-            Elgin L42 e Argox em modo PPLB. <b>Navegador</b>: só para etiquetas em folha A4 de impressora comum.</p>
+          <h3 class="titulo-ico">${Icone('etiqueta')} Impressora de etiquetas</h3>
+          <p class="dica"><b>TSPL</b>: etiquetadoras genéricas, TSC, Gprinter, Xprinter. <b>ZPL</b>: Zebra, Elgin L42 Pro, Argox.
+            <b>EPL</b>: Zebra LP/TLP antigas, Elgin L42 e Argox em modo PPLB. <b>Navegador</b>: etiquetas em folha A4.
+            O modelo da etiqueta (preço grande, simples…) é escolhido na tela <a href="#/etiquetas">Etiquetas</a>.</p>
           <div class="grade-form tres">
-            ${sel('impressao_etiqueta_modo', 'Linguagem', [['zpl', 'ZPL (recomendado)'], ['epl', 'EPL / PPLB'], ['tspl', 'TSPL (etiquetadoras genéricas, TSC, Gprinter, Xprinter)'], ['navegador', 'Folha A4 pelo navegador']])}
+            ${sel('impressao_etiqueta_modo', 'Linguagem', [['zpl', 'ZPL'], ['epl', 'EPL / PPLB'], ['tspl', 'TSPL (genéricas, TSC, Gprinter, Xprinter)'], ['navegador', 'Folha A4 pelo navegador']])}
             <label class="col2">Impressora
               <span class="campo-com-botao">
                 <select name="impressora_etiqueta" data-impressoras>${opcaoAtual(c.impressora_etiqueta)}</select>
@@ -104,11 +278,25 @@ Telas.config = (() => {
             ${campo('etiqueta_gap_mm', 'Espaço entre etiquetas no rolo (mm)', 'type="number" min="0" max="20" step="0.5"')}
             ${check('etiqueta_mostrar_loja', 'Mostrar nome da loja')}
             ${check('etiqueta_mostrar_preco', 'Mostrar preço')}
-            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="etiqueta"><i data-icone="etiqueta"></i> Imprimir etiqueta de teste</button></div>
+            <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="etiqueta">${Icone('etiqueta')} Imprimir etiqueta de teste</button></div>
+          </div>
+        </div>`)}
+        ${secao('vendas', `
+        <div class="cartao">
+          <h3 class="titulo-ico">${Icone('sacola')} Regras de venda</h3>
+          <div class="grade-form">
+            <label>Markup padrão (preço sugerido) <small>ex.: 2,2 = custo × 2,2</small>
+              <input name="markup_padrao" inputmode="decimal" value="${esc(c.markup_padrao)}" placeholder="vazio = não sugerir"></label>
+            ${sel('arredondar_preco', 'Arredondar preços para', [['90', 'terminar em ,90'], ['99', 'terminar em ,99'], ['00', 'terminar em ,00 (redondo)'], ['', 'não arredondar']])}
+            <label>Meta de vendas do mês (R$) <small>aparece no painel Início</small>
+              <input name="meta_mensal" inputmode="decimal" value="${c.meta_mensal ? U.num(c.meta_mensal) : ''}"></label>
+            ${campo('desconto_maximo_pct', 'Desconto máximo por venda (%)', 'type="number" min="0" max="100"')}
+            ${check('som_bipe', 'Tocar som ao bipar produto e ao concluir a venda')}
+            ${check('estoque_negativo', 'Permitir vender produto sem estoque')}
           </div>
         </div>
         <div class="cartao">
-          <h3><i data-icone="cartao"></i> Taxas das maquininhas</h3>
+          <h3 class="titulo-ico">${Icone('cartao')} Taxas das maquininhas</h3>
           <p class="dica">Coloque a porcentagem que a maquininha (Stone, Cielo, PagSeguro, Mercado Pago…) desconta.
             O sistema grava a taxa em cada venda e mostra nos Relatórios quanto realmente cai na conta.
             Deixe vazio o que não tem taxa.</p>
@@ -119,9 +307,10 @@ Telas.config = (() => {
             ${campo('taxa_credito_7a12', 'Crédito 7 a 12x (%)', 'inputmode="decimal" placeholder="ex.: 5,99"')}
             ${campo('taxa_pix', 'PIX (%)', 'inputmode="decimal" placeholder="geralmente 0"')}
           </div>
-        </div>
+        </div>`)}
+        ${secao('crediario', `
         <div class="cartao">
-          <h3><i data-icone="caderno"></i> Crediário</h3>
+          <h3 class="titulo-ico">${Icone('caderno')} Crediário</h3>
           <div class="grade-form tres">
             ${campo('crediario_max_parcelas', 'Máximo de parcelas', 'type="number" min="1" max="24"')}
             ${campo('crediario_dias_primeira', '1º vencimento (dias após a compra)', 'type="number" min="1" max="120"')}
@@ -129,9 +318,18 @@ Telas.config = (() => {
               <input name="crediario_limite_padrao" data-dinheiro inputmode="decimal" value="${c.crediario_limite_padrao ? U.num(c.crediario_limite_padrao) : ''}"></label>
             ${check('crediario_bloquear_atraso', 'Não vender fiado para quem tem parcela atrasada')}
           </div>
+        </div>`)}
+        ${secao('backup', `
+        <div class="cartao">
+          <h3 class="titulo-ico">${Icone('nuvem')} Situação dos backups</h3>
+          <div id="backup-status" class="backup-status">Carregando…</div>
+          <div class="acoes acoes-esq">
+            <button type="button" class="btn btn-primario" id="backup-agora">${Icone('nuvem')} Fazer backup agora</button>
+            <a class="btn" href="/api/backup" download>${Icone('nuvem')} Baixar uma cópia neste computador</a>
+          </div>
         </div>
         <div class="cartao">
-          <h3><i data-icone="nuvem"></i> Backup automático</h3>
+          <h3 class="titulo-ico">${Icone('ajustes')} Backup automático</h3>
           <p class="dica">Uma cópia dos dados é feita <b>ao fechar o caixa</b> e, se o computador ficar ligado, <b>uma vez por dia</b>.
             Para se proteger de defeito no computador, use a segunda pasta: um <b>pendrive</b> ou uma pasta do
             <b>Google Drive / OneDrive</b> que sincroniza sozinha com a internet.</p>
@@ -143,22 +341,10 @@ Telas.config = (() => {
             <label class="col2">Segunda cópia (pendrive ou Google Drive) <small>opcional</small>
               <input name="backup_pasta_extra" value="${esc(c.backup_pasta_extra)}" placeholder="ex.: E:\\Backup Clara Styllus  ou  C:\\Users\\Clara\\Google Drive\\Backup PDV"></label>
           </div>
-        </div>
-        <div class="cartao">
-          <h3>Regras de venda</h3>
-          <div class="grade-form">
-            <label>Markup padrão (preço sugerido) <small>ex.: 2,2 = custo × 2,2</small>
-              <input name="markup_padrao" inputmode="decimal" value="${esc(c.markup_padrao)}" placeholder="vazio = não sugerir"></label>
-            ${sel('arredondar_preco', 'Arredondar preços para', [['90', 'terminar em ,90'], ['99', 'terminar em ,99'], ['00', 'terminar em ,00 (redondo)'], ['', 'não arredondar']])}
-            <label>Meta de vendas do mês (R$) <small>aparece no painel Início</small>
-              <input name="meta_mensal" inputmode="decimal" value="${c.meta_mensal ? U.num(c.meta_mensal) : ''}"></label>
-            ${check('som_bipe', 'Tocar som ao bipar produto e ao concluir a venda')}
-            ${campo('desconto_maximo_pct', 'Desconto máximo por venda (%)', 'type="number" min="0" max="100"')}
-            ${check('estoque_negativo', 'Permitir vender produto sem estoque')}
-          </div>
-        </div>
+        </div>`)}
+        ${secao('atualizacao', `
         <div class="cartao" id="atualizacoes">
-          <h3><i data-icone="atualizar"></i> Atualizações do sistema</h3>
+          <h3 class="titulo-ico">${Icone('atualizar')} Atualizações do sistema</h3>
           <div id="at-status">Carregando…</div>
           <details class="at-avancado"><summary>Atualização automática e acesso</summary>
             <div class="grade-form">
@@ -169,19 +355,27 @@ Telas.config = (() => {
                 <input name="atualizacao_url" value="${esc(c.atualizacao_url)}" placeholder="https://api.github.com/repos/…/releases/latest"></label>
             </div>
           </details>
-        </div>
-        <div class="acoes"><button class="btn btn-primario btn-grande">Salvar configurações</button></div>
-      </form>
-      <div class="cartao">
-        <h3><i data-icone="nuvem"></i> Backups</h3>
-        <div id="backup-status" class="backup-status">Carregando…</div>
-        <div class="acoes acoes-esq">
-          <button type="button" class="btn btn-primario" id="backup-agora"><i data-icone="nuvem"></i> Fazer backup agora</button>
-          <a class="btn" href="/api/backup" download><i data-icone="nuvem"></i> Baixar uma cópia neste computador</a>
-        </div>
-      </div>`;
+        </div>`)}
+        <div class="cfg-salvar"><span id="cfg-sujo" hidden>${Icone('alerta')} Há alterações não salvas</span>
+          <button class="btn btn-primario btn-grande">${Icone('check')} Salvar configurações</button></div>
+      </form>`;
+
+    raiz.querySelector('.cfg-abas').onclick = (ev) => {
+      const b = ev.target.closest('[data-ir]');
+      if (!b) return;
+      aba = b.dataset.ir;
+      U.local.gravar('config_aba', aba);
+      raiz.querySelectorAll('.cfg-aba-btn').forEach((x) => x.classList.toggle('sel', x === b));
+      raiz.querySelectorAll('.cfg-aba').forEach((x) => { x.hidden = x.dataset.aba !== aba; });
+    };
 
     const form = raiz.querySelector('#f-cfg');
+    const sujo = raiz.querySelector('#cfg-sujo');
+    form.addEventListener('input', () => { sujo.hidden = false; });
+    form.addEventListener('change', () => { sujo.hidden = false; });
+    ligarLogo(raiz, form, () => { sujo.hidden = false; desenharPrevia(raiz, form); });
+    form.addEventListener('input', U.debounce(() => desenharPrevia(raiz, form), 150));
+    desenharPrevia(raiz, form);
     carregarImpressoras(raiz, false);
     Atualizacao.desenharStatus(raiz.querySelector('#at-status'));
     const mostrarBackup = (st) => {
@@ -225,6 +419,7 @@ Telas.config = (() => {
       try {
         await api('/api/config', { metodo: 'PUT', corpo: dados });
         await U.config(true);
+        sujo.hidden = true;
         aviso('Configurações salvas.');
         Atualizacao.desenharStatus(raiz.querySelector('#at-status'));
       } catch (e) { erro(e); }

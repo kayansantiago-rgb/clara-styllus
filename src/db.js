@@ -184,6 +184,10 @@ const CONFIG_PADRAO = {
   cupom_mensagem: 'Obrigada pela preferência! Trocas em até 30 dias com etiqueta e este comprovante.',
   cupom_largura_mm: '80',
   cupom_vias: '1',
+  cupom_logo: '', // logo em 1 bit para a térmica (JSON { l, h, d })
+  cupom_logo_img: '', // a mesma imagem em PNG (impressão pelo navegador e pré-visualização)
+  cupom_qr_texto: '', // link do Instagram / WhatsApp impresso como QR Code
+  cupom_qr_legenda: 'Siga a gente no Instagram',
   etiqueta_largura_mm: '40',
   etiqueta_altura_mm: '30',
   etiqueta_colunas: '1',
@@ -203,6 +207,7 @@ const CONFIG_PADRAO = {
   impressao_etiqueta_modo: 'zpl',
   impressora_etiqueta: '',
   etiqueta_dpi: '203',
+  etiqueta_modelo: 'padrao',
   etiqueta_espaco_mm: '2',
   etiqueta_gap_mm: '3',
   // Crediário

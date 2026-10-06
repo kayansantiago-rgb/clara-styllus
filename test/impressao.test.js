@@ -26,6 +26,27 @@ test('ESC/POS: acentos em CP850, colunas e corte', () => {
   assert.ok(new Cupom({ acentos: 'sem' }).linha('ação').bytes().includes(Buffer.from('acao')));
 });
 
+test('ESC/POS: logo (GS v 0) e QR Code (GS ( k) no cupom', () => {
+  const { cupomVenda } = require('../src/impressao/documentos');
+  const raster = Buffer.alloc(2 * 3, 0xff); // 16 x 3 pontos pretos
+  const cfg = {
+    loja_nome: 'Loja', cupom_colunas: '48', cupom_mensagem: 'Volte sempre!',
+    cupom_logo: JSON.stringify({ l: 2, h: 3, d: raster.toString('base64') }),
+    cupom_qr_texto: 'https://instagram.com/clarastyllus', cupom_qr_legenda: 'Siga a gente',
+  };
+  const venda = { id: 7, criado_em: '2026-10-06 10:00:00', itens: [], pagamentos: [], subtotal: 0, total: 0 };
+  const c = cupomVenda(venda, cfg);
+  const b = c.bytes();
+  assert.ok(b.includes(Buffer.concat([Buffer.from([0x1d, 0x76, 0x30, 0x00, 2, 0, 3, 0]), raster])));
+  const qr = Buffer.from(cfg.cupom_qr_texto, 'latin1');
+  assert.ok(b.includes(Buffer.concat([Buffer.from([0x1d, 0x28, 0x6b, qr.length + 3, 0, 0x31, 0x50, 0x30]), qr])));
+  assert.ok(b.includes(Buffer.from([0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30])));
+  assert.match(c.texto, /\[ logo \]/);
+  assert.match(c.texto, /Volte sempre!/);
+  // Logo inválido é ignorado sem quebrar o cupom.
+  assert.doesNotThrow(() => cupomVenda(venda, { ...cfg, cupom_logo: '{quebrado' }));
+});
+
 const cfgEtq = {
   etiqueta_largura_mm: '40', etiqueta_altura_mm: '30', etiqueta_colunas: '2', etiqueta_espaco_mm: '2',
   etiqueta_dpi: '203', etiqueta_mostrar_loja: '1', etiqueta_mostrar_preco: '1', loja_nome: 'Clara Styllus',

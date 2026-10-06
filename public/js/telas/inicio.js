@@ -41,11 +41,11 @@ Telas.inicio = (() => {
 
       ${at && at.disponivel ? `<div class="pdv-alerta ok painel-alerta at-aviso"><i data-icone="nuvem"></i>
         <span>Nova versão <b>${esc(at.disponivel.versao)}</b> do sistema disponível (você está na ${esc(at.versao_atual)}).</span>
-        <button class="btn btn-peq btn-primario" id="at-agora">Atualizar agora</button> <a href="#/config">detalhes</a></div>` : ''}
+        <button class="btn btn-peq btn-primario" id="at-agora">Atualizar agora</button> <a href="#/config?aba=atualizacao">detalhes</a></div>` : ''}
       ${condAtrasadas.length ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="bolsa"></i> ${condAtrasadas.length} condicional(is) passou do prazo de devolução:
         ${condAtrasadas.slice(0, 3).map((c) => esc(c.cliente_nome)).join(', ')}${condAtrasadas.length > 3 ? '…' : ''}. <a href="#/condicional">Ver condicionais →</a></div>` : ''}
       ${semBackup ? `<div class="pdv-alerta perigo painel-alerta"><i data-icone="nuvem"></i> ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}
-        Se o computador der defeito, os dados podem se perder. <a href="#/config">Fazer backup agora →</a></div>`
+        Se o computador der defeito, os dados podem se perder. <a href="#/config?aba=backup">Fazer backup agora →</a></div>`
     : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="nuvem"></i> ${esc(bk.ultimo_erro)}</div>` : ''}
       <div class="in-atalhos">
         <a class="in-atalho destaque" href="#/pdv">${Icone('sacola')}<b>Vender</b><small>abrir o caixa</small></a>
@@ -75,7 +75,7 @@ Telas.inicio = (() => {
             <p class="dica">Faltam ${brl(Math.max(0, meta - r.mes.faturamento))} em ${r.mes.dias - r.mes.dia + 1} dia(s)
               — cerca de <b>${brl(Math.max(0, Math.ceil((meta - r.mes.faturamento) / (r.mes.dias - r.mes.dia + 1))))}</b> por dia.</p>`
     : `<div class="meta-numeros"><b>${brl(r.mes.faturamento)}</b><span>vendido no mês</span></div>
-            <p class="dica">Defina uma meta mensal em <a href="#/config">Configurações</a> para acompanhar o progresso aqui.</p>`}
+            <p class="dica">Defina uma meta mensal em <a href="#/config?aba=vendas">Configurações → Vendas</a> para acompanhar o progresso aqui.</p>`}
         </div>
 
         <div class="cartao">

@@ -41,16 +41,19 @@ function conteudo(p, cfg, m) {
   const det = [p.tamanho && `TAM ${p.tamanho}`, p.cor, p.referencia && `REF ${p.referencia}`].filter(Boolean).join(' - ');
   const h = m.altura - 2 * m.margem;
   const linhas = [];
-  if (cfg.etiqueta_mostrar_loja === '1') linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: 0.1 * h });
-  linhas.push({ texto: p.nome, alt: 0.11 * h });
-  if (det) linhas.push({ texto: det, alt: 0.085 * h });
+  // Modelos: padrão (loja, nome, detalhes, preço), preço em destaque e simples (sem o nome da loja).
+  const modelo = cfg.etiqueta_modelo || 'padrao';
+  const destaque = modelo === 'preco';
+  if (cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples') linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: (destaque ? 0.08 : 0.1) * h });
+  linhas.push({ texto: p.nome, alt: (destaque ? 0.09 : 0.11) * h });
+  if (det) linhas.push({ texto: det, alt: (destaque ? 0.075 : 0.085) * h });
   if (cfg.etiqueta_mostrar_preco === '1') {
     if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
       // Liquidação: "DE R$ 159,90" riscado e "POR R$ 99,90" em destaque.
       linhas.push({ texto: `DE ${preco(p.preco_anterior)}`, alt: 0.085 * h, riscado: true });
-      linhas.push({ texto: `POR ${preco(p.preco_venda)}`, alt: 0.15 * h });
+      linhas.push({ texto: `POR ${preco(p.preco_venda)}`, alt: (destaque ? 0.2 : 0.15) * h });
     } else {
-      linhas.push({ texto: preco(p.preco_venda), alt: 0.17 * h });
+      linhas.push({ texto: preco(p.preco_venda), alt: (destaque ? 0.26 : 0.17) * h });
     }
   }
   return linhas.map((l) => ({ ...l, texto: semAcento(l.texto).toUpperCase(), alt: Math.max(12, Math.round(l.alt)) }));

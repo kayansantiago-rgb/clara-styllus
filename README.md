@@ -16,8 +16,14 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   pagamento, horário de pico, dia da semana, categorias e vendedoras.
 - **Atualização do sistema**: procura versão nova sozinho (com internet), baixa em segundo plano e avisa
   no Início; um clique instala. Sem internet, dá para atualizar escolhendo o instalador (pendrive).
-- **Visual moderno**: menu com ícones, fontes próprias (funcionam sem internet), tela de venda e cadastro
-  de produto redesenhados.
+- **Visual moderno**: menu com ícones, fontes próprias (funcionam sem internet) e todas as telas redesenhadas
+  (venda, pagamento, caixa com contagem de notas e moedas no fechamento, troca, produtos em lista ou vitrine,
+  crediário, condicional, etiquetas, inventário e vendedores em cartões com as vendas do mês).
+- **Configurações em abas**: Loja, Cupom, Impressoras, Vendas, Crediário, Backup e Atualização, com aviso de
+  alterações não salvas.
+- **Cupom personalizado**: logo da loja no topo (a imagem vira preto e branco sozinha, com ajuste de tom),
+  mensagem final em destaque e **QR Code** do Instagram ou WhatsApp no rodapé, com pré-visualização na tela.
+- **Modelos de etiqueta**: padrão, preço em destaque ou simples (sem o nome da loja).
 - **Login sem senha salva**: o navegador não oferece para guardar a senha; cada pessoa digita a sua ao entrar
   (o ícone do olho mostra o que foi digitado).
 - **Troca com vale-troca**: bipe o cupom (V123) ou use 🔁 Troca no caixa, escolha as peças que voltam e sai um
@@ -62,7 +68,7 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Produtos**: cadastro com **grade de tamanho × cor** de uma só vez, preço de custo e de venda,
   margem, estoque mínimo, entrada/saída/ajuste de estoque e histórico.
 - **Etiquetas**: código de barras EAN-13 gerado automaticamente (ou o do fornecedor), impressão direta
-  em ZPL/EPL nas térmicas de etiqueta (Zebra, Elgin, Argox…) ou em folha A4 adesiva.
+  em TSPL/ZPL/EPL nas térmicas de etiqueta (genéricas, Zebra, Elgin, Argox…) ou em folha A4 adesiva.
 - **Caixa**: abrir e fechar direto da tela de venda; sangria, suprimento, abertura da gaveta, fechamento com conferência do dinheiro e
   impressão do resumo.
 - **Vendas**: consulta, reimpressão e cancelamento (devolve as peças ao estoque). O administrador também
