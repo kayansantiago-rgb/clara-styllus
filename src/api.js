@@ -641,17 +641,45 @@ function criarApi(db, opcoes = {}) {
   rota('GET', '/api/clientes', ({ query }) => {
     const q = texto(query.get('q'));
     const ordem = { recentes: 'ultima_compra IS NULL, ultima_compra DESC', valor: 'total_comprado DESC' }[query.get('ordem')] || 'nome';
-    if (!q) return planos(db.prepare(`SELECT *, ${RESUMO_CLIENTE} FROM clientes ORDER BY ${ordem} LIMIT 300`).all());
+    if (!q) return planos(db.prepare(`SELECT *, ${RESUMO_CLIENTE} FROM clientes WHERE excluido_em IS NULL ORDER BY ${ordem} LIMIT 300`).all());
     const dig = q.replace(/\D/g, '');
     return planos(
       db
         .prepare(
-          `SELECT *, ${RESUMO_CLIENTE} FROM clientes WHERE nome LIKE ? OR (? <> '' AND (cpf LIKE ? OR telefone LIKE ?))
+          `SELECT *, ${RESUMO_CLIENTE} FROM clientes WHERE excluido_em IS NULL AND (nome LIKE ? OR (? <> '' AND (cpf LIKE ? OR telefone LIKE ?)))
            ORDER BY ${ordem} LIMIT 100`
         )
         .all(`%${q}%`, dig, `%${dig}%`, `%${dig}%`)
     );
   });
+
+  /**
+   * Exclui o cadastro (administrador). Não deixa excluir quem ainda deve no crediário, tem condicional ou
+   * reserva aberta, ou vale com saldo. Sem nenhum histórico, apaga de vez; com histórico (vendas, crediário
+   * quitado…), apaga os dados pessoais e tira das listas — o nome continua nas vendas antigas.
+   */
+  rota('DELETE', '/api/clientes/:id', ({ params }) => {
+    const c = plano(db.prepare('SELECT * FROM clientes WHERE id = ? AND excluido_em IS NULL').get(params.id));
+    if (!c) throw erro(404, 'Cliente não encontrada.');
+    const conta = (sql) => db.prepare(sql).get(c.id).n;
+    const deve = crediario.saldo(c.id).aberto;
+    if (deve > 0) throw erro(409, `${c.nome} ainda deve R$ ${(deve / 100).toFixed(2).replace('.', ',')} no crediário. Receba ou cancele as parcelas antes de excluir.`);
+    if (conta(`SELECT COUNT(*) AS n FROM condicionais WHERE cliente_id = ? AND status = 'aberta'`)) throw erro(409, 'Ela tem condicional aberta. Feche a condicional antes de excluir.');
+    if (conta(`SELECT COUNT(*) AS n FROM reservas WHERE cliente_id = ? AND status = 'aberta'`)) throw erro(409, 'Ela tem reserva aberta. Retire ou cancele a reserva antes de excluir.');
+    if (conta(`SELECT COUNT(*) AS n FROM vales WHERE cliente_id = ? AND status = 'ativo' AND saldo > 0`)) throw erro(409, 'Ela tem vale com saldo. Use ou cancele o vale antes de excluir.');
+    const historico = ['vendas', 'crediario_parcelas', 'crediario_recebimentos', 'condicionais', 'reservas', 'vales', 'trocas']
+      .some((t) => conta(`SELECT COUNT(*) AS n FROM ${t} WHERE cliente_id = ?`));
+    return transacao(db, () => {
+      db.prepare('DELETE FROM espera WHERE cliente_id = ?').run(c.id);
+      if (!historico) {
+        db.prepare('DELETE FROM clientes WHERE id = ?').run(c.id);
+        return { ok: true, apagado: true, nome: c.nome };
+      }
+      db.prepare(`UPDATE clientes SET cpf = NULL, telefone = NULL, email = NULL, aniversario = NULL, observacao = NULL,
+        excluido_em = datetime('now','localtime') WHERE id = ?`).run(c.id);
+      return { ok: true, apagado: false, nome: c.nome };
+    });
+  }, 'admin');
 
   rota('GET', '/api/clientes/:id', ({ params }) => {
     const c = plano(db.prepare('SELECT * FROM clientes WHERE id = ?').get(params.id));
@@ -1411,7 +1439,7 @@ function criarApi(db, opcoes = {}) {
     // Aniversariantes de hoje até 7 dias (comparando só mês-dia).
     const proximos = new Map(Array.from({ length: 8 }, (_, i) => [dia(i).slice(5), i]));
     const aniversariantes = planos(
-      db.prepare(`SELECT id, nome, telefone, aniversario FROM clientes WHERE aniversario IS NOT NULL AND aniversario <> ''`).all()
+      db.prepare(`SELECT id, nome, telefone, aniversario FROM clientes WHERE excluido_em IS NULL AND aniversario IS NOT NULL AND aniversario <> ''`).all()
     )
       .filter((c) => proximos.has(c.aniversario.slice(5)))
       .map((c) => ({ ...c, em_dias: proximos.get(c.aniversario.slice(5)) }))

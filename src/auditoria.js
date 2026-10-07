@@ -157,6 +157,7 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
       antes: (c) => db.prepare('SELECT nome FROM clientes WHERE id = ?').get(c.params.id),
       depois: (c, r, a) => ({ tipo: 'crediario', acao: 'Lançou débito manual', descricao: `${a?.nome || ''} · ${brl(c.corpo.valor)}${c.corpo.descricao ? ' · ' + c.corpo.descricao : ''}`, valor: Number(c.corpo.valor) }),
     },
+    'DELETE /api/clientes/:id': { depois: (c, r) => ({ tipo: 'cliente', acao: 'Excluiu cliente', descricao: `${r.nome}${r.apagado ? '' : ' (o nome continua nas vendas antigas)'}`, importante: true }) },
     'POST /api/crediario/parcelas/:id/cancelar': { depois: (c) => ({ tipo: 'crediario', acao: 'Cancelou parcela', descricao: `Parcela nº ${c.params.id}`, importante: true }) },
     'POST /api/inventarios': { depois: (c, r) => ({ tipo: 'estoque', acao: 'Começou inventário', descricao: `Nº ${r.id}${r.descricao ? ' · ' + r.descricao : ''}` }) },
     'POST /api/inventarios/:id/finalizar': { depois: (c, r) => ({ tipo: 'estoque', acao: 'Finalizou inventário', descricao: `Nº ${r.id} · ${r.ajustados} produto(s) ajustado(s) · falta ${brl(r.valor_falta)} · sobra ${brl(r.valor_sobra)}`, importante: r.valor_falta > 0 }) },

@@ -197,3 +197,32 @@ test('fechar o caixa contando notas: a diferença bate', OPC, async () => {
     await sis.fechar();
   }
 });
+
+test('crediário quitado aparece em "Quitados"; administradora exclui o cadastro da cliente', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    await sis.pagina.evaluate(async (x) => {
+      await U.api('/api/vendas', { metodo: 'POST', corpo: { cliente_id: x.ana.id, itens: [{ produto_id: x.blusa.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 8990, parcelas: 2 }] } });
+      await U.api(`/api/crediario/clientes/${x.ana.id}/receber`, { metodo: 'POST', corpo: { valor: 8990, forma: 'pix' } });
+    }, d);
+    await sis.ir('crediario');
+    await sis.pagina.click('[data-sit=quitados]');
+    await sis.pagina.waitForTimeout(500);
+    assert.match(await sis.pagina.textContent('#lista'), /Ana Paula Souza[\s\S]*quitado[\s\S]*89,90/);
+    await sis.pagina.click('.cr-quitado');
+    await sis.pagina.waitForSelector('#modal-corpo details[open]');
+    await sis.pagina.keyboard.press('Escape');
+
+    await sis.ir('clientes');
+    await sis.pagina.click('text=Ana Paula Souza');
+    await sis.pagina.waitForSelector('#excluir');
+    await sis.pagina.click('#excluir');
+    await sis.pagina.click('#modal-corpo [data-ok]');
+    await sis.pagina.waitForTimeout(800);
+    assert.doesNotMatch(await sis.pagina.textContent('#conteudo'), /Ana Paula Souza/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

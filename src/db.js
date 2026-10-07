@@ -416,6 +416,10 @@ function migrar(db) {
   if (!colunas('crediario_recebimentos').includes('taxa')) {
     db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN taxa INTEGER');
   }
+  // Cliente excluída que tem histórico (vendas, crediário…): some das listas, o nome fica nas vendas antigas.
+  if (!colunas('clientes').includes('excluido_em')) {
+    db.exec('ALTER TABLE clientes ADD COLUMN excluido_em TEXT');
+  }
   // Cancelamento/estorno feito com outro caixa aberto: o caixa original continua como foi fechado.
   if (!colunas('vendas').includes('cancelada_caixa_id')) {
     db.exec('ALTER TABLE vendas ADD COLUMN cancelada_caixa_id INTEGER');

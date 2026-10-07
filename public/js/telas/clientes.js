@@ -134,10 +134,28 @@ Telas.clientes = (() => {
 
       <div class="acoes vd-det-acoes">
         <button class="btn btn-fantasma" id="editar">${Icone('lapis')} Editar dados</button>
+        ${U.sessao.ehAdmin() ? `<button class="btn btn-fantasma btn-perigo-claro" id="excluir">${Icone('lixeira')} Excluir cliente</button>` : ''}
         <span class="espaco"></span>
         <button class="btn btn-primario" id="vender">${Icone('sacola')} Vender para ela</button>
       </div>`, { largura: '860px' });
     corpo.querySelector('#editar').onclick = () => formulario(c, () => { carregar(); ficha(c.id); });
+    const bExcluir = corpo.querySelector('#excluir');
+    if (bExcluir) {
+      bExcluir.onclick = async () => {
+        const ok = await U.confirmar(`Excluir ${c.nome}?`,
+          'O cadastro sai da lista de clientes. Se ela já comprou, o nome continua nas vendas antigas, mas telefone, CPF e aniversário são apagados. Não dá para desfazer.',
+          { ok: 'Excluir cliente', perigo: true });
+        if (!ok) return ficha(c.id);
+        try {
+          const r = await api(`/api/clientes/${c.id}`, { metodo: 'DELETE' });
+          aviso(`${r.nome} foi excluída.`);
+          carregar();
+        } catch (e) {
+          erro(e);
+          ficha(c.id);
+        }
+      };
+    }
     corpo.querySelector('#vender').onclick = () => {
       Telas.pdv.usarCliente({ id: c.id, nome: c.nome, cpf: c.cpf });
       fecharModal();

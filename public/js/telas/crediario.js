@@ -3,6 +3,7 @@ Telas.crediario = (() => {
   const { esc, brl, api, aviso, erro, abrirModal, fecharModal, dataHora } = U;
   let raiz;
   let lista = [];
+  let situacao = 'abertos'; // 'abertos' ou 'quitados'
 
   const dataBr = (d) => (d ? d.split('-').reverse().join('/') : '');
   const diasAte = (d) => Math.round((Date.parse(d + 'T00:00') - Date.parse(U.hoje() + 'T00:00')) / 864e5);
@@ -27,6 +28,10 @@ Telas.crediario = (() => {
       </div>
       <div class="vd-kpis cr-kpis" id="resumo"></div>
       <div class="vd-barra-filtros">
+        <div class="segmentos" id="situacao">
+          <button class="segmento ${situacao === 'abertos' ? 'sel' : ''}" data-sit="abertos">Em aberto</button>
+          <button class="segmento ${situacao === 'quitados' ? 'sel' : ''}" data-sit="quitados">${Icone('check')} Quitados</button>
+        </div>
         <div class="busca-ico pr-busca">${Icone('busca')}<input id="q" type="search" placeholder="Buscar cliente por nome, CPF ou telefone" autofocus autocomplete="off"></div>
         <label class="interruptor vd-canceladas"><input type="checkbox" id="atraso"><span class="trilho"></span><span class="txt"><b>Só quem está em atraso</b></span></label>
         <span class="semaforo-legenda">${selo({ cor: 'verde', txt: 'em dia' })}${selo({ cor: 'amarelo', txt: 'vence em 7 dias' })}${selo({ cor: 'vermelho', txt: 'atrasado' })}</span>
@@ -34,6 +39,13 @@ Telas.crediario = (() => {
       <div class="cr-lista" id="lista"></div>`;
     raiz.querySelector('#q').addEventListener('input', U.debounce(carregar));
     raiz.querySelector('#atraso').onchange = carregar;
+    raiz.querySelector('#situacao').onclick = (ev) => {
+      const b = ev.target.closest('[data-sit]');
+      if (!b) return;
+      situacao = b.dataset.sit;
+      raiz.querySelectorAll('#situacao .segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      carregar();
+    };
     raiz.querySelector('#lancar').onclick = () => escolherClienteParaDebito();
     raiz.querySelector('#lista').onclick = (ev) => {
       const tr = ev.target.closest('[data-i]');
@@ -49,10 +61,12 @@ Telas.crediario = (() => {
     if (!raiz) return;
     const q = raiz.querySelector('#q').value;
     const atraso = raiz.querySelector('#atraso').checked ? '&atraso=1' : '';
+    raiz.querySelector('#atraso').closest('label').hidden = situacao === 'quitados';
+    raiz.querySelector('.semaforo-legenda').hidden = situacao === 'quitados';
     let resumo;
     try {
       [lista, resumo] = await Promise.all([
-        api(`/api/crediario?q=${encodeURIComponent(q)}${atraso}`),
+        situacao === 'quitados' ? api(`/api/crediario/quitados?q=${encodeURIComponent(q)}`) : api(`/api/crediario?q=${encodeURIComponent(q)}${atraso}`),
         api('/api/crediario/resumo'),
       ]);
     } catch (e) { return erro(e); }
@@ -63,6 +77,19 @@ Telas.crediario = (() => {
       <div class="vd-kpi"><span>${Icone('dinheiro')} Recebido hoje</span><b>${brl(resumo.recebido)}</b><small>parcelas pagas hoje</small></div>
       <div class="vd-kpi"><span>${Icone('clientes')} Clientes devendo</span><b>${resumo.clientes}</b><small>com saldo em aberto</small></div>`;
     const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+    if (situacao === 'quitados') {
+      raiz.querySelector('#lista').innerHTML = lista.map((c, i) => `
+      <div class="cr-linha cr-quitado" data-i="${i}" tabindex="0">
+        <span class="avatar">${esc(iniciais(c.nome))}</span>
+        <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></div>
+        <div><span class="semaforo verde"><i></i>quitado</span></div>
+        <div class="cr-num"><small>Quitou em</small><b>${c.quitado_em ? dataBr(c.quitado_em.slice(0, 10)) : '—'}</b><small>cliente desde ${dataBr(c.desde.slice(0, 10))}</small></div>
+        <div class="cr-num r"><small>Compras</small><b>${c.compras}</b><small>${c.parcelas} parcela(s)</small></div>
+        <div class="cr-num r"><small>Total pago</small><b class="txt-ok">${brl(c.total)}</b></div>
+        <button class="btn">${Icone('olho')} Ver</button>
+      </div>`).join('') || `<div class="vd-vazio">${Ilustracao.svg('caderno', 150)}<b>Nenhum crediário quitado ainda</b><br><small>Quando uma cliente pagar todas as parcelas, ela aparece aqui.</small></div>`;
+      return;
+    }
     raiz.querySelector('#lista').innerHTML = lista.map((c, i) => {
       const sem = semaforo(c.vencido, c.proximo_vencimento, c.dias_atraso);
       return `
@@ -115,7 +142,7 @@ Telas.crediario = (() => {
       <div class="cr-det">
         <div><h4>Parcelas em aberto</h4>
           <div class="cr-linha-tempo" id="parc">${abertas.map(linhaParcela).join('') || '<div class="vazio">Nenhuma parcela em aberto.</div>'}</div>
-          ${pagas.length ? `<details><summary>Parcelas já pagas (${pagas.length})</summary><div class="cr-linha-tempo">${pagas.map(linhaParcela).join('')}</div></details>` : ''}
+          ${pagas.length ? `<details ${abertas.length ? '' : 'open'}><summary>Parcelas já pagas (${pagas.length})</summary><div class="cr-linha-tempo">${pagas.map(linhaParcela).join('')}</div></details>` : ''}
         </div>
         <div><h4>Recebimentos</h4>
           <div class="cr-recs" id="recs">${d.recebimentos.map((r) => `

@@ -159,3 +159,29 @@ test('servidor: endereço malformado responde 400 e o sistema continua no ar; up
     fs.rmSync(pasta, { recursive: true, force: true });
   }
 });
+
+test('excluir cliente: bloqueia quem deve; sem histórico apaga; com histórico apaga os dados e tira das listas', () => {
+  const { chamar, p } = loja();
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  const nova = chamar('POST', '/api/clientes', { nome: 'Sem Compras', telefone: '63999990000' }).corpo;
+  assert.equal(chamar('DELETE', `/api/clientes/${nova.id}`).corpo.apagado, true);
+  assert.equal(chamar('GET', `/api/clientes/${nova.id}`).status, 404);
+
+  const bia = chamar('POST', '/api/clientes', { nome: 'Bia Devendo', telefone: '63988887777', cpf: '' }).corpo;
+  chamar('POST', '/api/vendas', { cliente_id: bia.id, itens: [{ produto_id: p.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 10000, parcelas: 1 }] });
+  const r = chamar('DELETE', `/api/clientes/${bia.id}`);
+  assert.equal(r.status, 409);
+  assert.match(r.corpo.erro, /deve/);
+  // Quitou: aparece nos quitados e já pode ser excluída (o nome fica na venda).
+  chamar('POST', `/api/crediario/clientes/${bia.id}/receber`, { valor: 10000, forma: 'pix' });
+  const quitados = chamar('GET', '/api/crediario/quitados').corpo;
+  assert.equal(quitados.length, 1);
+  assert.equal(quitados[0].total, 10000);
+  assert.equal(chamar('GET', '/api/crediario').corpo.length, 0);
+  const ex = chamar('DELETE', `/api/clientes/${bia.id}`).corpo;
+  assert.equal(ex.apagado, false);
+  assert.equal(chamar('GET', '/api/clientes').corpo.some((c) => c.id === bia.id), false);
+  const ficha = chamar('GET', `/api/clientes/${bia.id}`).corpo;
+  assert.equal(ficha.telefone, null);
+  assert.equal(chamar('GET', '/api/vendas').corpo[0].cliente_nome, 'Bia Devendo');
+});

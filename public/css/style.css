@@ -1963,3 +1963,4 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .pag2-total.com-juros { background: linear-gradient(140deg, #6b3a00, #a35a00); }
 .pag2-total .pag2-parcelas { display: inline-block; margin: 2px 0 4px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.18); font-weight: 700; font-size: 15px; color: #fff; }
 .pag2-modo.voltar .i { transform: scaleX(-1); }
+.cr-quitado { border-left: 4px solid #1baf7a; }

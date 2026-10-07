@@ -154,6 +154,31 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
   rota('GET', '/api/crediario/resumo', ({ query }) =>
     resumoGeral(texto(query.get('de'), 10), texto(query.get('ate'), 10)));
 
+  /** Crediários já quitados: clientes que compraram no crediário e não devem mais nada. */
+  rota('GET', '/api/crediario/quitados', ({ query }) => {
+    const q = texto(query.get('q'));
+    const args = [];
+    let filtro = '';
+    if (q) {
+      const dig = q.replace(/\D/g, '');
+      filtro = `AND (c.nome LIKE ? OR (? <> '' AND (c.cpf LIKE ? OR c.telefone LIKE ?)))`;
+      args.push(`%${q}%`, dig, `%${dig}%`, `%${dig}%`);
+    }
+    return planos(
+      db
+        .prepare(
+          `SELECT c.id, c.nome, c.cpf, c.telefone, COUNT(*) AS parcelas, SUM(p.valor) AS total,
+             MIN(p.criado_em) AS desde, MAX(p.pago_em) AS quitado_em,
+             COUNT(DISTINCT COALESCE(p.venda_id, -p.id)) AS compras
+           FROM crediario_parcelas p JOIN clientes c ON c.id = p.cliente_id
+           WHERE p.status <> 'cancelada' ${filtro}
+           GROUP BY c.id HAVING SUM(p.status = 'aberta') = 0
+           ORDER BY quitado_em DESC LIMIT 300`
+        )
+        .all(...args)
+    );
+  });
+
   rota('GET', '/api/crediario', ({ query }) => {
     const q = texto(query.get('q'));
     const soAtraso = query.get('atraso') === '1';
