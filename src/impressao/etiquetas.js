@@ -21,7 +21,12 @@ const ean13Valido = (c) => {
 const preco = (c) => 'R$ ' + ((Number(c) || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Número de parcelas do modelo "parcelado" (2 a 12, padrão 3). */
-const parcelasEtiqueta = (cfg) => Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
+const parcelasEtiqueta = (cfg) => {
+  const n = Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
+  // "Sem juros" só até a última parcela sem juros (ex.: juros a partir de 4x → no máximo 3x).
+  const aPartir = Number(cfg.juros_a_partir) || 0;
+  return aPartir > 2 ? Math.min(n, aPartir - 1) : n;
+};
 /** Valor de cada parcela, arredondado para cima (as parcelas nunca somam menos que o preço). */
 const valorParcela = (centavos, n) => Math.ceil((Number(centavos) || 0) / n);
 

@@ -149,6 +149,8 @@ Telas.vendas = (() => {
     raiz.querySelector('#kpis').innerHTML = `
       <div class="vd-kpi destaque"><span>${Icone('carteira')} Faturamento</span><b>${brl(total)}</b>
         <small>${canceladas ? `${canceladas} cancelada(s) fora da conta` : 'vendas concluídas'}</small></div>
+      <div class="vd-kpi vd-kpi-cai"><span>${Icone('dinheiro')} Cai na conta</span><b>${brl(ok.reduce((a, v) => a + (v.liquido ?? v.total), 0))}</b>
+        <small>depois das taxas das maquininhas</small></div>
       <div class="vd-kpi"><span>${Icone('recibo')} Vendas</span><b>${ok.length}</b><small>${pecas} peça(s)</small></div>
       <div class="vd-kpi"><span>${Icone('grafico')} Ticket médio</span><b>${brl(ok.length ? Math.round(total / ok.length) : 0)}</b>
         <small>${ok.length ? `${(pecas / ok.length).toFixed(1).replace('.', ',')} peça(s) por venda` : '—'}</small></div>
@@ -235,9 +237,12 @@ Telas.vendas = (() => {
       <div class="vd-det-totais">
         <div class="linha"><span>Subtotal</span><span>${brl(v.subtotal)}</span></div>
         ${v.desconto ? `<div class="linha"><span>Descontos</span><span>−${brl(v.desconto)}</span></div>` : ''}
-        ${v.pagamentos.map((p) => `<div class="linha"><span>${esc(U.FORMAS[p.forma] || p.forma)}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}${p.referencia ? ` <small>${esc(p.referencia)}</small>` : ''}</span><span>${brl(p.valor)}</span></div>`).join('')}
+        ${v.acrescimo ? `<div class="linha"><span>Juros do cartão (pagos pela cliente)</span><span>+${brl(v.acrescimo)}</span></div>` : ''}
+        ${v.pagamentos.map((p) => `<div class="linha"><span>${esc(U.FORMAS[p.forma] || p.forma)}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}${p.bandeira ? ` <small>${esc(U.BANDEIRAS[p.bandeira] || '')}</small>` : ''}${p.referencia ? ` <small>${esc(p.referencia)}</small>` : ''}${
+  p.taxa ? ` <small class="txt-perigo">taxa ${brl(p.taxa)}</small>` : ''}</span><span>${brl(p.valor)}</span></div>`).join('')}
         ${v.troco ? `<div class="linha"><span>Troco</span><span>${brl(v.troco)}</span></div>` : ''}
         <div class="linha total"><span>Total</span><span>${brl(v.total)}</span></div>
+        ${v.taxas ? `<div class="linha vd-cai"><span>${Icone('carteira')} Cai na conta (sem as taxas)</span><b>${brl(v.liquido)}</b></div>` : ''}
       </div>
       ${v.crediario && v.crediario.length ? `<h3 class="titulo-ico">${Icone('caderno')} Parcelas do crediário</h3>
         <div class="vd-parcelas">${v.crediario.map((p) => `<div class="linha"><span>${p.numero}/${p.total_parcelas} · venc. ${p.vencimento.split('-').reverse().join('/')}</span>

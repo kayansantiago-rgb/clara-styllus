@@ -839,6 +839,9 @@ function criarApi(db, opcoes = {}) {
       db.prepare('SELECT * FROM venda_pagamentos WHERE venda_id = ? ORDER BY id').all(id)
     );
     v.crediario = crediario.parcelasDaVenda(id);
+    // O que realmente cai na conta: total da venda menos as taxas das maquininhas.
+    v.taxas = v.pagamentos.reduce((a, p) => a + (p.taxa || 0), 0);
+    v.liquido = v.total - v.taxas;
     return v;
   };
 
@@ -889,8 +892,8 @@ function criarApi(db, opcoes = {}) {
       const subtotal = itens.reduce((a, it) => a + it.total, 0);
       const descontoGeral = inteiro(corpo.desconto, 'desconto', { min: 0, padrao: 0 });
       if (descontoGeral > subtotal) throw erro(400, 'Desconto maior que o subtotal.');
-      const total = subtotal - descontoGeral;
-      const descontoTotal = bruto - total;
+      const totalPecas = subtotal - descontoGeral;
+      const descontoTotal = bruto - totalPecas;
       const maxPct = Number(cfg.desconto_maximo_pct || 100);
       if (bruto > 0 && (descontoTotal * 100) / bruto > maxPct + 1e-9) {
         throw erro(403, `Desconto acima do máximo permitido (${maxPct}%).`);
@@ -910,6 +913,15 @@ function criarApi(db, opcoes = {}) {
           bandeira: p.forma === 'debito' || p.forma === 'credito' ? taxas.bandeiraValida(p.bandeira) : null,
         };
       });
+      // Crédito parcelado a partir de N vezes: a taxa da maquininha é somada no valor da cliente.
+      // O caixa manda o valor "da peça"; aqui ele vira o valor cobrado na maquininha.
+      let acrescimo = 0;
+      for (const p of pagamentos) {
+        p.juros = taxas.jurosRepassados(cfg, p.forma, p.parcelas, p.valor, p.bandeira);
+        p.valor += p.juros;
+        acrescimo += p.juros;
+      }
+      const total = totalPecas + acrescimo;
       // Vale-troca: confere saldo e validade (o desconto do saldo é feito ao gravar).
       const hojeStr = new Date().toLocaleDateString('sv-SE');
       for (const p of pagamentos.filter((x) => x.forma === 'vale')) {
@@ -947,10 +959,10 @@ function criarApi(db, opcoes = {}) {
       const r = db
         .prepare(
           `INSERT INTO vendas (caixa_id, cliente_id, cpf_nota, vendedor, usuario_id, subtotal, desconto,
-             total, troco) VALUES (?,?,?,?,?,?,?,?,?)`
+             total, troco, acrescimo) VALUES (?,?,?,?,?,?,?,?,?,?)`
         )
         .run(caixa.id, clienteId, soDigitos(corpo.cpf_nota), usuario.nome, usuario.id,
-          bruto, descontoTotal, total, troco);
+          bruto, descontoTotal, total, troco, acrescimo);
       const vendaId = Number(r.lastInsertRowid);
 
       const insItem = db.prepare(
@@ -973,11 +985,11 @@ function criarApi(db, opcoes = {}) {
         }
       }
       const insPag = db.prepare(
-        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa, referencia, bandeira) VALUES (?,?,?,?,?,?,?)'
+        'INSERT INTO venda_pagamentos (venda_id, forma, valor, parcelas, taxa, referencia, bandeira, juros) VALUES (?,?,?,?,?,?,?,?)'
       );
       for (const p of pagamentos) {
         insPag.run(vendaId, p.forma, p.valor, p.parcelas, taxas.calcular(cfg, p.forma, p.parcelas, p.valor, p.bandeira),
-          p.referencia, p.bandeira);
+          p.referencia, p.bandeira, p.juros);
         if (p.forma === 'vale') {
           db.prepare(`UPDATE vales SET saldo = saldo - ?, status = CASE WHEN saldo - ? <= 0 THEN 'usado' ELSE 'ativo' END
                       WHERE codigo = ?`).run(p.valor, p.valor, p.referencia);
@@ -1008,7 +1020,8 @@ function criarApi(db, opcoes = {}) {
         .prepare(
           `SELECT v.*, c.nome AS cliente_nome,
              (SELECT SUM(quantidade) FROM venda_itens i WHERE i.venda_id = v.id) AS pecas,
-             (SELECT GROUP_CONCAT(DISTINCT forma) FROM venda_pagamentos p WHERE p.venda_id = v.id) AS formas
+             (SELECT GROUP_CONCAT(DISTINCT forma) FROM venda_pagamentos p WHERE p.venda_id = v.id) AS formas,
+             v.total - COALESCE((SELECT SUM(taxa) FROM venda_pagamentos p WHERE p.venda_id = v.id), 0) AS liquido
            FROM vendas v LEFT JOIN clientes c ON c.id = v.cliente_id
            ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
            ORDER BY v.criado_em DESC, v.id DESC LIMIT 500`
@@ -1134,7 +1147,7 @@ function criarApi(db, opcoes = {}) {
       db
         .prepare(
           `SELECT COUNT(*) AS vendas, COALESCE(SUM(total),0) AS faturamento,
-             COALESCE(SUM(desconto),0) AS descontos
+             COALESCE(SUM(desconto),0) AS descontos, COALESCE(SUM(acrescimo),0) AS juros_repassados
            FROM vendas v WHERE ${filtro}`
         )
         .get(de, ate)
@@ -1232,6 +1245,8 @@ function criarApi(db, opcoes = {}) {
         .all(de, ate)
     ));
     const totalTaxas = linhasTaxa.reduce((a, l) => a + l.taxa, 0);
+    // Quanto das vendas realmente cai na conta (vendas antigas sem taxa gravada usam a taxa atual).
+    totais.cai_na_conta = totais.faturamento - linhasTaxa.filter((l) => l.origem === 'vendas').reduce((a, l) => a + l.taxa, 0);
     totais.taxas = totalTaxas;
     totais.lucro_apos_taxas = totais.lucro_bruto - totalTaxas;
     // Lucro real = vendas − trocas (com o custo das peças que voltaram) − custo − taxas − despesas.
@@ -1301,12 +1316,15 @@ function criarApi(db, opcoes = {}) {
           .prepare(
             `SELECT COUNT(*) AS vendas, COALESCE(SUM(total),0) AS faturamento,
                COALESCE((SELECT SUM(i.quantidade) FROM venda_itens i JOIN vendas v2 ON v2.id = i.venda_id
-                 WHERE v2.status = 'concluida' AND date(v2.criado_em) = ?),0) AS pecas
+                 WHERE v2.status = 'concluida' AND date(v2.criado_em) = ?),0) AS pecas,
+               COALESCE((SELECT SUM(p.taxa) FROM venda_pagamentos p JOIN vendas v2 ON v2.id = p.venda_id
+                 WHERE v2.status = 'concluida' AND date(v2.criado_em) = ?),0) AS taxas
              FROM vendas WHERE status = 'concluida' AND date(criado_em) = ?`
           )
-          .get(d, d)
+          .get(d, d, d)
       );
       t.ticket = t.vendas ? Math.round(t.faturamento / t.vendas) : 0;
+      t.liquido = t.faturamento - t.taxas;
       return t;
     };
     const inicioMes = hoje.slice(0, 8) + '01';

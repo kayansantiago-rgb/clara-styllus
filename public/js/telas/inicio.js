@@ -61,7 +61,7 @@ Telas.inicio = (() => {
         <a class="in-atalho" href="#/relatorios">${Icone('grafico')}<b>Relatórios</b><small>lucro e gráficos</small></a>
       </div>
       <div class="vd-kpis in-kpis">
-        <div class="vd-kpi destaque"><span>${Icone('carteira')} Vendido hoje</span><b>${brl(r.hoje.faturamento)}</b><small>${variacao(r.hoje.faturamento, r.ontem.faturamento)}</small></div>
+        <div class="vd-kpi destaque"><span>${Icone('carteira')} Vendido hoje</span><b>${brl(r.hoje.faturamento)}</b><small>${variacao(r.hoje.faturamento, r.ontem.faturamento)}${r.hoje.taxas ? ` · cai na conta ${brl(r.hoje.liquido)}` : ''}</small></div>
         <div class="vd-kpi"><span>${Icone('recibo')} Vendas hoje</span><b>${r.hoje.vendas}</b><small>${variacao(r.hoje.vendas, r.ontem.vendas)}</small></div>
         <div class="vd-kpi"><span>${Icone('roupa')} Peças hoje</span><b>${r.hoje.pecas}</b><small>${variacao(r.hoje.pecas, r.ontem.pecas)}</small></div>
         <div class="vd-kpi"><span>${Icone('grafico')} Ticket médio hoje</span><b>${brl(r.hoje.ticket)}</b><small>${variacao(r.hoje.ticket, r.ontem.ticket)}</small></div>

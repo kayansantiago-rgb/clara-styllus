@@ -1938,3 +1938,18 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .es-ou::before, .es-ou::after { content: ''; flex: 1; border-top: 1px solid var(--borda); }
 @media (max-width: 1150px) { .es-card { grid-template-columns: 1fr 1fr; } }
 .et-parcelas { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 13px; font-weight: 600; color: #6c5f66; }
+.pag2-taxa.com-juros { background: #fff4e0; color: #7a4b00; }
+.pag2-taxa.com-juros .i { color: #c47f00; }
+.pag2-liquido { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.pag2-liquido .linha { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; padding: 6px 12px; border-radius: 10px; background: #f6f2f4; }
+.pag2-liquido .linha.cai { background: #e3f5ec; color: #1d6e4a; font-weight: 600; }
+.pag2-liquido .linha.cai b { font-size: 17px; }
+.pag2-liquido .i { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+.vc-liquido { margin-top: 12px; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 16px; border-radius: 12px; background: #e3f5ec; color: #1d6e4a; font-size: 14px; }
+.vc-liquido b { font-size: 18px; }
+.vc-liquido .i { width: 16px; height: 16px; vertical-align: -3px; }
+.vd-kpi-cai b { color: #1d7a4e; }
+.vd-cai { color: #1d6e4a; }
+.vd-cai .i { width: 15px; height: 15px; vertical-align: -3px; }
+.rl-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.vd-kpis:has(.vd-kpi-cai):has(.vd-kpi-formas) { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); }

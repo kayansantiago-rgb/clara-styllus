@@ -49,6 +49,7 @@ Telas.pdv = (() => {
     raiz = el;
     carrinho = local.ler(CHAVE, null) || novoCarrinho();
     const r = await api('/api/caixa/atual');
+    if (!raiz) return; // saiu da tela enquanto carregava
     caixa = r.caixa;
     pararRelogio();
     if (!caixa) return telaCaixaFechado();
@@ -703,6 +704,7 @@ Telas.pdv = (() => {
           <div class="pag2-total"><small>Total da venda</small><b>${brl(t.total)}</b><span>${t.pecas} peça${t.pecas === 1 ? '' : 's'}${t.bruto - t.total ? ` · desconto ${brl(t.bruto - t.total)}` : ''}</span></div>
           <div id="lista-pag" class="lista-pag"></div>
           <div class="pag-resumo" id="pag-resumo"></div>
+          <div class="pag2-liquido" id="pag-liquido"></div>
           <button class="btn btn-primario btn-grande pag2-concluir" id="concluir" disabled>${Icone('check')} Confirmar venda <kbd>Enter</kbd></button>
           <button class="btn btn-fantasma" data-fechar>Voltar <kbd>Esc</kbd></button>
         </aside>
@@ -775,26 +777,38 @@ Telas.pdv = (() => {
     const pago = () => pagamentos.reduce((a, p) => a + p.valor, 0);
     const restante = () => t.total - pago();
 
+    const aPartir = Number(cfg.juros_a_partir) || 0;
     const preencherParcelas = () => {
       const max = forma === 'crediario' ? maxParcelas : 12;
       const atual = Number(parcEl.value) || 1;
-      parcEl.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i + 1}">${i + 1}x</option>`).join('');
+      // No crédito: até 3x sem juros; a partir de 4x com os juros da maquininha (para a cliente).
+      parcEl.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i + 1}">${i + 1}x${
+        forma !== 'credito' ? '' : aPartir && i + 1 >= aPartir ? ' com juros' : ' sem juros'}</option>`).join('');
       parcEl.value = String(Math.min(atual, max));
     };
 
     // Cartão: bandeira escolhida e quanto a maquininha desconta (só informativo para quem está no caixa).
     let bandeira = 'visa_master';
+    const jurosDe = (p) => U.juros(cfg, p.forma, p.parcelas, p.valor, p.bandeira);
     const infoTaxa = () => {
       const box = corpo.querySelector('#info-taxa');
       const cartao = forma === 'debito' || forma === 'credito';
       corpo.querySelector('#lbl-band').hidden = !cartao;
       const n = forma === 'credito' ? Number(parcEl.value) || 1 : 1;
       const p = cartao || forma === 'pix' ? U.taxa(cfg, forma, n, bandeira) : 0;
-      box.hidden = !p;
-      if (!p) return;
       const v = U.paraCentavos(valorEl.value) || 0;
-      const tx = Math.round((v * p) / 100);
-      box.innerHTML = `${Icone('cartao')}<span>Taxa da maquininha <b>${U.pctTxt(p)}</b> (${brl(tx)}) · cai na conta <b>${brl(v - tx)}</b></span>`;
+      box.hidden = !p || !v;
+      box.classList.remove('com-juros');
+      if (!p || !v) return;
+      const j = U.juros(cfg, forma, n, v, bandeira);
+      const tx = Math.round(((v + j) * p) / 100);
+      if (j) {
+        box.classList.add('com-juros');
+        box.innerHTML = `${Icone('cartao')}<span><b>${n}x com juros:</b> a cliente paga <b>${n}x de ${brl(Math.ceil((v + j) / n))}</b> = ${brl(v + j)}
+          (juros ${brl(j)}) · cai na conta <b>${brl(v + j - tx)}</b></span>`;
+      } else {
+        box.innerHTML = `${Icone('cartao')}<span>${forma === 'credito' && n > 1 ? `<b>${n}x sem juros</b> · ` : ''}taxa da maquininha <b>${U.pctTxt(p)}</b> (${brl(tx)}) paga pela loja · cai na conta <b>${brl(v - tx)}</b></span>`;
+      }
     };
     corpo.querySelector('#lbl-band').onclick = (e) => {
       const b = e.target.closest('[data-band]');
@@ -851,10 +865,19 @@ Telas.pdv = (() => {
     const atualizar = () => {
       corpo.querySelector('#lista-pag').innerHTML = pagamentos.length ? pagamentos.map((p, i) => `
         <div class="pag2-item">${Icone(ICONES_PAG[p.forma] || 'carteira')}<span><b>${NOMES_PAG[p.forma] || U.FORMAS[p.forma]}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</b>${
-  p.codigo ? `<small>${esc(p.codigo)}</small>` : ''}${p.bandeira ? `<small>${U.BANDEIRAS[p.bandeira]}</small>` : ''}${p.forma === 'crediario' ? `<small>1º venc. ${p.primeiro_vencimento.split('-').reverse().join('/')}</small>` : ''}</span>
+  p.codigo ? `<small>${esc(p.codigo)}</small>` : ''}${p.bandeira ? `<small>${U.BANDEIRAS[p.bandeira]}</small>` : ''}${
+  jurosDe(p) ? `<small class="txt-perigo">+ ${brl(jurosDe(p))} de juros</small>` : ''}${p.forma === 'crediario' ? `<small>1º venc. ${p.primeiro_vencimento.split('-').reverse().join('/')}</small>` : ''}</span>
         <b>${brl(p.valor)}</b><button class="mini perigo" data-rm="${i}" title="Tirar">${Icone('fechar')}</button></div>`).join('')
         : '<div class="pag2-nada">Escolha a forma e o valor ao lado.</div>';
       const r = restante();
+      const totalJuros = pagamentos.reduce((a, p) => a + jurosDe(p), 0);
+      const liquido = pagamentos.reduce((a, p) => {
+        const bruto = p.valor + jurosDe(p) - (p.forma === 'dinheiro' ? Math.max(0, -r) : 0);
+        return a + bruto - Math.round((bruto * U.taxa(cfg, p.forma, p.parcelas, p.bandeira)) / 100);
+      }, 0);
+      corpo.querySelector('#pag-liquido').innerHTML = pagamentos.length ? `
+        ${totalJuros ? `<div class="linha"><span>Cliente paga (com juros)</span><b>${brl(t.total + totalJuros)}</b></div>` : ''}
+        <div class="linha cai"><span>${Icone('carteira')} Cai na conta</span><b>${brl(liquido)}</b></div>` : '';
       corpo.querySelector('#pag-resumo').innerHTML = r > 0
         ? `<div class="pag2-falta"><span>Falta receber</span><b>${brl(r)}</b></div>`
         : `<div class="pag2-troco ${r < 0 ? 'tem' : ''}"><span>${r < 0 ? 'Troco para a cliente' : 'Pago'}</span><b>${r < 0 ? brl(-r) : 'Valor certo ✓'}</b>
@@ -1063,6 +1086,8 @@ Telas.pdv = (() => {
            <div class="vc-det">Recebido ${brl(venda.total + venda.troco)} · total ${brl(venda.total)}</div>`
     : `<div class="vc-rotulo">Venda registrada</div><div class="vc-valor">${brl(venda.total)}</div>
            <div class="vc-det">${venda.pagamentos.map((p) => esc(nomesPag[p.forma] || U.FORMAS[p.forma]) + (p.parcelas > 1 ? ` ${p.parcelas}x` : '')).join(' + ')}</div>`}
+        ${venda.taxas || venda.acrescimo ? `<div class="vc-liquido">${Icone('carteira')} Cai na conta <b>${brl(venda.liquido)}</b>
+          <small>${venda.acrescimo ? `juros da cliente ${brl(venda.acrescimo)} · ` : ''}taxas da maquininha ${brl(venda.taxas)}</small></div>` : ''}
       </div>
       ${cred.length ? `<div class="info-cred">${Icone('caderno')} Crediário em ${cred.length}x — ${cred.map((p) =>
     `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}<br>

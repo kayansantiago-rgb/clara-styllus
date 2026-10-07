@@ -222,6 +222,7 @@ const CONFIG_PADRAO = {
   som_bipe: '1',
   // Taxas das maquininhas (% por venda)
   taxas_tabela: JSON.stringify(require('./taxas').TABELA_PADRAO), // taxa por parcela e bandeira
+  juros_a_partir: '4', // crédito com N parcelas ou mais: a taxa da maquininha é somada no valor da cliente (0 = nunca)
   taxa_debito: '',
   taxa_credito_vista: '',
   taxa_credito_2a6: '',
@@ -414,6 +415,13 @@ function migrar(db) {
   }
   if (!colunas('crediario_recebimentos').includes('taxa')) {
     db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN taxa INTEGER');
+  }
+  // Juros da maquininha repassados à cliente (crédito parcelado a partir de N vezes).
+  if (!colunas('vendas').includes('acrescimo')) {
+    db.exec('ALTER TABLE vendas ADD COLUMN acrescimo INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!colunas('venda_pagamentos').includes('juros')) {
+    db.exec('ALTER TABLE venda_pagamentos ADD COLUMN juros INTEGER NOT NULL DEFAULT 0');
   }
   // Grupo de bandeira do cartão (visa_master / elo_amex) para a taxa certa.
   if (!colunas('venda_pagamentos').includes('bandeira')) {

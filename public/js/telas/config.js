@@ -146,16 +146,18 @@ Telas.config = (() => {
     const campos = [...raiz.querySelectorAll('#tx-tabela input')];
     campos.forEach((i) => { i.value = (t[i.dataset.b] || {})[i.dataset.l] ?? ''; });
     const simular = () => {
-      const cfg = { taxas_tabela: oculto.value, taxa_pix: form.elements.taxa_pix.value };
+      const cfg = { taxas_tabela: oculto.value, taxa_pix: form.elements.taxa_pix.value, juros_a_partir: form.elements.juros_a_partir.value };
       const v = U.paraCentavos(raiz.querySelector('#tx-valor').value) || 0;
       const f = raiz.querySelector('#tx-forma').value;
       const p = U.taxa(cfg, f === 'debito' ? 'debito' : 'credito', f === 'debito' ? 1 : Number(f), raiz.querySelector('#tx-band').value);
-      const tx = Math.round((v * p) / 100);
       const n = f === 'debito' ? 1 : Number(f);
+      const j = U.juros(cfg, f === 'debito' ? 'debito' : 'credito', n, v, raiz.querySelector('#tx-band').value);
+      const tx = Math.round(((v + j) * p) / 100);
       raiz.querySelector('#tx-res').innerHTML = `
-        <div><span>Taxa (${U.pctTxt(p)})</span><b class="txt-perigo">− ${U.brl(tx)}</b></div>
-        <div class="tx-cai"><span>Cai na conta</span><b>${U.brl(v - tx)}</b></div>
-        ${n > 1 ? `<small>A cliente paga ${n}x de ${U.brl(Math.round(v / n))}</small>` : ''}`;
+        ${j ? `<div><span>Juros (a cliente paga)</span><b>+ ${U.brl(j)}</b></div>` : ''}
+        <div><span>Taxa (${U.pctTxt(p)})${j ? '' : ' paga pela loja'}</span><b class="txt-perigo">− ${U.brl(tx)}</b></div>
+        <div class="tx-cai"><span>Cai na conta</span><b>${U.brl(v + j - tx)}</b></div>
+        ${n > 1 ? `<small>A cliente paga ${n}x de ${U.brl(Math.ceil((v + j) / n))}${j ? ' (com juros)' : ' sem juros'}</small>` : ''}`;
     };
     const juntar = () => {
       const novo = {};
@@ -178,6 +180,7 @@ Telas.config = (() => {
     });
     ['#tx-valor', '#tx-forma', '#tx-band'].forEach((s) => raiz.querySelector(s).addEventListener('input', simular));
     form.elements.taxa_pix.addEventListener('input', simular);
+    form.elements.juros_a_partir.addEventListener('change', simular);
     simular();
   }
 
@@ -355,6 +358,9 @@ Telas.config = (() => {
               </tbody>
             </table>
             <div class="tx-lado">
+              <label>Juros para a cliente <small>a taxa do crédito é somada no valor dela</small>
+                <select name="juros_a_partir">${[['0', 'Nunca (a loja paga sempre)'], ...Array.from({ length: 11 }, (_, i) => [String(i + 2), `A partir de ${i + 2}x (até ${i + 1}x sem juros)`])].map(([v, t]) =>
+    `<option value="${v}" ${String(c.juros_a_partir || '0') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
               <label>PIX (%) <small>vazio = sem taxa</small><input name="taxa_pix" inputmode="decimal" value="${esc(c.taxa_pix)}" placeholder="sem taxa"></label>
               <div class="tx-sim">
                 <b>${Icone('carteira')} Simular</b>
@@ -431,8 +437,10 @@ Telas.config = (() => {
 
     const form = raiz.querySelector('#f-cfg');
     const sujo = raiz.querySelector('#cfg-sujo');
-    form.addEventListener('input', () => { sujo.hidden = false; });
-    form.addEventListener('change', () => { sujo.hidden = false; });
+    // O simulador de taxas não muda nada salvo: não conta como alteração.
+    const marcar = (ev) => { if (!ev.target.closest('.tx-sim')) sujo.hidden = false; };
+    form.addEventListener('input', marcar);
+    form.addEventListener('change', marcar);
     ligarLogo(raiz, form, () => { sujo.hidden = false; desenharPrevia(raiz, form); });
     form.addEventListener('input', U.debounce(() => desenharPrevia(raiz, form), 150));
     desenharPrevia(raiz, form);

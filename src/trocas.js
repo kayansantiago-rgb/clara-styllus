@@ -12,7 +12,8 @@ function instalarTrocas({ db, rota, erro, inteiro, texto, plano, planos, transac
   /** Itens da venda com o quanto ainda pode voltar e o valor pago por unidade. */
   function itensTrocaveis(venda) {
     const somaItens = venda.itens.reduce((a, it) => a + it.total, 0);
-    const fator = somaItens ? venda.total / somaItens : 1; // aplica o desconto geral da venda
+    // Aplica o desconto geral da venda (os juros do cartão repassados à cliente não voltam no vale).
+    const fator = somaItens ? (venda.total - (venda.acrescimo || 0)) / somaItens : 1;
     return venda.itens.map((it) => {
       const devolvido = db
         .prepare('SELECT COALESCE(SUM(quantidade),0) AS n FROM troca_itens WHERE venda_item_id = ?')

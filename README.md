@@ -62,6 +62,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   o "De" e o cupom informa quanto a cliente economizou.
 - **Inventário pelo leitor**: conta a loja toda ou uma categoria bipando as peças, mostra o que está
   faltando/sobrando (em peças e em custo), permite desfazer/corrigir leituras e ajusta o estoque ao finalizar.
+- **Juros no crédito e "cai na conta"**: até 3x sem juros (a loja paga a taxa); a partir de 4x (configurável) a
+  taxa da maquininha é somada no valor da cliente e a loja recebe o preço cheio. O pagamento, a venda concluída,
+  a tela Vendas, os Relatórios e o Início mostram quanto realmente cai na conta depois das taxas. Na troca, os
+  juros pagos pela cliente não entram no vale.
 - **Taxas das maquininhas**: tabela com a taxa do débito e de cada parcela do crédito (1x a 12x), separada
   por bandeira (Visa/Master e Elo/Amex), já preenchida com a tabela da maquininha da loja, mais a taxa do PIX
   e um simulador ("quanto cai na conta"). No pagamento, escolha a bandeira do cartão e veja a taxa na hora;

@@ -271,6 +271,14 @@ const U = (() => {
     if (parcelas <= 6) return pct(cfg.taxa_credito_2a6);
     return pct(cfg.taxa_credito_7a12);
   }
+  /** Juros repassados à cliente (crédito com `juros_a_partir` parcelas ou mais). Igual a src/taxas.js. */
+  function juros(cfg, forma, parcelas, valor, bandeira) {
+    const aPartir = Number(cfg.juros_a_partir) || 0;
+    if (forma !== 'credito' || !aPartir || (Number(parcelas) || 1) < aPartir) return 0;
+    const p = taxa(cfg, forma, parcelas, bandeira);
+    if (!p || p >= 100) return 0;
+    return Math.ceil(valor / (1 - p / 100) - 1e-9) - valor;
+  }
   const pctTxt = (n) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
 
   // -------------------------------------------------------------- fotos
@@ -308,7 +316,7 @@ const U = (() => {
     sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,
-    dadosForm, FORMAS, taxa, pctTxt, BANDEIRAS,
+    dadosForm, FORMAS, taxa, juros, pctTxt, BANDEIRAS,
   };
 })();
 

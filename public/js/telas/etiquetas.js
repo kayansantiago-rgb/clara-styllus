@@ -49,7 +49,7 @@ Telas.etiquetas = (() => {
     `<button class="et-modelo ${k === modelo ? 'sel' : ''}" data-modelo="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}
               </div>
               <label class="et-parcelas" id="et-parcelas" ${modelo === 'parcelado' ? '' : 'hidden'}>Parcelas na etiqueta
-                <select id="parcelas">${Array.from({ length: 11 }, (_, i) => i + 2).map((n) =>
+                <select id="parcelas">${Array.from({ length: 11 }, (_, i) => i + 2).filter((n) => !(Number(cfg.juros_a_partir) > 2) || n < Number(cfg.juros_a_partir)).map((n) =>
     `<option value="${n}" ${String(n) === String(cfg.etiqueta_parcelas || '3') ? 'selected' : ''}>${n}x sem juros</option>`).join('')}</select></label>
             </div>
           </div>

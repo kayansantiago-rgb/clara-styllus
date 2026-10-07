@@ -109,6 +109,8 @@ Telas.relatorios = (() => {
       <div class="vd-kpis rl-kpis">
         <div class="vd-kpi destaque"><span>${Icone('carteira')} Faturamento</span><b>${brl(t.faturamento)}</b>
           <small>${variacao(t.faturamento, r.anterior.faturamento)} vs. ${brl(r.anterior.faturamento)} no período anterior</small></div>
+        <div class="vd-kpi vd-kpi-cai"><span>${Icone('dinheiro')} Cai na conta</span><b>${brl(t.cai_na_conta ?? t.faturamento)}</b>
+          <small>${t.faturamento - (t.cai_na_conta ?? t.faturamento) ? `− ${brl(t.faturamento - t.cai_na_conta)} de taxas` : 'sem taxas no período'}${t.juros_repassados ? ` · inclui ${brl(t.juros_repassados)} de juros pagos pelas clientes` : ''}</small></div>
         <div class="vd-kpi"><span>${Icone('recibo')} Vendas</span><b>${t.vendas}</b><small>${variacao(t.vendas, r.anterior.vendas)} · ${t.pecas} peça(s)</small></div>
         <div class="vd-kpi"><span>${Icone('grafico')} Ticket médio</span><b>${brl(t.ticket_medio)}</b><small>descontos ${brl(t.descontos)}</small></div>
         <div class="vd-kpi"><span>${Icone('estrela')} Lucro real</span><b class="${t.lucro_real < 0 ? 'txt-perigo' : ''}">${brl(t.lucro_real)}</b>

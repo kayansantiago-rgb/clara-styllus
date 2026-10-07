@@ -106,6 +106,7 @@ const Impressao = (() => {
       <div class="linha"><span>Qtd. de peças</span><span>${pecas}</span></div>
       <div class="linha"><span>Subtotal</span><span>${num(venda.subtotal)}</span></div>
       ${venda.desconto ? `<div class="linha"><span>Descontos</span><span>-${num(venda.desconto)}</span></div>` : ''}
+      ${venda.acrescimo ? `<div class="linha"><span>Juros do cartão</span><span>+${num(venda.acrescimo)}</span></div>` : ''}
       <hr class="duplo">
       <div class="linha b g"><span>TOTAL</span><span>${brl(venda.total)}</span></div>
       <hr class="duplo">
@@ -197,7 +198,9 @@ const Impressao = (() => {
       ${detalhes ? `<div class="det">${esc(detalhes)}</div>` : ''}
       ${cfg.etiqueta_mostrar_preco !== '1' ? ''
     : modelo === 'parcelado' ? (() => {
-      const n = Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
+      const aPartir = Number(cfg.juros_a_partir) || 0;
+      const n0 = Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
+      const n = aPartir > 2 ? Math.min(n0, aPartir - 1) : n0;
       return `${p.preco_anterior > p.preco_venda
         ? `<div class="de">de <s>${brl(p.preco_anterior)}</s> por ${brl(p.preco_venda)}</div>`
         : `<div class="avista">${brl(p.preco_venda)}</div>`}

@@ -102,6 +102,10 @@ function cupomVenda(venda, cfg, { via = '', abrirGaveta = false } = {}) {
   c.par('Qtd. de peças', String(pecas));
   c.par('Subtotal', num(venda.subtotal));
   if (venda.desconto) c.par('Descontos', '-' + num(venda.desconto));
+  if (venda.acrescimo) {
+    const pj = venda.pagamentos.find((p) => p.juros);
+    c.par(`Juros do cartão${pj ? ` (${pj.parcelas}x)` : ''}`, '+' + num(venda.acrescimo));
+  }
   const economia = venda.itens.reduce((a, it) =>
     a + (it.preco_anterior > it.preco_unitario ? (it.preco_anterior - it.preco_unitario) * it.quantidade : 0), 0) + (venda.desconto || 0);
   c.separador('=');

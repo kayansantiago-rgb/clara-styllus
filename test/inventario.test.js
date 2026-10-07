@@ -108,3 +108,31 @@ test('relatório mostra taxa gravada na venda e lucro após taxas', () => {
   assert.equal(r.totais.lucro_bruto, 30000 - 12000);
   assert.equal(r.totais.lucro_apos_taxas, 18000 - 1200);
 });
+
+test('até 3x a loja paga a taxa; a partir de 4x os juros vão para a cliente e a loja recebe o preço cheio', () => {
+  const { chamar } = novaApi();
+  const p = chamar('POST', '/api/produtos', { nome: 'Vestido', preco_venda: 25990, estoque: 5 }).corpo;
+  chamar('POST', '/api/caixa/abrir', {});
+  const item = [{ produto_id: p.id, quantidade: 1 }];
+  // 3x sem juros: a cliente paga 259,90 e cai 259,90 − 6,12%.
+  const v3 = chamar('POST', '/api/vendas', { itens: item, pagamentos: [{ forma: 'credito', valor: 25990, parcelas: 3 }] }).corpo;
+  assert.equal(v3.total, 25990);
+  assert.equal(v3.acrescimo, 0);
+  assert.equal(v3.liquido, 25990 - 1591);
+  // 6x: a cliente paga 259,90 / (1 − 8,28%) e a loja recebe o preço da peça.
+  const v6 = chamar('POST', '/api/vendas', { itens: item, pagamentos: [{ forma: 'credito', valor: 25990, parcelas: 6 }] }).corpo;
+  assert.equal(v6.total, 28337);
+  assert.equal(v6.acrescimo, 2347);
+  assert.equal(v6.pagamentos[0].juros, 2347);
+  assert.ok(Math.abs(v6.liquido - 25990) <= 1);
+  // Na troca, os juros do cartão não voltam no vale.
+  const t = chamar('POST', `/api/vendas/${v6.id}/troca`, { itens: [{ venda_item_id: v6.itens[0].id, quantidade: 1 }] }).corpo;
+  assert.equal(t.valor, 25990);
+  // Desligado (juros_a_partir = 0): ninguém paga juros.
+  chamar('PUT', '/api/config', { juros_a_partir: '0' });
+  const v12 = chamar('POST', '/api/vendas', { itens: item, pagamentos: [{ forma: 'credito', valor: 25990, parcelas: 12 }] }).corpo;
+  assert.equal(v12.total, 25990);
+  const r = chamar('GET', '/api/relatorios').corpo;
+  assert.equal(r.totais.juros_repassados, 2347);
+  assert.ok(r.totais.cai_na_conta < r.totais.faturamento);
+});
