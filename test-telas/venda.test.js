@@ -48,7 +48,7 @@ test('pagamento dividido (PIX + dinheiro) e desistência não grava nada', OPC, 
     await sis.pagina.waitForTimeout(300);
     assert.equal((await sis.api('/api/vendas')).length, 0);
     // Dividido.
-    await pagar(sis, 'pix', { valor: '100,00' });
+    await pagar(sis, 'pix', { valor: '100,00', dividir: true });
     await pagar(sis, 'dinheiro', { valor: '159,90' });
     const v = await confirmar(sis);
     assert.deepEqual(v.pagamentos.map((p) => [p.forma, p.valor]), [['pix', 10000], ['dinheiro', 15990]]);
@@ -78,9 +78,8 @@ test('crédito: 3x sem juros (a loja paga a taxa) e 6x com juros (a cliente paga
     await sis.pagina.waitForSelector('.pag2');
     await sis.pagina.selectOption('#pag-parc', '6');
     await sis.pagina.waitForTimeout(150);
-    assert.match(await sis.pagina.textContent('#info-taxa'), /6x com juros[\s\S]*6x de R\$\s?47,23[\s\S]*283,37/);
-    await sis.pagina.click('.pag2-add');
-    await sis.pagina.waitForTimeout(250);
+    // O total grande já mostra o valor que vai na maquininha.
+    assert.match(await sis.pagina.textContent('#pag-total'), /Passar na maquininha[\s\S]*283,37[\s\S]*6x de R\$\s?47,23/);
     const v6 = await confirmar(sis);
     assert.equal(v6.total, 28337);
     assert.equal(v6.acrescimo, 2347);
@@ -107,8 +106,6 @@ test('Enter duas vezes não grava a venda duas vezes; Alt+2 escolhe PIX e o "2" 
     await sis.pagina.keyboard.press('Alt+2');
     await sis.pagina.waitForTimeout(150);
     assert.equal(await sis.pagina.getAttribute('.pag2 .forma.sel', 'data-forma'), 'pix');
-    await sis.pagina.click('.pag2-add');
-    await sis.pagina.waitForTimeout(200);
     await sis.pagina.focus('#concluir');
     await sis.pagina.keyboard.press('Enter');
     await sis.pagina.keyboard.press('Enter');
@@ -134,6 +131,39 @@ test('desconto na venda (F7) e peça sem estoque mostra o aviso da lista de espe
     assert.match(await sis.pagina.textContent('.p4-pagar'), /233,91/);
     await bipar(sis, d.saia.codigo);
     assert.match(await sis.pagina.textContent('#alertas'), /anotar na lista de espera/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
+
+test('modo direto: escolhe a forma e Enter confirma; no dinheiro mostra o troco antes', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    await sis.ir('pdv');
+    await bipar(sis, d.blusa.codigo);
+    await sis.pagina.click('.p4-formas [data-forma=dinheiro]');
+    await sis.pagina.waitForSelector('.pag2.direto');
+    assert.equal(await sis.pagina.isVisible('.pag2-add'), false, 'sem o botão Adicionar');
+    await sis.pagina.keyboard.type('100');
+    await sis.pagina.waitForTimeout(150);
+    assert.match(await sis.pagina.textContent('#pag-resumo'), /Troco[\s\S]*10,10/);
+    assert.equal((await sis.api('/api/vendas')).length, 0, 'ainda não gravou');
+    await sis.pagina.keyboard.press('Enter');
+    await sis.pagina.waitForSelector('.vc');
+    const v = (await sis.api('/api/vendas'))[0];
+    assert.equal(v.troco, 1010);
+    // Débito: nem precisa digitar valor.
+    await sis.pagina.keyboard.press('Enter');
+    await sis.pagina.waitForTimeout(400);
+    await bipar(sis, d.blusa.codigo);
+    await sis.pagina.click('.p4-formas [data-forma=debito]');
+    await sis.pagina.waitForSelector('.pag2.direto');
+    assert.equal(await sis.pagina.isVisible('#pag-valor'), false);
+    await sis.pagina.keyboard.press('Enter');
+    await sis.pagina.waitForSelector('.vc');
+    assert.equal((await sis.api('/api/vendas')).length, 2);
     assert.deepEqual(sis.erros, []);
   } finally {
     await sis.fechar();

@@ -157,7 +157,7 @@ Telas.pdv = (() => {
     const nav = raiz.querySelector('#menu-nav');
     raiz.querySelector('#t-nav').onclick = (ev) => { ev.stopPropagation(); nav.hidden = !nav.hidden; };
     raiz.querySelector('#btn-cliente').onclick = () => escolherCliente();
-    raiz.querySelector('#btn-finalizar').onclick = () => finalizar();
+    raiz.querySelector('#btn-finalizar').onclick = () => finalizar('dinheiro', undefined, { dividir: true });
     raiz.querySelector('#btn-limpar').onclick = limpar;
     raiz.querySelector('#itens').addEventListener('click', cliqueItem);
     raiz.querySelector('.pdv-pagar').onclick = (e) => {
@@ -683,7 +683,11 @@ Telas.pdv = (() => {
     return !mudou;
   }
 
-  async function finalizar(formaInicial = 'dinheiro', valeCodigo) {
+  /**
+   * Pagamento. Modo direto (o normal): escolhe a forma e confirma (Enter). No dinheiro, digita o valor
+   * recebido para ver o troco. "Dividir em duas formas" (ou vale-troca) usa a lista com "Adicionar".
+   */
+  async function finalizar(formaInicial = 'dinheiro', valeCodigo, opcoes = {}) {
     if (!carrinho.itens.length) return aviso('Adicione itens antes de finalizar.', 'alerta');
     try {
       if (!(await conferirPrecos())) return;
@@ -705,6 +709,7 @@ Telas.pdv = (() => {
     const vencPadrao = new Date(Date.now() + (Number(cfg.crediario_dias_primeira) || 30) * 864e5).toLocaleDateString('sv-SE');
     const pagamentos = [];
     let forma = formaInicial;
+    let dividir = !!opcoes.dividir || !!valeCodigo || formaInicial === 'vale';
     const formas = Object.entries(U.FORMAS);
 
     const ICONES_PAG = { dinheiro: 'dinheiro', pix: 'pix', debito: 'cartao', credito: 'cartao', crediario: 'caderno', vale: 'vale', outro: 'carteira' };
@@ -726,6 +731,7 @@ Telas.pdv = (() => {
             <label id="lbl-vale" hidden>Código do vale<input id="pag-vale" autocomplete="off" placeholder="Bipe o vale-troca"></label>
             <button class="btn btn-claro pag2-add">${Icone('mais')} Adicionar <kbd>Enter</kbd></button>
           </form>
+          <button type="button" class="link pag2-modo" id="pag-modo"></button>
           <div class="pag2-dica" id="pag-dica" hidden></div>
           <div class="pag2-taxa" id="info-taxa" hidden></div>
           <div class="valores-rapidos" id="rapidos"></div>
@@ -733,7 +739,7 @@ Telas.pdv = (() => {
           <div id="info-cred" class="info-cred" hidden></div>
         </div>
         <aside class="pag2-dir">
-          <div class="pag2-total"><small>Total da venda</small><b>${brl(t.total)}</b><span>${t.pecas} peça${t.pecas === 1 ? '' : 's'}${t.bruto - t.total ? ` · desconto ${brl(t.bruto - t.total)}` : ''}</span></div>
+          <div class="pag2-total" id="pag-total"></div>
           <div id="lista-pag" class="lista-pag"></div>
           <div class="pag-resumo" id="pag-resumo"></div>
           <div class="pag2-liquido" id="pag-liquido"></div>
@@ -802,7 +808,10 @@ Telas.pdv = (() => {
       const b = ev.target.closest('[data-v]');
       if (!b) return;
       valorEl.value = num(Number(b.dataset.v));
-      corpo.querySelector('#f-pag').requestSubmit();
+      if (dividir) return corpo.querySelector('#f-pag').requestSubmit();
+      // Modo direto: mostra o troco e espera a confirmação.
+      atualizarDireto();
+      corpo.querySelector('#concluir').focus();
     };
     const parcEl = corpo.querySelector('#pag-parc');
     const vencEl = corpo.querySelector('#pag-venc');
@@ -867,12 +876,14 @@ Telas.pdv = (() => {
     };
 
     const escolherForma = (f) => {
+      if (f === 'vale' && !dividir) { dividir = true; modo(); }
       if (f === 'crediario' && !carrinho.cliente) {
         fecharModal();
         aviso('Para vender no crediário, escolha o cliente.', 'alerta');
         return escolherCliente(() => finalizar('crediario'));
       }
       forma = f;
+      corpo.querySelector('.pag2').dataset.forma = f;
       corpo.querySelectorAll('.forma').forEach((b) => b.classList.toggle('sel', b.dataset.forma === f));
       corpo.querySelector('#lbl-parc').hidden = f !== 'credito' && f !== 'crediario';
       corpo.querySelector('#lbl-venc').hidden = f !== 'crediario';
@@ -881,20 +892,83 @@ Telas.pdv = (() => {
       // muda só para dividir a venda em duas formas (ex.: parte no PIX, parte no cartão).
       const nome = NOMES_PAG[f] || U.FORMAS[f];
       corpo.querySelector('#pag-rotulo').textContent = f === 'dinheiro' ? 'Valor recebido em dinheiro' : `Valor no ${nome.toLowerCase() === 'pix' ? 'PIX' : nome.toLowerCase()}`;
+      valorEl.placeholder = f === 'dinheiro' && !dividir ? `${num(t.total)} (valor exato)` : '';
       const dica = corpo.querySelector('#pag-dica');
       dica.hidden = f === 'dinheiro';
       dica.textContent = f === 'vale' ? 'O valor vem do saldo do vale.' : 'Já vem com o valor exato. Só mude se a cliente for dividir o pagamento em duas formas.';
       if (f !== 'dinheiro' && restante() > 0) valorEl.value = num(restante());
+      if (f === 'dinheiro' && !dividir) valorEl.value = '';
       preencherParcelas();
       infoCrediario();
       infoVale();
       desenharRapidos();
+      if (!dividir) atualizar();
       if (f === 'vale' && !valeAtual) { valeEl.focus(); return; }
+      // Modo direto sem valor para digitar (PIX, cartão…): o foco vai para "Confirmar venda" (Enter).
+      if (!dividir && f !== 'dinheiro') { corpo.querySelector('#concluir').focus(); return; }
       valorEl.focus();
       valorEl.select();
     };
 
+    // Total grande: no crédito com juros mostra o valor que vai na maquininha.
+    const desenharTotal = (juros, n) => {
+      corpo.querySelector('#pag-total').innerHTML = juros
+        ? `<small>Passar na maquininha · crédito ${n}x</small><b>${brl(t.total + juros)}</b>
+           <span class="pag2-parcelas">${n}x de ${brl(Math.ceil((t.total + juros) / n))}</span>
+           <span>peças ${brl(t.total)} + juros ${brl(juros)} (pagos pela cliente)</span>`
+        : `<small>Total da venda</small><b>${brl(t.total)}</b><span>${t.pecas} peça${t.pecas === 1 ? '' : 's'}${t.bruto - t.total ? ` · desconto ${brl(t.bruto - t.total)}` : ''}</span>`;
+      corpo.querySelector('#pag-total').classList.toggle('com-juros', !!juros);
+    };
+
+    /** Pagamento do modo direto: a venda inteira na forma escolhida. */
+    const pagamentoDireto = () => {
+      const recebido = U.paraCentavos(valorEl.value);
+      return {
+        forma,
+        valor: forma === 'dinheiro' && valorEl.value.trim() ? recebido : t.total,
+        parcelas: forma === 'credito' || forma === 'crediario' ? Number(parcEl.value) || 1 : 1,
+        bandeira: forma === 'debito' || forma === 'credito' ? bandeira : undefined,
+        primeiro_vencimento: forma === 'crediario' ? vencEl.value : undefined,
+      };
+    };
+
+    const atualizarDireto = () => {
+      const p = pagamentoDireto();
+      const j = jurosDe(p);
+      desenharTotal(j, p.parcelas);
+      const invalido = Number.isNaN(p.valor);
+      const falta = invalido ? t.total : t.total - p.valor;
+      const bruto = (forma === 'dinheiro' ? t.total : p.valor) + j;
+      const liquido = bruto - Math.round((bruto * U.taxa(cfg, p.forma, p.parcelas, p.bandeira)) / 100);
+      corpo.querySelector('#pag-resumo').innerHTML = falta > 0
+        ? `<div class="pag2-falta"><span>${invalido ? 'Valor inválido' : 'Falta'}</span><b>${brl(falta)}</b></div>`
+        : `<div class="pag2-troco ${falta < 0 ? 'tem' : ''}"><span>${falta < 0 ? 'Troco para a cliente' : 'Pagamento'}</span><b>${falta < 0 ? brl(-falta) : 'Valor certo ✓'}</b>
+            <small>Aperte <b>Enter</b> ou clique em <b>Confirmar venda</b>. Se a cliente desistir, clique em Voltar — nada é registrado.</small></div>`;
+      corpo.querySelector('#pag-liquido').innerHTML = `<div class="linha cai"><span>${Icone('carteira')} Cai na conta</span><b>${brl(liquido)}</b></div>`;
+      corpo.querySelector('#concluir').disabled = falta > 0;
+      infoTaxa();
+    };
+
+    /** Liga/desliga o modo "dividir em duas formas". */
+    const modo = () => {
+      corpo.querySelector('.pag2').classList.toggle('direto', !dividir);
+      corpo.querySelector('#pag-modo').classList.toggle('voltar', dividir);
+      corpo.querySelector('#pag-modo').innerHTML = dividir
+        ? `${Icone('seta')} Voltar para uma forma só`
+        : `${Icone('mais')} Dividir em duas formas (ex.: parte no PIX, parte no cartão)`;
+      corpo.querySelector('#pag-modo').hidden = dividir && pagamentos.some((p) => p.forma === 'vale');
+      if (dividir) desenharTotal(0);
+    };
+    corpo.querySelector('#pag-modo').onclick = () => {
+      dividir = !dividir;
+      pagamentos.length = 0;
+      modo();
+      escolherForma(forma === 'vale' ? 'dinheiro' : forma);
+      atualizar();
+    };
+
     const atualizar = () => {
+      if (!dividir) return atualizarDireto();
       corpo.querySelector('#lista-pag').innerHTML = pagamentos.length ? pagamentos.map((p, i) => `
         <div class="pag2-item">${Icone(ICONES_PAG[p.forma] || 'carteira')}<span><b>${NOMES_PAG[p.forma] || U.FORMAS[p.forma]}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</b>${
   p.codigo ? `<small>${esc(p.codigo)}</small>` : ''}${p.bandeira ? `<small>${U.BANDEIRAS[p.bandeira]}</small>` : ''}${
@@ -930,8 +1004,8 @@ Telas.pdv = (() => {
       const b = e.target.closest('[data-rm]');
       if (b) { pagamentos.splice(Number(b.dataset.rm), 1); atualizar(); valorEl.focus(); }
     };
-    valorEl.addEventListener('input', infoCrediario);
-    parcEl.addEventListener('change', infoCrediario);
+    valorEl.addEventListener('input', () => { infoCrediario(); if (!dividir) atualizarDireto(); });
+    parcEl.addEventListener('change', () => { infoCrediario(); if (!dividir) atualizarDireto(); });
     vencEl.addEventListener('change', infoCrediario);
     // Alt + 1…7 escolhe a forma de pagamento. Os números sozinhos sempre digitam o valor
     // (antes, com o valor selecionado, o "2" de R$ 200 trocava para PIX).
@@ -944,6 +1018,7 @@ Telas.pdv = (() => {
     });
     corpo.querySelector('#f-pag').onsubmit = async (e) => {
       e.preventDefault();
+      if (!dividir) return concluir();
       if (!valorEl.value.trim() && restante() <= 0) return concluir();
       if (forma === 'vale' && (!valeAtual || valeAtual.codigo !== valeEl.value.trim().toUpperCase())) {
         if (!(await buscarVale())) return;
@@ -981,6 +1056,12 @@ Telas.pdv = (() => {
 
     let enviando = false;
     const concluir = async () => {
+      if (!dividir && !enviando) {
+        const p = pagamentoDireto();
+        if (Number.isNaN(p.valor) || p.valor < t.total) return aviso(forma === 'dinheiro' ? 'O valor recebido é menor que o total.' : 'Valor inválido.', 'erro');
+        pagamentos.length = 0;
+        pagamentos.push(p);
+      }
       if (enviando || restante() > 0) return;
       enviando = true;
       try {
@@ -1003,10 +1084,12 @@ Telas.pdv = (() => {
         vendaConcluida(venda);
       } catch (e) {
         enviando = false;
+        if (!dividir) pagamentos.length = 0;
         erro(e);
       }
     };
     corpo.querySelector('#concluir').onclick = concluir;
+    modo();
     escolherForma(forma);
     atualizar();
     if (valeCodigo) {
@@ -1160,7 +1243,7 @@ Telas.pdv = (() => {
     if (!raiz || !caixa) return;
     const mapa = {
       F2: () => raiz.querySelector('#busca').focus(),
-      F4: () => !U.modalAberto() && finalizar(),
+      F4: () => !U.modalAberto() && finalizar('dinheiro', undefined, { dividir: true }),
       F6: () => !U.modalAberto() && escolherCliente(),
       F7: () => !U.modalAberto() && pedirDesconto(),
       F8: () => {

@@ -1953,3 +1953,13 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .vd-cai .i { width: 15px; height: 15px; vertical-align: -3px; }
 .rl-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .vd-kpis:has(.vd-kpi-cai):has(.vd-kpi-formas) { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); }
+
+/* ---------- Pagamento: modo direto ---------- */
+.pag2.direto .pag2-add, .pag2.direto #lista-pag, .pag2.direto #pag-dica { display: none !important; }
+.pag2.direto:not([data-forma=dinheiro]) .pag2-valor { display: none !important; }
+.pag2.direto:not([data-forma=dinheiro]) #rapidos { display: none; }
+.pag2-modo { margin-top: 10px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; color: var(--rosa-escuro); }
+.pag2-modo .i { width: 15px; height: 15px; }
+.pag2-total.com-juros { background: linear-gradient(140deg, #6b3a00, #a35a00); }
+.pag2-total .pag2-parcelas { display: inline-block; margin: 2px 0 4px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.18); font-weight: 700; font-size: 15px; color: #fff; }
+.pag2-modo.voltar .i { transform: scaleX(-1); }

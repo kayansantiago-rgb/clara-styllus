@@ -100,8 +100,11 @@ async function bipar(sis, texto) {
   await sis.pagina.waitForTimeout(350);
 }
 
-/** Abre o pagamento numa forma, opcionalmente com valor e parcelas, e adiciona. */
-async function pagar(sis, forma, { valor, parcelas, bandeira } = {}) {
+/**
+ * Abre o pagamento numa forma, com valor/parcelas/bandeira. No modo direto (o normal) só escolhe;
+ * com `dividir`, passa para "dividir em duas formas" e adiciona o pagamento na lista.
+ */
+async function pagar(sis, forma, { valor, parcelas, bandeira, dividir } = {}) {
   const p = sis.pagina;
   if (!(await p.locator('.pag2').count())) {
     await p.click(`.p4-formas [data-forma=${forma}]`);
@@ -110,10 +113,17 @@ async function pagar(sis, forma, { valor, parcelas, bandeira } = {}) {
     await p.click(`.pag2 [data-forma=${forma}]`);
   }
   await p.waitForTimeout(150);
+  if (dividir && await p.locator('.pag2.direto').count()) {
+    await p.click('#pag-modo');
+    await p.waitForTimeout(150);
+  }
   if (parcelas) await p.selectOption('#pag-parc', String(parcelas));
   if (bandeira) await p.click(`[data-band=${bandeira}]`);
-  if (valor !== undefined) await p.fill('#pag-valor', valor);
-  await p.click('.pag2-add');
+  if (valor !== undefined) {
+    await p.fill('#pag-valor', valor);
+    await p.dispatchEvent('#pag-valor', 'input');
+  }
+  if (!(await p.locator('.pag2.direto').count())) await p.click('.pag2-add');
   await p.waitForTimeout(250);
 }
 
