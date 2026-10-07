@@ -33,6 +33,7 @@ const U = (() => {
     let s = String(valor ?? '').trim().replace(/[R$\s]/g, '');
     if (!s) return 0;
     if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ''); // "1.500" = mil e quinhentos
     const n = Number(s);
     return Number.isFinite(n) ? Math.round(n * 100) : NaN;
   }
@@ -249,6 +250,29 @@ const U = (() => {
     } catch { /* sem áudio: segue sem som */ }
   }
 
+  // ------------------------------------------------------- clique duplo
+  /**
+   * Evita gravar duas vezes (clique duplo, Enter repetido): enquanto `fn` roda, os botões de `el`
+   * ficam desativados e novos envios são ignorados.
+   */
+  function umaVez(el, fn) {
+    return async (...args) => {
+      if (el._ocupado) {
+        if (args[0] && args[0].preventDefault) args[0].preventDefault();
+        return undefined;
+      }
+      el._ocupado = true;
+      const botoes = el.matches('button') ? [el] : [...el.querySelectorAll('button:not([data-fechar])')];
+      botoes.forEach((b) => { b.disabled = true; });
+      try {
+        return await fn(...args);
+      } finally {
+        el._ocupado = false;
+        botoes.forEach((b) => { b.disabled = false; });
+      }
+    };
+  }
+
   // -------------------------------------------------------------- taxas
   // Mesma regra de src/taxas.js: taxa por parcela e grupo de bandeira (tabela da maquininha).
   const BANDEIRAS = { visa_master: 'Visa / Master', elo_amex: 'Elo / Amex' };
@@ -316,7 +340,7 @@ const U = (() => {
     sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,
-    dadosForm, FORMAS, taxa, juros, pctTxt, BANDEIRAS,
+    dadosForm, FORMAS, taxa, juros, pctTxt, BANDEIRAS, umaVez,
   };
 })();
 

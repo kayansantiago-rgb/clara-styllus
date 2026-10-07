@@ -242,9 +242,14 @@ serviço “Clara Styllus PDV” (em *Serviços* do Windows), apague os arquivos
 ## Desenvolvimento
 
 ```sh
-npm start   # sobe o servidor em http://localhost:3456
-npm test    # testes da API
+npm start           # sobe o servidor em http://localhost:3456
+npm test            # testes da API (contas, estoque, caixa, crediário, reservas, impressão…)
+npm run test:telas  # testes de tela: abre um navegador e faz vendas, trocas, reservas… de verdade
 ```
+
+Os testes de tela usam o [Playwright](https://playwright.dev) (com o Chromium dele). Ele não faz parte
+do sistema instalado na loja: em desenvolvimento, instale com `npm i -D playwright && npx playwright install chromium`
+(ou aponte `PLAYWRIGHT_MODULO` para uma instalação existente). Sem ele, os testes de tela são pulados.
 
 Estrutura: `server.js` (servidor HTTP), `src/` (banco SQLite embutido no Node e API),
 `public/` (telas em HTML/CSS/JS puro, sem build).

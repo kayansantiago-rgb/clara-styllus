@@ -106,7 +106,7 @@ function instalarCondicional({ db, rota, erro, inteiro, texto, plano, planos, tr
       db.prepare(`UPDATE condicionais SET status = 'cancelada', fechada_em = datetime('now','localtime') WHERE id = ?`).run(c.id);
       return buscar(c.id);
     });
-  });
+  }, 'admin');
 
   return { buscar };
 }

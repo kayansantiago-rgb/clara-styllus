@@ -130,8 +130,9 @@ Telas.condicional = (() => {
         carregar();
       } catch (e) { erro(e); }
     };
-    corpo.querySelector('#fechar').onclick = async () => {
+    corpo.querySelector('#fechar').onclick = U.umaVez(corpo.querySelector('#fechar'), async () => {
       const itens = [...corpo.querySelectorAll('[data-id]')].map((i) => ({ id: Number(i.dataset.id), ficou: Math.max(0, Number(i.value) || 0) }));
+      if (itens.some((x) => x.ficou > 0) && !(await Telas.pdv.podeSubstituirVenda())) return;
       try {
         const r = await api(`/api/condicionais/${c.id}/fechar`, { metodo: 'POST', corpo: { itens } });
         fecharModal();
@@ -145,7 +146,7 @@ Telas.condicional = (() => {
         aviso('Condicional fechada. As peças que ela ficou já estão no caixa: é só receber.');
         Telas.pdv.carregarVenda({ itens: produtos, cliente });
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   return { abrir, sair: () => { raiz = null; } };

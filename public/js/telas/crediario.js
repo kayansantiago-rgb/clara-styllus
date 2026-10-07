@@ -247,7 +247,7 @@ Telas.crediario = (() => {
         <label class="col2">Vencimento da 1ª parcela<input name="primeiro_vencimento" type="date" value="${venc}"></label>
         <div class="acoes col2"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Lançar</button></div>
       </form>`, { largura: '520px' });
-    corpo.querySelector('form').onsubmit = async (ev) => {
+    corpo.querySelector('form').onsubmit = U.umaVez(corpo.querySelector('form'), async (ev) => {
       ev.preventDefault();
       const d = U.dadosForm(ev.target);
       const valor = U.paraCentavos(d.valor);
@@ -260,7 +260,7 @@ Telas.crediario = (() => {
         aviso('Débito lançado.');
         carregar();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   return { abrir, detalhe, receber, sair: () => { raiz = null; } };

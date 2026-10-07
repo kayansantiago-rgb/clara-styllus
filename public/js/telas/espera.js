@@ -49,6 +49,7 @@ Telas.espera = (() => {
   async function carregar() {
     if (!raiz) return;
     try { lista = await api('/api/espera?status=todos'); } catch (e) { return erro(e); }
+    if (!raiz) return; // saiu da tela enquanto carregava
     if (aba === 'chegou' && !lista.some(ABAS[0][2])) aba = lista.some(ABAS[1][2]) ? 'aguardando' : 'chegou';
     desenhar();
     window.atualizarBolinhaEspera && window.atualizarBolinhaEspera();
@@ -111,6 +112,7 @@ Telas.espera = (() => {
       return;
     }
     if (ev.target.closest('[data-vender]')) {
+      if (!(await Telas.pdv.podeSubstituirVenda())) return;
       try {
         const produto = await api(`/api/produtos/${e.chegou.id}`);
         await api(`/api/espera/${e.id}/status`, { metodo: 'POST', corpo: { status: 'atendida' } });
@@ -176,7 +178,7 @@ Telas.espera = (() => {
       const el = corpo.querySelector('#es-prod');
       if (prod) {
         el.innerHTML = `<div class="es-escolhido">${U.miniatura(prod, 'es-foto')}<div><b>${esc(prod.nome)}</b>
-          <small>${[prod.tamanho && `Tam ${prod.tamanho}`, prod.cor, `${prod.estoque} em estoque`].filter(Boolean).join(' · ')}</small></div>
+          <small>${[prod.tamanho && `Tam ${prod.tamanho}`, prod.cor, `${prod.estoque} em estoque`].filter(Boolean).map(esc).join(' · ')}</small></div>
           <button type="button" class="btn btn-peq" id="troca-prod">Trocar</button></div>`;
         el.querySelector('#troca-prod').onclick = () => { prod = null; desenharProd(); };
         return;
@@ -197,7 +199,7 @@ Telas.espera = (() => {
         let r = [];
         try { r = await api(`/api/produtos?q=${encodeURIComponent(t)}&limite=8`); } catch (e) { return erro(e); }
         res.innerHTML = r.map((p, i) => `<button type="button" data-p="${i}">${U.miniatura(p, 'es-foto-mini')}<span><b>${esc(p.nome)}</b>
-          <small>${[p.tamanho && `Tam ${p.tamanho}`, p.cor].filter(Boolean).join(' · ')} · <span class="${p.estoque > 0 ? '' : 'txt-perigo'}">${p.estoque} em estoque</span></small></span></button>`).join('')
+          <small>${[p.tamanho && `Tam ${p.tamanho}`, p.cor].filter(Boolean).map(esc).join(' · ')} · <span class="${p.estoque > 0 ? '' : 'txt-perigo'}">${p.estoque} em estoque</span></small></span></button>`).join('')
           || '<small class="dica">Nada no cadastro. Descreva a peça abaixo.</small>';
         res.onclick = (ev) => {
           const b = ev.target.closest('[data-p]');
@@ -208,7 +210,7 @@ Telas.espera = (() => {
 
     desenharCli();
     desenharProd();
-    corpo.querySelector('#es-ok').onclick = async () => {
+    corpo.querySelector('#es-ok').onclick = U.umaVez(corpo.querySelector('#es-ok'), async () => {
       if (!cli) return aviso('Escolha a cliente.', 'erro');
       const desc = corpo.querySelector('#es-desc');
       if (!prod && !(desc && desc.value.trim())) return aviso('Escolha a peça ou descreva o que ela quer.', 'erro');
@@ -226,7 +228,7 @@ Telas.espera = (() => {
         if (aoSalvar) aoSalvar();
         window.atualizarBolinhaEspera && window.atualizarBolinhaEspera();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   return { abrir, anotar, sair: () => { raiz = null; } };

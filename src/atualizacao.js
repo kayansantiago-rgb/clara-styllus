@@ -59,10 +59,20 @@ function instalarAtualizacao({ rota, erro, config, salvarConfig, pasta }) {
   };
   fs.mkdirSync(pasta, { recursive: true });
 
-  const cabecalhos = (binario) => {
+  /** O token de acesso só vai para o GitHub ou para o endereço de atualização configurado. */
+  const hostConfiavel = (url) => {
+    try {
+      const host = new URL(url).host;
+      const cfgUrl = config().atualizacao_url;
+      return host === 'api.github.com' || (!!cfgUrl && host === new URL(cfgUrl).host);
+    } catch {
+      return false;
+    }
+  };
+  const cabecalhos = (binario, url) => {
     const cfg = config();
     const h = { 'User-Agent': 'ClaraStyllusPDV/' + VERSAO, Accept: binario ? 'application/octet-stream' : 'application/vnd.github+json' };
-    if (cfg.atualizacao_token) h.Authorization = `Bearer ${cfg.atualizacao_token}`;
+    if (cfg.atualizacao_token && hostConfiavel(url)) h.Authorization = `Bearer ${cfg.atualizacao_token}`;
     return h;
   };
 
@@ -72,7 +82,7 @@ function instalarAtualizacao({ rota, erro, config, salvarConfig, pasta }) {
     estado.erro = null;
     try {
       const url = config().atualizacao_url || URL_PADRAO;
-      const r = await fetch(url, { headers: cabecalhos(false), signal: AbortSignal.timeout(20000) });
+      const r = await fetch(url, { headers: cabecalhos(false, url), signal: AbortSignal.timeout(20000) });
       if (r.status === 404) throw new Error('Nenhuma versão publicada encontrada (se o repositório for privado, informe o token de acesso).');
       if (r.status === 401 || r.status === 403) throw new Error('Acesso negado pelo GitHub: confira o token de acesso.');
       if (!r.ok) throw new Error(`Servidor de atualização respondeu ${r.status}.`);
@@ -104,12 +114,12 @@ function instalarAtualizacao({ rota, erro, config, salvarConfig, pasta }) {
   async function baixarAgora(m, destino) {
     estado.baixando = true;
     try {
-      const r = await fetch(m.url, { headers: cabecalhos(m.github), signal: AbortSignal.timeout(15 * 60000) });
+      const r = await fetch(m.url, { headers: cabecalhos(m.github, m.url), signal: AbortSignal.timeout(15 * 60000) });
       if (!r.ok) throw new Error(`Falha ao baixar o instalador (${r.status}).`);
       const dados = Buffer.from(await r.arrayBuffer());
       let esperado = m.sha256;
       if (!esperado && m.url_sha256) {
-        const rs = await fetch(m.url_sha256, { headers: cabecalhos(true), signal: AbortSignal.timeout(30000) });
+        const rs = await fetch(m.url_sha256, { headers: cabecalhos(true, m.url_sha256), signal: AbortSignal.timeout(30000) });
         if (rs.ok) esperado = (await rs.text()).trim().split(/\s+/)[0];
       }
       const obtido = crypto.createHash('sha256').update(dados).digest('hex');

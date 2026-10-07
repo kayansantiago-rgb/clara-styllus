@@ -25,7 +25,8 @@ const parcelasEtiqueta = (cfg) => {
   const n = Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
   // "Sem juros" só até a última parcela sem juros (ex.: juros a partir de 4x → no máximo 3x).
   const aPartir = Number(cfg.juros_a_partir) || 0;
-  return aPartir > 2 ? Math.min(n, aPartir - 1) : n;
+  if (!aPartir) return n;
+  return aPartir - 1 >= 2 ? Math.min(n, aPartir - 1) : 0; // 0 = não há parcelamento sem juros
 };
 /** Valor de cada parcela, arredondado para cima (as parcelas nunca somam menos que o preço). */
 const valorParcela = (centavos, n) => Math.ceil((Number(centavos) || 0) / n);
@@ -57,7 +58,7 @@ function conteudo(p, cfg, m) {
   if (cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples') linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: (destaque ? 0.08 : 0.1) * h });
   linhas.push({ texto: p.nome, alt: (destaque ? 0.09 : 0.11) * h });
   if (det) linhas.push({ texto: det, alt: (destaque ? 0.075 : 0.085) * h });
-  if (cfg.etiqueta_mostrar_preco === '1' && modelo === 'parcelado') {
+  if (cfg.etiqueta_mostrar_preco === '1' && modelo === 'parcelado' && parcelasEtiqueta(cfg) >= 2) {
     // Parcelado: preço à vista menor e "3X DE R$ 86,64" em destaque (sem juros).
     const n = parcelasEtiqueta(cfg);
     if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
@@ -76,7 +77,13 @@ function conteudo(p, cfg, m) {
       linhas.push({ texto: preco(p.preco_venda), alt: (destaque ? 0.26 : 0.17) * h });
     }
   }
-  return linhas.map((l) => ({ ...l, texto: semAcento(l.texto).toUpperCase(), alt: Math.max(12, Math.round(l.alt)) }));
+  // Quebras de linha e caracteres de controle viram espaço: na linguagem da impressora, uma quebra de
+  // linha no nome da peça viraria um comando (ex.: imprimir centenas de etiquetas).
+  return linhas.map((l) => ({
+    ...l,
+    texto: semAcento(String(l.texto).replace(/[\x00-\x1f\x7f]+/g, ' ')).toUpperCase(),
+    alt: Math.max(12, Math.round(l.alt)),
+  }));
 }
 
 function barras(codigo, larguraUtil) {
@@ -112,7 +119,7 @@ function zpl(lista, cfg) {
         }
         y += l.alt + 2;
       }
-      const codigo = semAcento(p.codigo);
+      const codigo = semAcento(String(p.codigo).replace(/[\x00-\x1f\x7f]+/g, ''));
       const b = barras(codigo, util);
       const txt = Math.max(14, Math.round(m.altura * 0.08));
       const alt = Math.max(20, m.altura - m.margem - y - txt - 6);
@@ -166,7 +173,7 @@ function epl(lista, cfg) {
         if (l.riscado) b += `LO${x},${y + Math.round(f.h / 2)},${t.length * f.w},2\n`;
         y += f.h + 3;
       }
-      const codigo = semAcento(p.codigo);
+      const codigo = semAcento(String(p.codigo).replace(/[\x00-\x1f\x7f]+/g, ''));
       const bar = barras(codigo, util);
       const alt = Math.max(20, m.altura - m.margem - y - 22);
       const x = x0 + Math.max(m.margem, Math.round((m.largura - bar.largura) / 2));
@@ -219,7 +226,7 @@ function tspl(lista, cfg) {
         if (l.riscado) t += `BAR ${x},${y + Math.round(f.h / 2)},${tx.length * f.w},2\r\n`;
         y += f.h + 3;
       }
-      const codigo = semAcento(p.codigo);
+      const codigo = semAcento(String(p.codigo).replace(/[\x00-\x1f\x7f]+/g, ''));
       const bar = barras(codigo, util);
       const alt = Math.max(20, m.altura - m.margem - y - 26);
       const x = x0 + Math.max(m.margem, Math.round((m.largura - bar.largura) / 2));

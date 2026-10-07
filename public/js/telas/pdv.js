@@ -175,10 +175,11 @@ Telas.pdv = (() => {
     const menu = raiz.querySelector('#menu-caixa');
     raiz.querySelector('#t-mais').onclick = (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; };
     menu.onclick = () => { menu.hidden = true; };
-    raiz.addEventListener('click', (ev) => {
+    // onclick (e não addEventListener): o container é o mesmo a cada venda, não pode acumular.
+    raiz.onclick = (ev) => {
       if (!ev.target.closest('#t-mais')) menu.hidden = true;
       if (!ev.target.closest('#t-nav')) nav.hidden = true;
-    });
+    };
     carregarAtalhos();
     raiz.querySelector('#t-fechar').onclick = async () => {
       if (carrinho.itens.length && !(await U.confirmar('Fechar caixa',
@@ -550,8 +551,11 @@ Telas.pdv = (() => {
       adicionar(sugestoes[selecionada]);
       return limparBusca();
     }
+    // Código bipado: limpa o campo na hora, para o próximo bipe (rápido) não se misturar com este.
+    const codigo = /^(\d{1,3}\s*[*xX]\s*)?[A-Za-z]{0,2}\d{3,}$/.test(valor.trim());
+    if (codigo) ev.target.value = '';
     try {
-      if (await lerEntrada(valor)) limparBusca();
+      if (await lerEntrada(valor) && (!codigo || !ev.target.value)) limparBusca();
     } catch (e) { erro(e); }
   }
 
@@ -587,6 +591,7 @@ Telas.pdv = (() => {
     if (!carrinho.itens.length) return;
     if (!(await U.confirmar('Cancelar venda', 'Remover todos os itens desta venda?', { ok: 'Sim, cancelar', perigo: true }))) return;
     carrinho = novoCarrinho();
+    local.gravar('pdv_vale_pendente', null); // o vale "para usar agora" era desta venda
     salvar();
     if (raiz) abrir(raiz);
   }
@@ -654,11 +659,38 @@ Telas.pdv = (() => {
   }
 
   // ------------------------------------------------------------ finalizar
+  /**
+   * O carrinho fica guardado no navegador (sobrevive a fechar a tela): antes de receber, confere os
+   * preços atuais das peças para o valor da tela ser o mesmo que o sistema grava.
+   */
+  async function conferirPrecos() {
+    const ids = [...new Set(carrinho.itens.map((it) => it.produto.id))];
+    const atuais = await Promise.all(ids.map((id) => api(`/api/produtos/${id}`).catch(() => null)));
+    let mudou = false;
+    carrinho.itens.forEach((it) => {
+      const p = atuais[ids.indexOf(it.produto.id)];
+      if (!p || it.produto.servico) return;
+      // Na retirada de reserva vale o preço combinado (o menor).
+      const preco = carrinho.reserva_id ? Math.min(p.preco_venda, it.produto.preco_venda) : p.preco_venda;
+      if (preco !== it.produto.preco_venda) mudou = true;
+      it.produto = { ...p, preco_venda: preco };
+    });
+    if (mudou) {
+      salvar();
+      desenhar();
+      aviso('O preço de alguma peça mudou desde que ela entrou no caixa. Confira o total.', 'alerta');
+    }
+    return !mudou;
+  }
+
   async function finalizar(formaInicial = 'dinheiro', valeCodigo) {
     if (!carrinho.itens.length) return aviso('Adicione itens antes de finalizar.', 'alerta');
+    try {
+      if (!(await conferirPrecos())) return;
+    } catch { /* sem conexão: segue; o servidor confere de novo */ }
     // Vale gerado numa troca e marcado para "usar agora".
     const pendente = local.ler('pdv_vale_pendente', null);
-    if (!valeCodigo && pendente && formaInicial === 'dinheiro') {
+    if (!valeCodigo && pendente) {
       formaInicial = 'vale';
       valeCodigo = pendente.codigo;
     }
@@ -960,12 +992,13 @@ Telas.pdv = (() => {
             pagamentos,
             cliente_id: carrinho.cliente ? carrinho.cliente.id : null,
             cpf_nota: carrinho.cpf_nota,
+            reserva_id: carrinho.reserva_id || undefined,
           },
         });
         carrinho = novoCarrinho();
         saldoCliente = null;
         salvar();
-        if (pagamentos.some((p) => p.forma === 'vale')) local.gravar('pdv_vale_pendente', null);
+        local.gravar('pdv_vale_pendente', null); // usado ou não, o vale "para usar agora" era desta venda
         fecharModal();
         vendaConcluida(venda);
       } catch (e) {
@@ -1005,7 +1038,7 @@ Telas.pdv = (() => {
         <div class="acoes"><button type="button" class="btn" data-fechar>Voltar</button>
           <button class="btn btn-primario btn-grande"><i data-icone="bolsa"></i> Registrar e imprimir (2 vias)</button></div>
       </form>`, { largura: '520px' });
-    corpo.querySelector('form').onsubmit = async (ev) => {
+    corpo.querySelector('form').onsubmit = U.umaVez(corpo.querySelector('form'), async (ev) => {
       ev.preventDefault();
       try {
         const c = await api('/api/condicionais', {
@@ -1023,7 +1056,7 @@ Telas.pdv = (() => {
         aviso(`Condicional nº ${c.id} registrada para ${c.cliente_nome} (devolver até ${c.prazo.split('-').reverse().join('/')}).`);
         if (raiz) abrir(raiz);
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   /** Reserva com sinal: as peças do carrinho ficam separadas para a cliente identificada. */
@@ -1050,8 +1083,15 @@ Telas.pdv = (() => {
   }
 
   /** Coloca peças no carrinho (ex.: o que a cliente ficou da condicional) e abre o caixa. */
-  function carregarVenda({ itens, cliente }) {
+  /** Há uma venda em andamento no caixa? (antes de trazer peças de outra tela) */
+  const temVendaEmAndamento = () => !!((local.ler(CHAVE, null) || {}).itens || []).length;
+  /** Pergunta antes de trocar a venda em andamento pelas peças de outra tela. */
+  const podeSubstituirVenda = async () => !temVendaEmAndamento()
+    || U.confirmar('Venda em andamento no caixa', 'Já tem peças no caixa. Trocar pela nova venda? As peças de agora saem do caixa.', { ok: 'Trocar' });
+
+  function carregarVenda({ itens, cliente, reservaId }) {
     const c = novoCarrinho();
+    if (reservaId) c.reserva_id = reservaId;
     c.itens = itens.map(({ produto, quantidade, desconto }) => ({ produto, quantidade, desconto: desconto || 0 }));
     if (cliente) {
       c.cliente = { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf };
@@ -1107,7 +1147,7 @@ Telas.pdv = (() => {
         if (ok === false) {
           st.classList.add('falhou');
           st.innerHTML = '<i data-icone="alerta"></i> O cupom não foi impresso. Confira se a impressora está ligada e com papel'
-            + (U.ehAdmin() ? ' (Configurações → Impressão)' : '')
+            + (U.sessao.ehAdmin() ? ' (Configurações → Impressoras)' : '')
             + ' e clique em “Imprimir de novo”.';
         } else {
           st.textContent = '✓ Cupom enviado para a impressora';
@@ -1138,7 +1178,7 @@ Telas.pdv = (() => {
   }
 
   return {
-    abrir, tecla, carregarVenda, usarCliente,
+    abrir, tecla, carregarVenda, usarCliente, podeSubstituirVenda,
     recarregar: () => raiz && abrir(raiz),
     sair: () => { raiz = null; pararRelogio(); },
   };

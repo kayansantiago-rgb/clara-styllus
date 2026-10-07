@@ -60,7 +60,7 @@ const Trocas = (() => {
       qtd.set(id, Math.max(0, Math.min(it.pode_voltar, n)));
       atualizar();
     });
-    corpo.querySelector('#troca-ok').onclick = async () => {
+    corpo.querySelector('#troca-ok').onclick = U.umaVez(corpo.querySelector('#troca-ok'), async () => {
       try {
         const t = await api(`/api/vendas/${venda.id}/troca`, {
           metodo: 'POST',
@@ -69,7 +69,7 @@ const Trocas = (() => {
         Impressao.troca(t);
         mostrarVale(t);
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   function mostrarVale(t) {

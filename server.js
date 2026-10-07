@@ -52,6 +52,16 @@ function criarServidor(db, opcoes = {}) {
 
     // Envio do instalador (arquivo binário grande) para atualizar sem internet.
     if (url.pathname === '/api/atualizacao/arquivo' && req.method === 'POST') {
+      // Confere o login antes de receber o arquivo (até 300 MB) para ninguém encher a memória.
+      const quem = despachar.usuarioDoToken(lerCookie(req.headers.cookie, COOKIE));
+      if (!quem || quem.perfil !== 'admin') {
+        req.resume();
+        return enviarJson(res, quem ? 403 : 401, { erro: quem ? 'Só o administrador pode atualizar o sistema.' : 'Entre no sistema.' });
+      }
+      if (Number(req.headers['content-length']) > 300e6) {
+        req.resume();
+        return enviarJson(res, 413, { erro: 'Arquivo grande demais.' });
+      }
       const partes = [];
       let tam = 0;
       req.on('data', (c) => {
@@ -111,8 +121,15 @@ function criarServidor(db, opcoes = {}) {
     }
 
     // Arquivos estáticos (sem permitir sair da pasta public).
-    let arquivo = path.normalize(path.join(PASTA_PUBLICA, decodeURIComponent(url.pathname)));
-    if (!arquivo.startsWith(PASTA_PUBLICA)) {
+    let caminho;
+    try {
+      caminho = decodeURIComponent(url.pathname);
+    } catch {
+      res.writeHead(400);
+      return res.end('Endereço inválido');
+    }
+    let arquivo = path.normalize(path.join(PASTA_PUBLICA, caminho));
+    if (arquivo !== PASTA_PUBLICA && !arquivo.startsWith(PASTA_PUBLICA + path.sep)) {
       res.writeHead(403);
       return res.end();
     }

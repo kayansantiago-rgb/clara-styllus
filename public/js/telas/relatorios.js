@@ -146,6 +146,7 @@ Telas.relatorios = (() => {
           <div class="linha"><span>Vendas</span><b>${brl(t.faturamento)}</b></div>
           <div class="linha"><span>(−) Trocas/devoluções em vale</span><span class="txt-perigo">− ${brl(t.trocas)}</span></div>
           <div class="linha"><span>(−) Custo das peças vendidas</span><span class="txt-perigo">− ${brl(t.custo - t.custo_trocas)}</span></div>
+          ${t.sinais_retidos ? `<div class="linha"><span>(+) Sinais de reserva que ficaram com a loja</span><span class="txt-ok">+ ${brl(t.sinais_retidos)}</span></div>` : ''}
           <div class="linha"><span>(−) Taxas das maquininhas</span><span class="txt-perigo">− ${brl(t.taxas)}</span></div>
           <div class="linha"><span>(−) Despesas da loja</span><span class="txt-perigo">− ${brl(t.despesas)}</span></div>
           <div class="linha total"><span>= Lucro real</span><b class="${t.lucro_real < 0 ? 'txt-perigo' : 'txt-ok'}">${brl(t.lucro_real)}</b></div>

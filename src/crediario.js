@@ -102,7 +102,8 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
       db
         .prepare(
           `SELECT forma, SUM(valor) AS valor, COUNT(*) AS quantidade FROM crediario_recebimentos
-           WHERE caixa_id = ? AND status = 'ok' GROUP BY forma`
+           WHERE caixa_id = ? AND (status = 'ok' OR (status = 'estornado' AND estornado_caixa_id IS NOT NULL
+             AND estornado_caixa_id <> caixa_id)) GROUP BY forma`
         )
         .all(caixaId)
     );
@@ -261,7 +262,15 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
   rota('POST', '/api/crediario/recebimentos/:id/estornar', ({ params }) => {
     const rec = buscarRecebimento(params.id);
     if (rec.status === 'estornado') throw erro(409, 'Recebimento já estornado.');
+    // Recebimento de um caixa já fechado: o fechamento dele não muda; o dinheiro devolvido sai do caixa aberto.
+    const aberto = caixaAberto();
+    const outroCaixa = !aberto || aberto.id !== rec.caixa_id;
+    if (outroCaixa && rec.forma === 'dinheiro' && !aberto) throw erro(409, 'Abra o caixa para devolver o dinheiro.');
     return transacao(db, () => {
+      if (outroCaixa && rec.forma === 'dinheiro') {
+        db.prepare(`INSERT INTO caixa_movimentos (caixa_id, tipo, valor, motivo) VALUES (?, 'sangria', ?, ?)`)
+          .run(aberto.id, rec.valor, `Estorno do recebimento nº ${rec.id} do crediário`);
+      }
       for (const p of rec.parcelas) {
         db.prepare(
           `UPDATE crediario_parcelas SET valor_pago = valor_pago - ?, status = 'aberta', pago_em = NULL
@@ -269,9 +278,9 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
         ).run(p.valor_recebido, p.id);
       }
       db.prepare(
-        `UPDATE crediario_recebimentos SET status = 'estornado', estornado_em = datetime('now','localtime')
-         WHERE id = ?`
-      ).run(rec.id);
+        `UPDATE crediario_recebimentos SET status = 'estornado', estornado_em = datetime('now','localtime'),
+           estornado_caixa_id = ? WHERE id = ?`
+      ).run(aberto ? aberto.id : null, rec.id);
       return buscarRecebimento(rec.id);
     });
   }, 'admin');

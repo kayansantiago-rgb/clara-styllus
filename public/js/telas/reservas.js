@@ -46,6 +46,7 @@ Telas.reservas = (() => {
   async function carregar() {
     if (!raiz) return;
     try { lista = await api(`/api/reservas?status=${status}`); } catch (e) { return erro(e); }
+    if (!raiz) return; // saiu da tela enquanto carregava
     const abertas = lista.filter((r) => r.status === 'aberta');
     const vencidas = abertas.filter((r) => diasAte(r.prazo) < 0).length;
     raiz.querySelector('#kpis').innerHTML = status === 'aberta' ? `
@@ -82,20 +83,19 @@ Telas.reservas = (() => {
   async function retirar(r) {
     const ok = await U.confirmar(`Retirar a reserva nº ${r.id}?`,
       `As ${r.pecas} peça(s) vão para o caixa. ${r.pago ? `O sinal de ${brl(r.pago)} já entra no pagamento e falta receber ${brl(r.falta)}.` : `Falta receber ${brl(r.total)}.`}`);
-    if (!ok) return;
+    if (!ok || !(await Telas.pdv.podeSubstituirVenda())) return;
     try {
       const res = await api(`/api/reservas/${r.id}/retirar`, { metodo: 'POST' });
       const produtos = await Promise.all(res.itens.map((it) => api(`/api/produtos/${it.produto_id}`)));
+      // Vale o preço combinado na reserva (o servidor confere pela reserva_id).
       const itens = res.itens.map((it, i) => ({
-        produto: produtos[i],
+        produto: { ...produtos[i], preco_venda: Math.min(produtos[i].preco_venda, it.preco) },
         quantidade: it.quantidade,
-        // Vale o preço combinado na reserva (se o preço subiu, a diferença entra como desconto).
-        desconto: Math.max(0, (produtos[i].preco_venda - it.preco) * it.quantidade),
       }));
       if (res.vale) local.gravar('pdv_vale_pendente', { codigo: res.vale.codigo, saldo: res.vale.saldo });
       fecharModal();
       aviso(res.vale ? `Reserva retirada: o sinal (${brl(res.vale.saldo)}) entra no pagamento.` : 'Reserva retirada: receba o pagamento no caixa.');
-      Telas.pdv.carregarVenda({ itens, cliente: { id: res.reserva.cliente_id, nome: res.reserva.cliente_nome, cpf: res.reserva.cliente_cpf } });
+      Telas.pdv.carregarVenda({ itens, reservaId: r.id, cliente: { id: res.reserva.cliente_id, nome: res.reserva.cliente_nome, cpf: res.reserva.cliente_cpf } });
     } catch (e) { erro(e); }
   }
 
@@ -167,10 +167,9 @@ Telas.reservas = (() => {
     ligarPagamento(corpo, 'rs', resumo);
     resumo();
     corpo.querySelector('#rs-valor').select();
-    corpo.querySelector('#rs-ok').onclick = async (ev) => {
+    corpo.querySelector('#rs-ok').onclick = U.umaVez(corpo.querySelector('#rs-ok'), async (ev) => {
       const p = lerPagamento(corpo, 'rs');
       if (p.valor > total) return aviso('O sinal não pode ser maior que o total.', 'erro');
-      ev.currentTarget.disabled = true;
       try {
         const r = await api('/api/reservas', {
           metodo: 'POST',
@@ -186,9 +185,8 @@ Telas.reservas = (() => {
         concluida(r);
       } catch (e) {
         erro(e);
-        ev.currentTarget.disabled = false;
       }
-    };
+    });
   }
 
   function concluida(r) {
@@ -266,7 +264,7 @@ Telas.reservas = (() => {
       <div class="acoes"><button type="button" class="btn" data-fechar>Voltar</button><button class="btn btn-primario" id="ok">${Icone('check')} Receber</button></div>`, { largura: '520px' });
     ligarPagamento(corpo, 'mais');
     corpo.querySelector('#mais-valor').select();
-    corpo.querySelector('#ok').onclick = async () => {
+    corpo.querySelector('#ok').onclick = U.umaVez(corpo.querySelector('#ok'), async () => {
       try {
         const nova = await api(`/api/reservas/${r.id}/sinal`, { metodo: 'POST', corpo: lerPagamento(corpo, 'mais') });
         aviso(`Recebido. Falta ${brl(nova.falta)}.`);
@@ -274,7 +272,7 @@ Telas.reservas = (() => {
         detalhe(r.id);
         carregar();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   function cancelar(r) {
@@ -289,7 +287,7 @@ Telas.reservas = (() => {
     corpo.querySelectorAll('.rs-destino input').forEach((i) => {
       i.onchange = () => corpo.querySelectorAll('.rs-destino').forEach((l) => l.classList.toggle('sel', l.contains(corpo.querySelector('.rs-destino input:checked'))));
     });
-    corpo.querySelector('#ok').onclick = async () => {
+    corpo.querySelector('#ok').onclick = U.umaVez(corpo.querySelector('#ok'), async () => {
       const d = corpo.querySelector('.rs-destino input:checked');
       try {
         const res = await api(`/api/reservas/${r.id}/cancelar`, { metodo: 'POST', corpo: { destino: d ? d.value : undefined } });
@@ -297,7 +295,7 @@ Telas.reservas = (() => {
         aviso(res.vale ? `Reserva cancelada. Vale ${res.vale.codigo} de ${brl(res.vale.saldo)} no nome da cliente.` : 'Reserva cancelada.');
         carregar();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   return { abrir, criar, sair: () => { raiz = null; } };

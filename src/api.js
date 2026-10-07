@@ -120,6 +120,7 @@ function criarApi(db, opcoes = {}) {
   };
 
   const abrirSessao = (ctx, usuario) => {
+    db.prepare(`DELETE FROM sessoes WHERE expira_em <= datetime('now','localtime')`).run(); // limpa as vencidas
     const token = novoToken();
     db.prepare(
       `INSERT INTO sessoes (token, usuario_id, expira_em)
@@ -174,13 +175,24 @@ function criarApi(db, opcoes = {}) {
     return abrirSessao(ctx, { ...u, id: Number(r.lastInsertRowid), ativo: 1 });
   }, 'publico');
 
+  // Tentativas de senha: depois de 5 erros seguidos no mesmo usuário, espera 30 s (dobrando até 15 min).
+  const tentativas = new Map();
   rota('POST', '/api/login', (ctx) => {
     const login = texto(ctx.corpo.login, 40);
+    const chave = String(login || '').toLowerCase();
+    const t = tentativas.get(chave) || { falhas: 0, ate: 0 };
+    if (t.ate > Date.now()) {
+      throw erro(429, `Muitas tentativas erradas. Espere ${Math.ceil((t.ate - Date.now()) / 1000)} segundos e tente de novo.`);
+    }
     const u = login && plano(db.prepare('SELECT * FROM usuarios WHERE login = ?').get(login));
     if (!u || !u.ativo || !conferirSenha(ctx.corpo.senha ?? '', u.senha_hash)) {
+      t.falhas++;
+      if (t.falhas >= 5) t.ate = Date.now() + Math.min(15 * 60e3, 30e3 * 2 ** (t.falhas - 5));
+      tentativas.set(chave, t);
       auditoria.loginFalhou(login);
       throw erro(401, 'Usuário ou senha incorretos.');
     }
+    tentativas.delete(chave);
     return abrirSessao(ctx, u);
   }, 'publico');
 
@@ -190,13 +202,15 @@ function criarApi(db, opcoes = {}) {
     return { ok: true };
   }, 'publico');
 
-  rota('POST', '/api/minha-senha', ({ usuario, corpo }) => {
+  rota('POST', '/api/minha-senha', ({ usuario, corpo, token }) => {
     if (!conferirSenha(corpo.senha_atual ?? '', usuario.senha_hash)) {
       throw erro(400, 'Senha atual incorreta.');
     }
     const { senha_hash: hash } = lerUsuario({ senha: corpo.nova_senha }, false);
     if (!hash) throw erro(400, 'Informe a nova senha.');
     db.prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?').run(hash, usuario.id);
+    // Senha nova: as outras sessões abertas com a senha antiga saem.
+    db.prepare('DELETE FROM sessoes WHERE usuario_id = ? AND token <> ?').run(usuario.id, token || '');
     return { ok: true };
   });
 
@@ -715,6 +729,9 @@ function criarApi(db, opcoes = {}) {
   instalarEspera({ db, rota, erro, inteiro, texto, plano, planos });
 
   // ----------------------------------------------------------------- caixa
+  // Venda conta no caixa em que foi feita se está concluída, ou se foi cancelada depois, com outro caixa aberto.
+  const VALEU_NO_CAIXA = `(v.status = 'concluida' OR (v.status = 'cancelada' AND v.cancelada_caixa_id IS NOT NULL
+    AND v.cancelada_caixa_id <> v.caixa_id))`;
   const resumoCaixa = (caixaId) => {
     const caixa = plano(db.prepare('SELECT * FROM caixas WHERE id = ?').get(caixaId));
     if (!caixa) throw erro(404, 'Caixa não encontrado.');
@@ -723,7 +740,7 @@ function criarApi(db, opcoes = {}) {
         .prepare(
           `SELECT p.forma, SUM(p.valor) AS valor, COUNT(DISTINCT v.id) AS vendas
            FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
-           WHERE v.caixa_id = ? AND v.status = 'concluida' GROUP BY p.forma`
+           WHERE v.caixa_id = ? AND ${VALEU_NO_CAIXA} GROUP BY p.forma`
         )
         .all(caixaId)
     );
@@ -732,12 +749,12 @@ function criarApi(db, opcoes = {}) {
         .prepare(
           `SELECT COUNT(*) AS quantidade, COALESCE(SUM(total),0) AS total,
              COALESCE(SUM(troco),0) AS troco, COALESCE(SUM(desconto),0) AS desconto
-           FROM vendas WHERE caixa_id = ? AND status = 'concluida'`
+           FROM vendas v WHERE caixa_id = ? AND ${VALEU_NO_CAIXA}`
         )
         .get(caixaId)
     );
     const canceladas = db
-      .prepare(`SELECT COUNT(*) AS n FROM vendas WHERE caixa_id = ? AND status = 'cancelada'`)
+      .prepare(`SELECT COUNT(*) AS n FROM vendas v WHERE caixa_id = ? AND NOT ${VALEU_NO_CAIXA}`)
       .get(caixaId).n;
     const movimentos = planos(
       db.prepare('SELECT * FROM caixa_movimentos WHERE caixa_id = ? ORDER BY id').all(caixaId)
@@ -857,12 +874,23 @@ function criarApi(db, opcoes = {}) {
       throw erro(400, 'Informe a forma de pagamento.');
     }
 
+    // Retirada de reserva: vale o preço combinado na reserva (se a peça ficou mais cara depois).
+    let reserva = null;
+    if (corpo.reserva_id) {
+      reserva = plano(db.prepare('SELECT * FROM reservas WHERE id = ?').get(corpo.reserva_id));
+      if (!reserva || reserva.status !== 'retirada') throw erro(400, 'Reserva não encontrada ou ainda não retirada.');
+      if (db.prepare('SELECT 1 FROM vendas WHERE reserva_id = ?').get(reserva.id)) throw erro(409, 'Esta reserva já virou venda.');
+      reserva.precos = new Map(db.prepare('SELECT produto_id, MIN(preco) AS preco FROM reserva_itens WHERE reserva_id = ? GROUP BY produto_id')
+        .all(reserva.id).map((r) => [r.produto_id, r.preco]));
+    }
+
     return transacao(db, () => {
       const itens = corpo.itens.map((it, i) => {
         const prod = plano(
           db.prepare('SELECT * FROM produtos WHERE id = ? AND ativo = 1').get(it.produto_id)
         );
         if (!prod) throw erro(400, `Item ${i + 1}: produto não encontrado ou inativo.`);
+        if (reserva && reserva.precos.has(prod.id)) prod.preco_venda = Math.min(prod.preco_venda, reserva.precos.get(prod.id));
         // Serviço (ajuste, embrulho…) pode ter o preço informado na hora.
         if (prod.servico && it.preco !== undefined && it.preco !== null && it.preco !== '') {
           prod.preco_venda = inteiro(it.preco, 'preço', { min: 0 });
@@ -924,8 +952,8 @@ function criarApi(db, opcoes = {}) {
       const total = totalPecas + acrescimo;
       // Vale-troca: confere saldo e validade (o desconto do saldo é feito ao gravar).
       const hojeStr = new Date().toLocaleDateString('sv-SE');
+      if (pagamentos.some((x) => x.forma === 'vale' && !x.referencia)) throw erro(400, 'Informe o código do vale-troca.');
       for (const p of pagamentos.filter((x) => x.forma === 'vale')) {
-        if (!p.referencia) throw erro(400, 'Informe o código do vale-troca.');
         const vale = db.prepare('SELECT * FROM vales WHERE codigo = ? COLLATE NOCASE').get(p.referencia);
         if (!vale) throw erro(404, `Vale ${p.referencia} não encontrado.`);
         if (vale.status !== 'ativo') throw erro(409, `O vale ${vale.codigo} já foi ${vale.status === 'usado' ? 'usado' : 'cancelado'}.`);
@@ -959,10 +987,10 @@ function criarApi(db, opcoes = {}) {
       const r = db
         .prepare(
           `INSERT INTO vendas (caixa_id, cliente_id, cpf_nota, vendedor, usuario_id, subtotal, desconto,
-             total, troco, acrescimo) VALUES (?,?,?,?,?,?,?,?,?,?)`
+             total, troco, acrescimo, reserva_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)`
         )
         .run(caixa.id, clienteId, soDigitos(corpo.cpf_nota), usuario.nome, usuario.id,
-          bruto, descontoTotal, total, troco, acrescimo);
+          bruto, descontoTotal, total, troco, acrescimo, reserva ? reserva.id : null);
       const vendaId = Number(r.lastInsertRowid);
 
       const insItem = db.prepare(
@@ -1032,6 +1060,14 @@ function criarApi(db, opcoes = {}) {
 
   rota('GET', '/api/vendas/:id', ({ params }) => buscarVenda(params.id));
 
+  /** Devolve aos vales o que foi usado na venda (um vale cancelado pelo administrador continua cancelado). */
+  const devolverVales = (venda) => {
+    for (const p of venda.pagamentos.filter((x) => x.forma === 'vale' && x.referencia)) {
+      db.prepare(`UPDATE vales SET saldo = saldo + ?, status = CASE WHEN status = 'usado' THEN 'ativo' ELSE status END
+                  WHERE codigo = ?`).run(p.valor, p.referencia);
+    }
+  };
+
   rota('POST', '/api/vendas/:id/cancelar', ({ params, corpo }) => {
     const venda = buscarVenda(params.id);
     if (venda.status === 'cancelada') throw erro(409, 'Venda já está cancelada.');
@@ -1040,16 +1076,25 @@ function criarApi(db, opcoes = {}) {
     if (db.prepare('SELECT 1 FROM trocas WHERE venda_id = ?').get(venda.id)) {
       throw erro(409, 'Esta venda já teve troca/devolução. Não dá para cancelar a venda inteira.');
     }
+    // Venda de um caixa que já foi fechado: o fechamento dele não muda; o dinheiro devolvido
+    // sai do caixa aberto agora (sangria).
+    const aberto = caixaAberto();
+    const dinheiroDaVenda = venda.pagamentos.filter((p) => p.forma === 'dinheiro').reduce((a, p) => a + p.valor, 0) - venda.troco;
+    const outroCaixa = !aberto || aberto.id !== venda.caixa_id;
+    if (outroCaixa && dinheiroDaVenda > 0 && !aberto) {
+      throw erro(409, 'Abra o caixa para devolver o dinheiro desta venda.');
+    }
     return transacao(db, () => {
       crediario.cancelarDaVenda(venda.id);
-      // Devolve o saldo dos vales usados nesta venda.
-      for (const p of venda.pagamentos.filter((x) => x.forma === 'vale' && x.referencia)) {
-        db.prepare(`UPDATE vales SET saldo = saldo + ?, status = 'ativo' WHERE codigo = ?`).run(p.valor, p.referencia);
-      }
+      devolverVales(venda);
       db.prepare(
         `UPDATE vendas SET status = 'cancelada', motivo_cancelamento = ?,
-           cancelada_em = datetime('now','localtime') WHERE id = ?`
-      ).run(motivo, venda.id);
+           cancelada_em = datetime('now','localtime'), cancelada_caixa_id = ? WHERE id = ?`
+      ).run(motivo, aberto ? aberto.id : null, venda.id);
+      if (outroCaixa && dinheiroDaVenda > 0) {
+        db.prepare(`INSERT INTO caixa_movimentos (caixa_id, tipo, valor, motivo) VALUES (?, 'sangria', ?, ?)`)
+          .run(aberto.id, dinheiroDaVenda, `Devolução da venda nº ${venda.id} (cancelada)`);
+      }
       for (const it of venda.itens) {
         if (db.prepare('SELECT servico FROM produtos WHERE id = ?').get(it.produto_id)?.servico) continue;
         db.prepare('UPDATE produtos SET estoque = estoque + ? WHERE id = ?').run(
@@ -1076,9 +1121,7 @@ function criarApi(db, opcoes = {}) {
     return transacao(db, () => {
       if (venda.status !== 'cancelada') {
         crediario.cancelarDaVenda(venda.id); // recusa se já tem parcela recebida
-        for (const p of venda.pagamentos.filter((x) => x.forma === 'vale' && x.referencia)) {
-          db.prepare(`UPDATE vales SET saldo = saldo + ?, status = 'ativo' WHERE codigo = ?`).run(p.valor, p.referencia);
-        }
+        devolverVales(venda);
         for (const it of venda.itens) {
           if (db.prepare('SELECT servico FROM produtos WHERE id = ?').get(it.produto_id)?.servico) continue;
           db.prepare('UPDATE produtos SET estoque = estoque + ? WHERE id = ?').run(it.quantidade, it.produto_id);
@@ -1269,7 +1312,12 @@ function criarApi(db, opcoes = {}) {
     totais.trocas = tr.valor;
     totais.custo_trocas = tr.custo;
     totais.despesas = despesas;
-    totais.lucro_real = totais.faturamento - tr.valor - (totais.custo - tr.custo) - totalTaxas - despesas;
+    // Sinal de reserva cancelada que ficou com a loja: entra como receita no dia do cancelamento.
+    totais.sinais_retidos = db.prepare(
+      `SELECT COALESCE(SUM(s.valor),0) AS v FROM reserva_sinais s JOIN reservas r ON r.id = s.reserva_id
+       WHERE r.status = 'cancelada' AND r.destino_sinal = 'loja' AND date(r.fechada_em) BETWEEN ? AND ?`
+    ).get(de, ate).v;
+    totais.lucro_real = totais.faturamento + totais.sinais_retidos - tr.valor - (totais.custo - tr.custo) - totalTaxas - despesas;
     // Horário de pico, dia da semana e categorias.
     const porHora = planos(db.prepare(
       `SELECT CAST(strftime('%H', criado_em) AS INTEGER) AS hora, COUNT(*) AS vendas, SUM(total) AS faturamento
@@ -1553,13 +1601,26 @@ function criarApi(db, opcoes = {}) {
     pasta: opcoes.pastaAtualizacoes || path.join(os.tmpdir(), 'clara-styllus-atualizacoes'),
   });
 
+  const semCusto = (x) => {
+    if (Array.isArray(x)) return x.map(semCusto);
+    if (x && typeof x === 'object' && 'preco_custo' in x) {
+      const { preco_custo: _c, ...resto } = x;
+      return resto;
+    }
+    return x;
+  };
+
   function despachar(metodo, caminho, query, corpo, token) {
     for (const r of rotas) {
       if (r.metodo !== metodo) continue;
       const m = caminho.match(r.re);
       if (!m) continue;
       const params = {};
-      r.nomes.forEach((n, i) => (params[n] = decodeURIComponent(m[i + 1])));
+      try {
+        r.nomes.forEach((n, i) => (params[n] = decodeURIComponent(m[i + 1])));
+      } catch {
+        return { status: 400, corpo: { erro: 'Endereço inválido.' } };
+      }
       const resposta = { status: 200 };
       const ctx = {
         params, query, corpo: corpo || {}, token,
@@ -1583,7 +1644,9 @@ function criarApi(db, opcoes = {}) {
             }
           );
         }
-        resposta.corpo = resultado;
+        // Preço de custo (e a margem da loja) só para o administrador.
+        resposta.corpo = metodo === 'GET' && ctx.usuario && ctx.usuario.perfil !== 'admin' && r.padrao.startsWith('/api/produtos')
+          ? semCusto(resultado) : resultado;
         if (auditar) auditar(resultado);
         return resposta;
       } catch (e) {
@@ -1594,6 +1657,7 @@ function criarApi(db, opcoes = {}) {
     return null;
   }
   despachar.backup = backup; // usado pelo servidor para o backup diário
+  despachar.usuarioDoToken = usuarioDoToken; // o envio do instalador confere o login antes de receber o arquivo
   despachar.atualizacao = atualizacao; // verificação periódica de versão nova
   return despachar;
 }

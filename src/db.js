@@ -416,6 +416,16 @@ function migrar(db) {
   if (!colunas('crediario_recebimentos').includes('taxa')) {
     db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN taxa INTEGER');
   }
+  // Cancelamento/estorno feito com outro caixa aberto: o caixa original continua como foi fechado.
+  if (!colunas('vendas').includes('cancelada_caixa_id')) {
+    db.exec('ALTER TABLE vendas ADD COLUMN cancelada_caixa_id INTEGER');
+  }
+  if (!colunas('vendas').includes('reserva_id')) {
+    db.exec('ALTER TABLE vendas ADD COLUMN reserva_id INTEGER');
+  }
+  if (!colunas('crediario_recebimentos').includes('estornado_caixa_id')) {
+    db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN estornado_caixa_id INTEGER');
+  }
   // Juros da maquininha repassados à cliente (crédito parcelado a partir de N vezes).
   if (!colunas('vendas').includes('acrescimo')) {
     db.exec('ALTER TABLE vendas ADD COLUMN acrescimo INTEGER NOT NULL DEFAULT 0');

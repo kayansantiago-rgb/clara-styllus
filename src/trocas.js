@@ -15,14 +15,17 @@ function instalarTrocas({ db, rota, erro, inteiro, texto, plano, planos, transac
     // Aplica o desconto geral da venda (os juros do cartão repassados à cliente não voltam no vale).
     const fator = somaItens ? (venda.total - (venda.acrescimo || 0)) / somaItens : 1;
     return venda.itens.map((it) => {
-      const devolvido = db
-        .prepare('SELECT COALESCE(SUM(quantidade),0) AS n FROM troca_itens WHERE venda_item_id = ?')
-        .get(it.id).n;
+      const ja = db
+        .prepare('SELECT COALESCE(SUM(quantidade),0) AS n, COALESCE(SUM(valor),0) AS valor FROM troca_itens WHERE venda_item_id = ?')
+        .get(it.id);
+      const pago = Math.round(it.total * fator); // quanto a linha inteira custou de verdade
       return {
         ...it,
-        devolvido,
-        pode_voltar: it.quantidade - devolvido,
+        devolvido: ja.n,
+        pode_voltar: it.quantidade - ja.n,
         valor_unitario_pago: Math.round((it.total / it.quantidade) * fator),
+        // Valor de devolver `qtd` peças: proporcional ao que foi pago, sem nunca passar do total da linha.
+        valorDe: (qtd) => Math.round((pago * (ja.n + qtd)) / it.quantidade) - ja.valor,
       };
     });
   }
@@ -79,7 +82,7 @@ function instalarTrocas({ db, rota, erro, inteiro, texto, plano, planos, transac
         if (!it) throw erro(400, 'Item não pertence a esta venda.');
         const qtd = inteiro(p.quantidade, 'quantidade', { min: 1 });
         if (qtd > it.pode_voltar) throw erro(409, `"${it.nome}": só ${it.pode_voltar} peça(s) podem voltar.`);
-        const v = it.valor_unitario_pago * qtd;
+        const v = it.valorDe(qtd);
         valor += v;
         return { it, qtd, v };
       });

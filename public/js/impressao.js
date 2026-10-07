@@ -200,7 +200,8 @@ const Impressao = (() => {
     : modelo === 'parcelado' ? (() => {
       const aPartir = Number(cfg.juros_a_partir) || 0;
       const n0 = Math.min(12, Math.max(2, Number(cfg.etiqueta_parcelas) || 3));
-      const n = aPartir > 2 ? Math.min(n0, aPartir - 1) : n0;
+      const n = !aPartir ? n0 : aPartir - 1 >= 2 ? Math.min(n0, aPartir - 1) : 0;
+      if (n < 2) return `<div class="preco">${brl(p.preco_venda)}</div>`; // sem parcelamento sem juros
       return `${p.preco_anterior > p.preco_venda
         ? `<div class="de">de <s>${brl(p.preco_anterior)}</s> por ${brl(p.preco_venda)}</div>`
         : `<div class="avista">${brl(p.preco_venda)}</div>`}

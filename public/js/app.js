@@ -223,7 +223,8 @@
         Animacoes.contar(conteudo);
       }
     } catch (e) {
-      if (e.status !== 401) {
+      // Se a pessoa já foi para outra tela, o erro desta não pode apagar a outra.
+      if (e.status !== 401 && telaAtual === tela) {
         conteudo.innerHTML = `<div class="vazio">Não foi possível abrir a tela: ${esc(e.message)}</div>`;
       }
     }

@@ -14,6 +14,7 @@ Telas.caixa = (() => {
   async function abrir(el) {
     raiz = el;
     const [atual, historico] = await Promise.all([api('/api/caixa/atual'), api('/api/caixas')]);
+    if (raiz !== el) return; // saiu da tela enquanto carregava
     raiz.innerHTML = `
       <div class="cabecalho-tela"><div><h1>Caixa</h1><p class="subtitulo">Abertura, sangria, suprimento e fechamento do dia.</p></div></div>
       ${atual.caixa ? painel(atual) : formAbrir()}
@@ -63,7 +64,7 @@ Telas.caixa = (() => {
   function ligarFormAbrir(el, aoAbrir) {
     const form = el.querySelector('#f-abrir');
     form.valor.focus();
-    form.onsubmit = async (ev) => {
+    form.onsubmit = U.umaVez(form, async (ev) => {
       ev.preventDefault();
       const valor = U.paraCentavos(form.valor.value);
       if (Number.isNaN(valor) || valor < 0) return aviso('Valor inválido.', 'erro');
@@ -72,7 +73,7 @@ Telas.caixa = (() => {
         aviso('Caixa aberto. Boas vendas!');
         aoAbrir();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   // -------------------------------------------------------------- painel
@@ -128,7 +129,8 @@ Telas.caixa = (() => {
         <label>Motivo<input name="motivo" placeholder="${sang ? 'Ex.: depósito no banco, pagamento de fornecedor' : 'Ex.: troco do banco'}"></label>
         <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">${Icone('check')} Lançar ${sang ? 'sangria' : 'suprimento'}</button></div>
       </form>`, { largura: '440px' });
-    corpo.querySelector('form').onsubmit = async (ev) => {
+    const fMov = corpo.querySelector('form');
+    fMov.onsubmit = U.umaVez(fMov, async (ev) => {
       ev.preventDefault();
       const valor = U.paraCentavos(ev.target.valor.value);
       if (!(valor > 0)) return aviso('Valor inválido.', 'erro');
@@ -138,7 +140,7 @@ Telas.caixa = (() => {
         fecharModal();
         if (aoConcluir) aoConcluir();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   async function fechar(r, aoConcluir) {
@@ -203,11 +205,29 @@ Telas.caixa = (() => {
       };
     });
     form.valor.oninput = atualizarDif;
+    // Na contagem, Enter passa para a próxima nota/moeda (não fecha o caixa no meio da contagem).
+    const contagem = [...form.querySelectorAll('[data-v]')];
+    contagem.forEach((inp, i) => {
+      inp.onkeydown = (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        (contagem[i + 1] || form.obs).focus();
+      };
+    });
     setTimeout(() => form.querySelector('[data-v]').focus(), 50);
-    form.onsubmit = async (ev) => {
+    form.onsubmit = U.umaVez(form, async (ev) => {
       ev.preventDefault();
       const valor = U.paraCentavos(form.valor.value);
       if (Number.isNaN(valor) || valor < 0) return aviso('Valor inválido.', 'erro');
+      // Com diferença, pede um segundo clique (o botão muda de texto) antes de fechar.
+      const d = valor - r.dinheiro_esperado;
+      const botao = form.querySelector('.btn-perigo');
+      if (d && form.dataset.confirmado !== String(valor)) {
+        form.dataset.confirmado = String(valor);
+        botao.innerHTML = `${Icone('alerta')} ${d < 0 ? 'Falta' : 'Sobra'} ${brl(Math.abs(d))} — clique de novo para fechar assim`;
+        aviso(`${d < 0 ? 'Está faltando' : 'Está sobrando'} ${brl(Math.abs(d))}. Confira a contagem ou clique de novo para fechar assim.`, 'alerta');
+        return;
+      }
       try {
         const fechado = await api('/api/caixa/fechar', { metodo: 'POST', corpo: { valor_informado: valor, observacao: form.obs.value } });
         fecharModal();
@@ -216,7 +236,7 @@ Telas.caixa = (() => {
         Impressao.fechamentoCaixa(fechado);
         if (aoConcluir) aoConcluir();
       } catch (e) { erro(e); }
-    };
+    });
   }
 
   return { abrir, movimento, fechar, formAbrir, ligarFormAbrir, sair: () => { raiz = null; } };
