@@ -75,6 +75,18 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Catálogo para Instagram e WhatsApp** (Produtos → Catálogo): marque as peças e o sistema monta as imagens com
+  foto, nome, tamanhos com estoque, preço "De/Por" com o % de desconto e o "3x de" sem juros. Formato de stories
+  (1080 × 1920) ou de post (1080 × 1350), uma peça por imagem ou quatro por imagem com título ("Novidades da semana").
+- **Chegou peça nova: avisar clientes**: depois de cadastrar uma peça ou dar entrada por bipagem, aparecem as
+  clientes que pediram na lista de espera e as que compraram a mesma peça ou a mesma categoria naquele tamanho no
+  último ano, cada uma com o botão de WhatsApp e a mensagem pronta (dá para editar). Também pelo ícone do WhatsApp
+  na lista de produtos.
+- **Curva ABC** (Relatórios): os modelos que fazem 80% do faturamento (A), os próximos 15% (B) e o resto (C), com
+  aviso de "repor" no carro-chefe com pouco estoque.
+- **Peças paradas** (Relatórios): modelos com estoque que não vendem há 30/60/90/120/180 dias, com o dinheiro
+  parado no custo; clicar abre o produto no cadastro para fazer liquidação.
+- **Melhores dias e horários** (Relatórios): mapa de calor dia da semana × horário, com os três momentos que mais vendem.
 - **Excluir produto** (administrador): nunca vendido, apaga de vez; já vendido, some das listas e continua nas
   vendas antigas (o código de barras fica livre).
 - **Grade de estoque** tamanho × cor, colorida (com estoque, no mínimo, esgotado).

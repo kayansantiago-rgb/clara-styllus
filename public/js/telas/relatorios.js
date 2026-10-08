@@ -11,6 +11,9 @@ Telas.relatorios = (() => {
   const PERIODOS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['mes', 'Este mês'], ['passado', 'Mês passado'], ['outro', 'Escolher datas']];
   const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#e87ba4', vale: '#008300', outro: '#4a3aa7' };
   const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const SEMANA_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const SEMANA_ORDEM = [1, 2, 3, 4, 5, 6, 0];
+  let diasParado = 90;
   let periodo = 'mes';
 
   function intervalo(p) {
@@ -105,6 +108,18 @@ Telas.relatorios = (() => {
       return { rotulo: SEMANA[d], valor: x ? x.faturamento : 0, dica: `${SEMANA[d]}: ${brl(x ? x.faturamento : 0)} · ${x ? x.vendas : 0} venda(s)` };
     });
     const qtd = (n) => `${Math.round(n)}`;
+    // Mapa de calor: dia da semana × hora, pelo faturamento.
+    const celulasCalor = new Map();
+    for (const c of r.por_semana_hora || []) {
+      celulasCalor.set(`${c.dia}|${c.hora}`, {
+        valor: c.faturamento,
+        dica: `${SEMANA_LONGO[c.dia]}, ${c.hora}h às ${c.hora + 1}h: ${brl(c.faturamento)} · ${c.vendas} venda(s)`,
+      });
+    }
+    const horasCalor = [];
+    for (let h = h0; h <= h1; h++) horasCalor.push({ chave: h, rotulo: `${h}h` });
+    const melhores = (r.por_semana_hora || []).slice().sort((a, b) => b.faturamento - a.faturamento).slice(0, 3)
+      .map((c) => `${SEMANA_LONGO[c.dia]} ${c.hora}h–${c.hora + 1}h`);
     raiz.querySelector('#rel').innerHTML = `
       <div class="vd-kpis rl-kpis">
         <div class="vd-kpi destaque"><span>${Icone('carteira')} Faturamento</span><b>${brl(t.faturamento)}</b>
@@ -131,6 +146,12 @@ Telas.relatorios = (() => {
         <div class="cartao"><h3 class="titulo-ico">${Icone('caderno')} Dia da semana</h3>
           <p class="dica">Quanto a loja fatura em cada dia da semana no período.</p>
           ${Graficos.colunas(semana, { altura: 150 })}</div>
+      </div>
+
+      <div class="cartao">
+        <h3 class="titulo-ico">${Icone('fogo')} Melhores dias e horários</h3>
+        ${melhores.length ? `<p class="dica">Os momentos que mais vendem: ${melhores.map((m, i) => `<b>${i + 1}º ${m}</b>`).join(' · ')}. Bons para ter mais gente na loja e postar nas redes um pouco antes.</p>` : ''}
+        ${Graficos.calor(SEMANA_ORDEM.map((d) => ({ chave: d, rotulo: SEMANA[d] })), horasCalor, celulasCalor)}
       </div>
 
       <div class="rl-grade">
@@ -193,8 +214,84 @@ Telas.relatorios = (() => {
           <tbody>${baixo.map((p) => `<tr><td>${esc(p.nome)} ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}</td>
             <td class="r txt-perigo">${p.estoque}</td><td class="r">${p.estoque_minimo}</td></tr>`).join('') || '<tr><td class="vazio" colspan="3">Tudo certo.</td></tr>'}</tbody></table>
         </div>
-      </div>`;
+      </div>
+      <div class="cartao" id="abc"><h3 class="titulo-ico">${Icone('grafico')} Curva ABC</h3><div class="vazio">Carregando…</div></div>
+      <div class="cartao" id="paradas"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3><div class="vazio">Carregando…</div></div>`;
     ligarDespesas();
+    carregarAbc();
+    carregarParadas();
+  }
+
+  const fotoModelo = (m) => U.miniatura(m.foto_versao ? { id: m.foto_id, foto_versao: m.foto_versao } : null, 'pr-foto');
+  const nomeModelo = (m) => `<b>${esc(m.nome)}</b><small>${esc([m.categoria, m.referencia && 'Ref ' + m.referencia].filter(Boolean).join(' · ') || '—')}</small>`;
+  const linkProdutos = (m) => `#/produtos?q=${encodeURIComponent(m.referencia || m.nome)}`;
+
+  /** Curva ABC do período: poucos modelos fazem a maior parte do faturamento. */
+  async function carregarAbc() {
+    const el = raiz && raiz.querySelector('#abc');
+    if (!el) return;
+    let r;
+    try { r = await api(`/api/relatorios/abc?de=${raiz.querySelector('#de').value}&ate=${raiz.querySelector('#ate').value}`); } catch (e) { return erro(e); }
+    if (!raiz || !raiz.contains(el)) return;
+    const TXT = {
+      A: 'Carro-chefe: nunca deixe faltar. Repor tamanhos e cores primeiro.',
+      B: 'Vendem bem: mantenha a grade, sem exagerar na compra.',
+      C: 'Vendem pouco: compre menos ou use em promoção e kit.',
+    };
+    const [a, b, c] = r.resumo;
+    const pct = (x) => (r.total ? Math.round((x / r.total) * 100) : 0);
+    el.innerHTML = `
+      <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('grafico')} Curva ABC</h3><small class="dica">Modelos (todas as cores e tamanhos juntos) pelo faturamento do período.</small></div>
+      ${!r.modelos.length ? '<div class="vazio">Sem vendas no período.</div>' : `
+      <div class="abc-resumo">${r.resumo.map((x) => `
+        <div class="abc-bloco abc-${x.classe}">
+          <span class="abc-letra">${x.classe}</span>
+          <div><b>${x.modelos} modelo(s) · ${pct(x.total)}% das vendas</b><small>${brl(x.total)} · ${x.pecas} peça(s)</small><small>${TXT[x.classe]}</small></div>
+        </div>`).join('')}</div>
+      ${a.modelos && r.modelos.length > 4 ? `<p class="dica">Só <b>${Math.round((a.modelos / r.modelos.length) * 100)}%</b> dos modelos (${a.modelos} de ${r.modelos.length}) trazem <b>${pct(a.total)}%</b> do faturamento.${c.modelos ? ` Outros ${c.modelos} somam só ${pct(c.total)}%.` : ''}</p>` : ''}
+      <table class="tabela abc-tabela">
+        <thead><tr><th></th><th>Modelo</th><th class="r">Peças</th><th class="r">Vendido</th><th class="r">% vendas</th><th class="r">Em estoque</th></tr></thead>
+        <tbody>${r.modelos.map((m, i) => `<tr class="${i >= 15 ? 'abc-mais' : ''}" ${i >= 15 ? 'hidden' : ''}>
+          <td><span class="abc-tag abc-${m.classe}">${m.classe}</span></td>
+          <td><a class="abc-modelo" href="${linkProdutos(m)}">${fotoModelo(m)}<span>${nomeModelo(m)}</span></a></td>
+          <td class="r">${m.pecas}</td><td class="r">${brl(m.total)}</td>
+          <td class="r">${m.percentual.toFixed(1).replace('.', ',')}%</td>
+          <td class="r ${m.classe === 'A' && m.estoque <= 2 ? 'txt-perigo' : ''}">${m.estoque}${m.classe === 'A' && m.estoque <= 2 ? ' · repor' : ''}</td></tr>`).join('')}</tbody>
+      </table>
+      ${r.modelos.length > 15 ? `<button class="link" id="abc-todos">Ver todos os ${r.modelos.length} modelos</button>` : ''}`}`;
+    const todos = el.querySelector('#abc-todos');
+    if (todos) todos.onclick = () => { el.querySelectorAll('.abc-mais').forEach((x) => { x.hidden = false; }); todos.remove(); };
+  }
+
+  /** Peças com estoque que não vendem há muito tempo: dinheiro parado na arara. */
+  async function carregarParadas() {
+    const el = raiz && raiz.querySelector('#paradas');
+    if (!el) return;
+    let r;
+    try { r = await api(`/api/relatorios/paradas?dias=${diasParado}`); } catch (e) { return erro(e); }
+    if (!raiz || !raiz.contains(el)) return;
+    const desde = (d) => (d ? d.slice(0, 10).split('-').reverse().join('/') : null);
+    el.innerHTML = `
+      <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3>
+        <label class="pp-dias">Sem vender há <select id="pp-dias">${[30, 60, 90, 120, 180].map((n) => `<option value="${n}" ${n === diasParado ? 'selected' : ''}>${n} dias</option>`).join('')}</select></label></div>
+      ${!r.modelos.length ? `<div class="vazio">Nenhuma peça parada há mais de ${r.dias} dias. Estoque girando bem! 🎉</div>` : `
+      <div class="pp-resumo">
+        <div><small>Modelos parados</small><b>${r.modelos.length}</b></div>
+        <div><small>Peças</small><b>${r.pecas}</b></div>
+        <div><small>Dinheiro parado (custo)</small><b class="txt-perigo">${brl(r.valor_custo)}</b></div>
+        <div><small>Valendo na etiqueta</small><b>${brl(r.valor_venda)}</b></div>
+      </div>
+      <p class="dica">Ideias: liquidação "De/Por", montar kits, oferecer para as clientes que compram a categoria, ou expor na frente da loja.
+        Clique no modelo para abrir no cadastro e usar o botão <b>Liquidação</b>.</p>
+      <table class="tabela">
+        <thead><tr><th>Modelo</th><th>Tamanhos</th><th class="r">Peças</th><th class="r">Custo parado</th><th class="r">Última venda</th></tr></thead>
+        <tbody>${r.modelos.map((m) => `<tr>
+          <td><a class="abc-modelo" href="${linkProdutos(m)}">${fotoModelo(m)}<span>${nomeModelo(m)}</span></a>${m.em_liquidacao ? ' <span class="pp-liq">em liquidação</span>' : ''}</td>
+          <td><small>${esc(m.tamanhos.join(', ') || '—')}</small></td>
+          <td class="r">${m.estoque}</td><td class="r">${brl(m.valor_custo)}</td>
+          <td class="r"><b>${m.dias_parado} dias</b><small class="bloco">${m.ultima_venda ? `vendeu em ${desde(m.ultima_venda)}` : `nunca vendeu · cadastro ${desde(m.cadastrado_em)}`}</small></td></tr>`).join('')}</tbody>
+      </table>`}`;
+    el.querySelector('#pp-dias').onchange = (ev) => { diasParado = Number(ev.target.value); carregarParadas(); };
   }
 
   /** Liga os botões de despesas depois que o relatório é desenhado. */

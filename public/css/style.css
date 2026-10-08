@@ -1981,3 +1981,86 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .fp-celular-ip { font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; border: 1px solid var(--borda-forte); background: #fff; color: #5d5157; border-radius: 99px; padding: 4px 10px; cursor: pointer; }
 .fp-celular-ip:hover { border-color: var(--rosa); }
 .fp-celular-ip.ativo { background: var(--rosa); border-color: var(--rosa); color: #fff; }
+
+/* Mapa de calor (dia da semana × horário) */
+.g-calor { display: grid; grid-template-columns: 34px repeat(var(--cols), minmax(0, 1fr)); gap: 3px; align-items: center; }
+.g-calor i { display: block; height: 26px; border-radius: 5px; cursor: default; }
+.g-calor i.zero { background: var(--fundo); }
+.g-calor i:hover { outline: 2px solid var(--texto); outline-offset: 1px; }
+.g-calor-col { font-size: 11px; color: var(--suave); text-align: left; white-space: nowrap; }
+.g-calor-lin { font-size: 12px; color: var(--suave); font-weight: 600; }
+.g-calor-legenda { display: flex; align-items: center; gap: 3px; justify-content: flex-end; margin-top: 10px; font-size: 11.5px; color: var(--suave); }
+.g-calor-legenda i { width: 18px; height: 12px; border-radius: 3px; }
+.g-calor-legenda span { margin: 0 4px; }
+
+/* Curva ABC e peças paradas */
+.abc-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin: 6px 0 12px; }
+.abc-bloco { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--borda); border-radius: 14px; padding: 12px 14px; background: #fff; }
+.abc-bloco > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.abc-bloco b { font-size: 14px; }
+.abc-bloco small { color: var(--suave); font-size: 12.5px; line-height: 1.35; }
+.abc-letra, .abc-tag { display: inline-grid; place-items: center; font-weight: 800; border-radius: 10px; flex: none; }
+.abc-letra { width: 38px; height: 38px; font-size: 19px; }
+.abc-tag { width: 26px; height: 26px; font-size: 13px; border-radius: 8px; }
+.abc-A .abc-letra, .abc-tag.abc-A { background: #7a3352; color: #fff; }
+.abc-B .abc-letra, .abc-tag.abc-B { background: #d18cab; color: #fff; }
+.abc-C .abc-letra, .abc-tag.abc-C { background: #f6e6ed; color: #7a3352; }
+.abc-modelo { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; min-width: 0; }
+.abc-modelo:hover b { color: var(--rosa); text-decoration: underline; }
+.abc-modelo .pr-foto { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.abc-modelo .pr-foto .i { width: 18px; height: 18px; }
+.abc-modelo > span { display: flex; flex-direction: column; min-width: 0; }
+.abc-modelo small { color: var(--suave); font-size: 12px; }
+.pp-dias { display: inline-flex; flex-direction: row; white-space: nowrap; align-items: center; gap: 8px; font-size: 13px; color: var(--suave); }
+.pp-dias select { width: auto; min-height: 34px; padding: 4px 8px; }
+.pp-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.pp-resumo > div { background: var(--fundo); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.pp-resumo small { color: var(--suave); font-size: 12px; }
+.pp-resumo b { font-size: 20px; }
+.pp-liq { font-size: 11px; font-weight: 700; color: #8a5f0a; background: #fffaee; border: 1px solid #f1dfb3; border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
+small.bloco { display: block; color: var(--suave); font-size: 11.5px; }
+
+/* Avisar clientes (chegou peça nova) */
+.ci { display: flex; flex-direction: column; gap: 12px; }
+.ci-peca { display: flex; gap: 12px; align-items: center; background: var(--rosa-claro); border-radius: 14px; padding: 12px 14px; }
+.ci-peca > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ci-peca small { color: var(--suave); }
+.ci-ico { width: 40px; height: 40px; border-radius: 12px; background: #fff; color: var(--rosa); display: grid; place-items: center; flex: none; }
+.ci-msg { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--suave); }
+.ci-msg textarea { color: var(--texto); font-size: 14px; resize: vertical; }
+.ci-lista { display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow: auto; padding-right: 2px; }
+.ci-cliente { display: flex; align-items: center; gap: 12px; border: 1px solid var(--borda); border-radius: 12px; padding: 8px 10px; background: #fff; }
+.ci-cliente.espera { border-color: var(--rosa-borda); background: #fdf7fa; }
+.ci-cliente.avisada { opacity: .6; }
+.ci-cliente.avisada .cl-btn-zap { background: #e9f7ef; color: #1d6e4a; border-color: #cdeedb; }
+.ci-av { width: 36px; height: 36px; border-radius: 50%; background: var(--rosa-claro); color: var(--rosa-escuro); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+.ci-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ci-txt small { color: var(--suave); font-size: 12.5px; display: flex; align-items: center; gap: 4px; }
+.ci-txt small .i { width: 13px; height: 13px; color: var(--rosa); }
+.ci-sem { color: var(--suave); font-size: 12px; white-space: nowrap; }
+.ci .acoes { display: flex; justify-content: flex-end; }
+
+/* Catálogo em imagem */
+.cat { display: grid; grid-template-columns: 340px 1fr; gap: 18px; min-height: 0; }
+.cat-esq { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cat-opcoes { display: flex; flex-direction: column; gap: 8px; }
+.cat-opcoes .segmentos { width: 100%; }
+.cat-opcoes .segmento { flex: 1; }
+.cat-opcoes label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--suave); }
+.cat-sel { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+.cat-lista { display: flex; flex-direction: column; gap: 4px; max-height: 52vh; overflow: auto; padding-right: 2px; }
+.cat-item { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--borda); background: #fff; cursor: pointer; }
+.cat-item:has(input:checked) { border-color: var(--rosa); background: #fdf7fa; }
+.cat-item.esgotado { opacity: .55; }
+.cat-item img, .cat-semfoto { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; flex: none; background: var(--rosa-claro); color: #c58ea6; display: grid; place-items: center; }
+.cat-item > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.cat-item b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-item small { color: var(--suave); font-size: 12px; }
+.cat-dir { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cat-previas { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; max-height: 58vh; overflow: auto; padding: 4px; background: var(--fundo); border-radius: 14px; align-content: start; }
+.cat-previas.post { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.cat-previa { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.cat-previa canvas { width: 100%; height: auto; border-radius: 10px; box-shadow: 0 4px 14px rgba(36,28,32,.12); background: #fff; }
+.cat-previa figcaption { display: flex; gap: 6px; justify-content: center; }
+.cat-acoes { display: flex; justify-content: flex-end; }
+@media (max-width: 860px) { .cat { grid-template-columns: 1fr; } }

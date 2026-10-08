@@ -15,6 +15,7 @@ const { instalarCondicional } = require('./condicional');
 const { instalarReservas } = require('./reservas');
 const { instalarEspera } = require('./espera');
 const { instalarCelular } = require('./celular');
+const { instalarGiro } = require('./giro');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
 const documentos = require('./impressao/documentos');
@@ -307,6 +308,9 @@ function criarApi(db, opcoes = {}) {
     if (!p) throw erro(404, 'Produto não encontrado.');
     return p;
   };
+
+  // Antes de /api/produtos/:id, para "interessadas" não virar um id.
+  instalarGiro({ db, rota, erro, texto, plano, planos });
 
   rota('GET', '/api/produtos', ({ query }) => {
     const q = texto(query.get('q'));
@@ -1388,6 +1392,11 @@ function criarApi(db, opcoes = {}) {
       `SELECT CAST(strftime('%w', criado_em) AS INTEGER) AS dia, COUNT(*) AS vendas, SUM(total) AS faturamento
        FROM vendas v WHERE ${filtro} GROUP BY dia ORDER BY dia`
     ).all(de, ate));
+    const porSemanaHora = planos(db.prepare(
+      `SELECT CAST(strftime('%w', criado_em) AS INTEGER) AS dia, CAST(strftime('%H', criado_em) AS INTEGER) AS hora,
+         COUNT(*) AS vendas, SUM(total) AS faturamento
+       FROM vendas v WHERE ${filtro} GROUP BY dia, hora`
+    ).all(de, ate));
     const porCategoria = planos(db.prepare(
       `SELECT COALESCE(NULLIF(p.categoria, ''), 'Sem categoria') AS categoria, SUM(i.quantidade) AS pecas, SUM(i.total) AS total
        FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
@@ -1402,7 +1411,7 @@ function criarApi(db, opcoes = {}) {
     anterior.de = desloca(de, -dias);
     anterior.ate = desloca(de, -1);
     return {
-      por_hora: porHora, por_semana: porSemana, por_categoria: porCategoria, anterior,
+      por_hora: porHora, por_semana: porSemana, por_semana_hora: porSemanaHora, por_categoria: porCategoria, anterior,
       de, ate, totais, formas, por_dia: porDia, top_produtos: topProdutos, por_vendedor: porVendedor,
       crediario: crediario.resumoGeral(de, ate),
       despesas_por_categoria: despesasPorCategoria,

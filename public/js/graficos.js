@@ -67,6 +67,27 @@ const Graficos = (() => {
     </div>`;
   }
 
+  /**
+   * Mapa de calor: linhas × colunas, cor de um só tom (claro = pouco, escuro = muito).
+   * celulas: Map("linha|coluna" → { valor, dica }).
+   */
+  const TONS = ['#f6e6ed', '#e7bccf', '#d18cab', '#b05a7e', '#7a3352'];
+  function calor(linhas, colunas, celulas, { formato = U.brl } = {}) {
+    const valores = [...celulas.values()].map((c) => c.valor).filter((v) => v > 0);
+    if (!valores.length) return '<div class="g-vazio">Sem vendas no período.</div>';
+    const max = Math.max(...valores);
+    const tom = (v) => (v > 0 ? TONS[Math.min(TONS.length - 1, Math.floor((v / max) * TONS.length - 1e-9))] : '');
+    return `<div class="g-calor" style="--cols:${colunas.length}">
+      <span></span>${colunas.map((c, i) => `<small class="g-calor-col">${i % 2 === 0 ? esc(c.rotulo) : ''}</small>`).join('')}
+      ${linhas.map((l) => `<small class="g-calor-lin">${esc(l.rotulo)}</small>${colunas.map((c) => {
+    const x = celulas.get(`${l.chave}|${c.chave}`);
+    const v = x ? x.valor : 0;
+    return `<i class="${v ? '' : 'zero'}" style="${v ? `background:${tom(v)}` : ''}" data-dica="${esc(x ? x.dica : `${l.rotulo}, ${c.rotulo}: sem vendas`)}"></i>`;
+  }).join('')}`).join('')}
+    </div>
+    <div class="g-calor-legenda"><span>menos</span>${TONS.map((t, i) => `<i style="background:${t}" title="até ${formato((max * (i + 1)) / TONS.length)}"></i>`).join('')}<span>mais</span></div>`;
+  }
+
   // Dica flutuante única para todos os gráficos.
   let dica;
   function mostrar(ev) {
@@ -91,5 +112,5 @@ const Graficos = (() => {
     mostrar({ target: alvo, clientX: b.left + b.width / 2, clientY: b.top });
   });
 
-  return { colunas, barras, rosca };
+  return { colunas, barras, rosca, calor };
 })();

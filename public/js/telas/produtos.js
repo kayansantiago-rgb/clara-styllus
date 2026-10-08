@@ -14,6 +14,7 @@ Telas.produtos = (() => {
       <div class="cabecalho-tela">
         <div><h1>Produtos</h1><p class="subtitulo" id="pr-resumo">Cadastro, estoque, preços e etiquetas.</p></div>
         <div class="ferramentas">
+          <button class="btn" id="catalogo" title="Imagens das peças da lista para postar no Instagram e mandar no WhatsApp">${Icone('imagem')} Catálogo</button>
           <button class="btn so-admin" id="entrada" title="Somar estoque bipando as peças que chegaram">${Icone('codigo')} Entrada por bipagem</button>
           <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">${Icone('fogo')} Liquidação</button>
           <button class="btn btn-primario so-admin" id="novo">${Icone('mais')} Novo produto</button>
@@ -59,7 +60,11 @@ Telas.produtos = (() => {
     raiz.querySelector('#novo').onclick = () => formulario(null);
     raiz.querySelector('#liquidacao').onclick = liquidacao;
     raiz.querySelector('#entrada').onclick = entradaBipagem;
+    raiz.querySelector('#catalogo').onclick = () => Catalogo.abrir(lista);
     raiz.querySelector('#lista').onclick = acao;
+    // Vindo de outra tela (ex.: Relatórios → peças paradas) com uma busca pronta.
+    const pedida = (/[?&]q=([^&]*)/.exec(location.hash) || [])[1];
+    if (pedida) raiz.querySelector('#q').value = decodeURIComponent(pedida);
     await carregar();
   }
 
@@ -86,6 +91,7 @@ Telas.produtos = (() => {
     <button class="btn-ico" data-acao="grade" data-i="${i}" title="Ver grade de estoque (tamanho × cor)">${Icone('grade')}</button>
     <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">${Icone('caixa')}</button>
     <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">${Icone('etiqueta')}</button>
+    <button class="btn-ico" data-acao="avisar" data-i="${i}" title="Avisar clientes que podem gostar (WhatsApp)">${Icone('whatsapp')}</button>
     <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">${Icone('lapis')}</button>`;
 
   function desenhar() {
@@ -140,6 +146,11 @@ Telas.produtos = (() => {
     if (b.dataset.acao === 'editar') formulario(p);
     if (b.dataset.acao === 'estoque') estoque(p);
     if (b.dataset.acao === 'grade') grade(p);
+    if (b.dataset.acao === 'avisar') {
+      // O modelo inteiro (todos os tamanhos e cores com estoque), não só esta variação.
+      const mesmo = todos.filter((x) => x.nome === p.nome && (x.referencia || '') === (p.referencia || '') && x.estoque > 0);
+      Interessadas.abrir((mesmo.length ? mesmo : [p]).map((x) => x.id));
+    }
     if (b.dataset.acao === 'etiqueta') {
       Telas.etiquetas.adicionar(p, Math.max(1, p.estoque));
       aviso(`${Math.max(1, p.estoque)} etiqueta(s) de "${p.nome}" na fila de impressão.`);
@@ -427,6 +438,7 @@ Telas.produtos = (() => {
       if (base.preco_anterior && base.preco_anterior <= base.preco_venda) {
         return aviso('O preço "De" precisa ser maior que o preço de venda (ou deixe vazio).', 'erro');
       }
+      let chegaram = [];
       try {
         if (!novo) {
           await api(`/api/produtos/${p.id}`, {
@@ -453,9 +465,12 @@ Telas.produtos = (() => {
           if (qtdEtiquetas && await U.confirmar('Etiquetas', `Mandar ${qtdEtiquetas} etiqueta(s) para a fila de impressão?`, { ok: 'Sim' })) {
             criados.forEach((x) => x.estoque && Telas.etiquetas.adicionar(x, x.estoque));
           }
+          chegaram = criados.filter((x) => x.estoque > 0).map((x) => x.id);
         }
         fecharModal();
         if (raiz) carregar();
+        // Peça nova com estoque: mostra quem pode gostar (só abre se alguma cliente combinar).
+        if (chegaram.length) Interessadas.abrir(chegaram, { auto: true });
       } catch (e) { erro(e); }
     };
   }
@@ -547,6 +562,7 @@ Telas.produtos = (() => {
         fecharModal();
         aviso(`Entrada lançada: ${pecas} peça(s) em ${r.length} produto(s).`);
         if (raiz) carregar();
+        Interessadas.abrir(r.map((x) => x.id), { auto: true });
       } catch (e) { erro(e); }
     };
     desenhar();
