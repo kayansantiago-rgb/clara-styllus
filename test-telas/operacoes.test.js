@@ -286,3 +286,47 @@ test('administradora exclui um produto pela tela de edição', OPC, async () => 
     await sis.fechar();
   }
 });
+
+test('vendedora recebe parcela do crediário pelo caixa (botão Crediário)', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    await sis.pagina.evaluate(async (x) => {
+      await U.api('/api/vendas', { metodo: 'POST', corpo: { cliente_id: x.ana.id, itens: [{ produto_id: x.blusa.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 8990, parcelas: 2 }] } });
+      await U.api('/api/usuarios', { metodo: 'POST', corpo: { nome: 'Bia Vendedora', login: 'bia', senha: '1234', perfil: 'vendedor' } });
+      await U.api('/api/logout', { metodo: 'POST' });
+    }, d);
+    await sis.pagina.goto(sis.url);
+    await sis.pagina.waitForSelector('#f-login');
+    await sis.pagina.fill('#f-login input[name=login]', 'bia');
+    await sis.pagina.fill('#f-login input[name=senha]', '1234');
+    await sis.pagina.click('#f-login button.btn-primario');
+    await sis.pagina.waitForSelector('#t-crediario');
+    // Sem cliente na venda: escolhe quem vai pagar na lista de quem deve.
+    await sis.pagina.click('#t-crediario');
+    await sis.pagina.waitForSelector('#lista-deve .ec-item');
+    assert.match(await sis.pagina.textContent('#lista-deve'), /Ana Paula Souza[\s\S]*89,90/);
+    await sis.pagina.fill('#q-deve', 'ninguem');
+    await sis.pagina.waitForSelector('#lista-deve .ec-vazio');
+    await sis.pagina.fill('#q-deve', 'ana');
+    await sis.pagina.waitForSelector('#lista-deve .ec-item');
+    if (process.env.PRINTS) await sis.pagina.screenshot({ path: `${process.env.PRINTS}/pdv-crediario.png` });
+    await sis.pagina.click('#lista-deve .ec-item');
+    await sis.pagina.waitForSelector('#modal-corpo form input[name=valor]');
+    await sis.pagina.fill('#modal-corpo input[name=valor]', '44,95');
+    await sis.pagina.click('#modal-corpo form .btn-primario');
+    await sis.pagina.waitForTimeout(800);
+    const cx = await sis.api('/api/caixa/atual');
+    assert.equal(cx.recebimentos_crediario[0].valor, 4495);
+    assert.equal(sis.db.prepare('SELECT operador FROM crediario_recebimentos').get().operador, 'Bia Vendedora');
+    // Com a cliente na venda, o F10 já abre o recebimento dela.
+    await sis.pagina.evaluate((c) => Telas.pdv.usarCliente(c), { id: d.ana.id, nome: d.ana.nome });
+    await sis.pagina.waitForTimeout(500);
+    await sis.pagina.keyboard.press('F10');
+    await sis.pagina.waitForSelector('#modal-corpo form input[name=valor]');
+    assert.match(await sis.pagina.textContent('#modal-titulo'), /Receber — Ana Paula Souza/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

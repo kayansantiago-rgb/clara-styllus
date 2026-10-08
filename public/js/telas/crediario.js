@@ -187,7 +187,8 @@ Telas.crediario = (() => {
   }
 
   // ------------------------------------------------------------- receber
-  async function receber(clienteId) {
+  /** depois: chamado depois de receber (ex.: a tela de venda atualiza o saldo da cliente). */
+  async function receber(clienteId, depois) {
     let d;
     try { d = await api(`/api/crediario/clientes/${clienteId}`); } catch (e) { return erro(e); }
     const caixa = await api('/api/caixa/atual').catch(() => ({}));
@@ -236,6 +237,7 @@ Telas.crediario = (() => {
         Impressao.recebimento(rec);
         atualizarStatusCaixa();
         carregar();
+        if (depois) depois(rec);
       } catch (e) { erro(e); }
     };
   }

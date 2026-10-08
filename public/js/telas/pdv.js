@@ -81,6 +81,7 @@ Telas.pdv = (() => {
             <button class="p4-acao" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')}<span>Troca</span></button>
             <button class="p4-acao" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')}<span>Condicional</span></button>
             <button class="p4-acao" id="t-reservar" title="Separar as peças com sinal para a cliente buscar depois">${Icone('reserva')}<span>Reservar</span></button>
+            <button class="p4-acao" id="t-crediario" title="Receber pagamento do crediário (F10)">${Icone('caderno')}<span>Crediário</span></button>
             <button class="p4-acao" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')}<span>Gaveta</span></button>
             <div class="p3-mais">
               <button class="p4-acao" id="t-mais" title="Sangria, suprimento e fechar o caixa">${Icone('carteira')}<span>Caixa</span></button>
@@ -171,6 +172,7 @@ Telas.pdv = (() => {
     raiz.querySelector('#t-troca').onclick = () => Trocas.perguntarVenda();
     raiz.querySelector('#t-condicional').onclick = () => enviarCondicional();
     raiz.querySelector('#t-reservar').onclick = () => reservar();
+    raiz.querySelector('#t-crediario').onclick = () => receberCrediario();
     raiz.querySelector('#t-tela').onclick = alternarTelaCheia;
     const menu = raiz.querySelector('#menu-caixa');
     raiz.querySelector('#t-mais').onclick = (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; };
@@ -216,6 +218,43 @@ Telas.pdv = (() => {
       atualizarStatusCaixa();
       if (raiz) abrir(raiz);
     });
+  }
+
+  /**
+   * Receber parcela do crediário pelo caixa: se a cliente da venda deve, já abre o recebimento dela;
+   * senão, mostra quem está devendo para escolher.
+   */
+  function receberCrediario() {
+    const atualizar = () => { carregarSaldoCliente(); atualizarStatusCaixa(); };
+    if (carrinho.cliente && saldoCliente && saldoCliente.aberto > 0) return Telas.crediario.receber(carrinho.cliente.id, atualizar);
+    const corpo = abrirModal('Receber crediário: quem vai pagar?', `
+      <div class="ec">
+        <div class="busca-ico ec-busca">${Icone('busca')}<input id="q-deve" placeholder="Nome, CPF ou telefone da cliente" autofocus autocomplete="off"></div>
+        <div id="lista-deve" class="ec-lista"></div>
+      </div>`, { largura: '640px' });
+    const lista = corpo.querySelector('#lista-deve');
+    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+    let encontrados = [];
+    const buscar = async (q) => {
+      try { encontrados = await api(`/api/crediario?q=${encodeURIComponent(q)}`); } catch (e) { return erro(e); }
+      lista.innerHTML = encontrados.slice(0, 40).map((c, i) => `
+        <button class="ec-item" data-i="${i}">
+          <span class="avatar">${esc(iniciais(c.nome))}</span>
+          <span class="ec-txt"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></span>
+          <span class="ec-info"><b>${brl(c.saldo)}</b><small>${c.parcelas} parcela(s) em aberto</small></span>
+          ${c.vencido > 0 ? `<span class="selo perigo">${brl(c.vencido)} vencido</span>` : '<span class="selo ok">em dia</span>'}
+        </button>`).join('') ||
+        `<div class="ec-vazio">${Icone('caderno')}<b>${q ? 'Ninguém com esse nome devendo no crediário' : 'Ninguém devendo no crediário'}</b><small>${q ? 'Confira o nome, o CPF ou o telefone.' : 'Tudo pago! 🎉'}</small></div>`;
+    };
+    corpo.querySelector('#q-deve').addEventListener('input', U.debounce((ev) => buscar(ev.target.value.trim()), 200));
+    lista.onclick = (ev) => {
+      const b = ev.target.closest('[data-i]');
+      if (!b) return;
+      const c = encontrados[Number(b.dataset.i)];
+      fecharModal();
+      Telas.crediario.receber(c.id, atualizar);
+    };
+    buscar('');
   }
 
   async function carregarSaldoCliente() {
@@ -304,7 +343,8 @@ Telas.pdv = (() => {
     if (!el) return;
     const alertas = [];
     if (carrinho.cliente && saldoCliente && saldoCliente.vencido > 0) {
-      alertas.push(['perigo', `<i data-icone="caderno"></i> ${esc(carrinho.cliente.nome)} tem <b>${brl(saldoCliente.vencido)}</b> vencido no crediário.`]);
+      alertas.push(['perigo', `<i data-icone="caderno"></i> ${esc(carrinho.cliente.nome)} tem <b>${brl(saldoCliente.vencido)}</b> vencido no crediário.
+        <button class="link" data-receber-cred>receber agora</button>`]);
     }
     const porProduto = new Map();
     for (const it of carrinho.itens) {
@@ -329,6 +369,8 @@ Telas.pdv = (() => {
     el.innerHTML = alertas.map(([tipo, txt]) => `<div class="pdv-alerta ${tipo}">${txt}</div>`).join('');
     const tirar = el.querySelector('#tirar-vale');
     if (tirar) tirar.onclick = () => { local.gravar('pdv_vale_pendente', null); desenharAlertas(); };
+    const rc = el.querySelector('[data-receber-cred]');
+    if (rc) rc.onclick = () => receberCrediario();
     el.querySelectorAll('[data-espera]').forEach((b) => {
       b.onclick = () => {
         const it = carrinho.itens.find((x) => x.produto.id === Number(b.dataset.espera));
@@ -1254,6 +1296,7 @@ Telas.pdv = (() => {
         desenhar();
       },
       F9: () => !U.modalAberto() && limpar(),
+      F10: () => !U.modalAberto() && receberCrediario(),
     };
     if (mapa[ev.key]) {
       ev.preventDefault();

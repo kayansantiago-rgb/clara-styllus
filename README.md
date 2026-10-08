@@ -75,6 +75,9 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Receber crediário pelo caixa**: botão **Crediário** (ou F10) na tela de venda. Se a cliente da venda deve, abre o
+  recebimento dela; senão, mostra quem está devendo para escolher. Vendedoras também recebem, o valor entra no caixa
+  aberto e o recibo sai na impressora. No aviso de "vencido no crediário" há o atalho **receber agora**.
 - **Foto sem fundo**: ao escolher ou tirar a foto da peça (no computador ou pelo celular), o sistema recorta a roupa
   sozinho e coloca num fundo no visual da loja (rosa, branco ou creme), com sombra suave, em 900 × 1200. Dá para trocar o
   fundo, voltar para a original ou desligar o "tirar o fundo sozinho". Funciona sem internet (modelo U²-Net pequeno no
@@ -217,6 +220,7 @@ impressora comum). A impressão direta usa o .NET Framework que já vem no Windo
 | F7 | Desconto na venda |
 | F8 | Remover o último item |
 | F9 | Cancelar a venda |
+| F10 | Receber pagamento do crediário (da cliente da venda ou escolhendo quem vai pagar) |
 | Alt + 1…7 | Escolher a forma de pagamento (na tela de pagamento; os números sozinhos digitam o valor) |
 | Enter | Confirmar a venda depois de ver o troco |
 | Esc | Fechar janela |
