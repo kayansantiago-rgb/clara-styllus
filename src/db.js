@@ -230,6 +230,9 @@ const CONFIG_PADRAO = {
   taxa_pix: '',
   // Preço sugerido no cadastro
   markup_padrao: '',
+  // Foto das peças: tirar o fundo sozinho e qual fundo colocar (rosa, branco, creme)
+  foto_sem_fundo: '1',
+  foto_fundo: 'rosa',
   arredondar_preco: '90',
   // Backup automático
   backup_auto: '1',

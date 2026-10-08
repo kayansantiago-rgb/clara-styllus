@@ -317,7 +317,8 @@ Telas.pdv = (() => {
       const nome = esc([p.nome, p.tamanho, p.cor].filter(Boolean).join(' '));
       if (qtd > p.estoque) alertas.push(['perigo', `<i data-icone="caixa"></i> <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.
         <button class="link" data-espera="${p.id}">anotar na lista de espera</button>`]);
-      else if (p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `<i data-icone="caixa"></i> <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
+      // Aviso de repor é para quem compra mercadoria (administradora); no caixa só atrapalha.
+      else if (U.sessao.ehAdmin() && p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `<i data-icone="caixa"></i> <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
     }
     const pendente = local.ler('pdv_vale_pendente', null);
     if (pendente) alertas.push(['ok', `<i data-icone="vale"></i> ${/^RS/i.test(pendente.codigo) ? 'Sinal da reserva' : 'Vale-troca'} <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);

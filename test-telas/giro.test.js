@@ -111,3 +111,55 @@ test('chegou peça: depois da entrada, mostra as clientes para avisar no WhatsAp
     assert.deepEqual(sis.erros, []);
   } finally { await sis.fechar(); }
 });
+
+test('foto da peça: tira o fundo sozinho, troca o fundo e volta para a original', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    await sis.ir('produtos');
+    await p.click('#novo');
+    await p.waitForSelector('#foto-arquivo', { state: 'attached' });
+    await p.setInputFiles('#foto-arquivo', require('node:path').join(__dirname, 'fotos/camiseta-listrada.jpg'));
+    await p.waitForSelector('.fp-processando');
+    await p.waitForSelector('.fp-fundo-cor', { timeout: 30000 });
+    assert.equal(await p.locator('.fp-processando').count(), 0);
+    const tam = await p.$eval('#foto-previa img', (i) => [i.naturalWidth, i.naturalHeight]);
+    assert.deepEqual(tam, [900, 1200]);
+    // Canto da foto = fundo rosa da loja (o fundo original era bege).
+    const canto = await p.$eval('#foto-previa img', (i) => {
+      const c = document.createElement('canvas'); c.width = 900; c.height = 1200;
+      const ctx = c.getContext('2d'); ctx.drawImage(i, 0, 0);
+      return [...ctx.getImageData(10, 10, 1, 1).data].slice(0, 3);
+    });
+    assert.ok(Math.abs(canto[0] - 0xfb) < 6 && Math.abs(canto[2] - 0xf7) < 6, `canto ${canto}`);
+    await print(sis, 'foto-sem-fundo', p.locator('.fp-lateral'));
+    if (process.env.PRINTS) {
+      const url = await p.$eval('#foto-previa img', (i) => i.src);
+      require('node:fs').writeFileSync(`${process.env.PRINTS}/foto-final.jpg`, Buffer.from(url.split(',')[1], 'base64'));
+    }
+    await p.click('[data-fundo=branco]');
+    assert.equal(await p.locator('[data-fundo=branco].sel').count(), 1);
+    await p.click('[data-fundo=original]');
+    assert.notDeepEqual(await p.$eval('#foto-previa img', (i) => [i.naturalWidth, i.naturalHeight]), [900, 1200]);
+    await p.click('[data-fundo=rosa]');
+    // Salva: a foto sem fundo vai para o produto; o fundo escolhido fica guardado.
+    await p.fill('#f-prod [name=nome]', 'Camiseta Listrada');
+    await p.fill('#f-prod [name=preco_venda]', '59,90');
+    await p.check('#criar-zeradas');
+    await p.click('#f-prod .fp-rodape .btn-primario');
+    await p.waitForTimeout(800);
+    const prod = sis.db.prepare(`SELECT id, foto_versao FROM produtos WHERE nome = 'Camiseta Listrada'`).get();
+    assert.ok(prod && prod.foto_versao);
+    assert.equal(sis.db.prepare(`SELECT valor FROM config WHERE chave = 'foto_fundo'`).get().valor, 'rosa');
+    // Desligar o "tirar o fundo sozinho" vale para as próximas fotos.
+    await sis.ir('produtos');
+    await p.click('#novo');
+    await p.setInputFiles('#foto-arquivo', require('node:path').join(__dirname, 'fotos/vestido-cabide.jpg'));
+    await p.waitForSelector('.fp-fundo-cor', { timeout: 30000 });
+    await p.uncheck('#foto-auto');
+    await p.waitForTimeout(300);
+    assert.equal(sis.db.prepare(`SELECT valor FROM config WHERE chave = 'foto_sem_fundo'`).get().valor, '0');
+    await print(sis, 'foto-vestido', p.locator('.fp-lateral'));
+    assert.deepEqual(sis.erros, []);
+  } finally { await sis.fechar(); }
+});

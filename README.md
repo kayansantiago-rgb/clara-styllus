@@ -75,6 +75,12 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Foto sem fundo**: ao escolher ou tirar a foto da peça (no computador ou pelo celular), o sistema recorta a roupa
+  sozinho e coloca num fundo no visual da loja (rosa, branco ou creme), com sombra suave, em 900 × 1200. Dá para trocar o
+  fundo, voltar para a original ou desligar o "tirar o fundo sozinho". Funciona sem internet (modelo U²-Net pequeno no
+  ONNX Runtime Web, em `public/vendor`). Fica melhor com a peça inteira na foto, no cabide, manequim ou estendida, sem
+  pessoa junto.
+- **Aviso "hora de repor" no caixa** só aparece para a administradora (as vendedoras não veem).
 - **Catálogo para Instagram e WhatsApp** (Produtos → Catálogo): marque as peças e o sistema monta as imagens com
   foto, nome, tamanhos com estoque, preço "De/Por" com o % de desconto e o "3x de" sem juros. Formato de stories
   (1080 × 1920) ou de post (1080 × 1350), uma peça por imagem ou quatro por imagem com título ("Novidades da semana").

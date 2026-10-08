@@ -43,6 +43,7 @@ Componentes de terceiros incluídos:
 - Node.js $NODE_VERSAO (licença MIT e outras; veja node\\LICENSE) — https://nodejs.org
 - WinSW $WINSW_VERSAO (licença MIT) — https://github.com/winsw/winsw
 - Fontes Inter e Playfair Display (SIL Open Font License 1.1; veja app\\public\\fonts)
+- ONNX Runtime Web (licença MIT) e modelo U^2-Net para tirar o fundo das fotos (Apache 2.0; veja app\\public\\vendor)
 TXT
 
 SAIDA="$DIST/ClaraStyllus-PDV-Setup-$VERSAO.exe"

@@ -210,6 +210,7 @@ Telas.produtos = (() => {
               <button type="button" class="btn btn-claro" id="foto-celular" title="Tirar a foto com o celular (mesmo Wi-Fi da loja)">${Icone('telefone')} Pelo celular</button>
               <button type="button" class="btn btn-fantasma btn-perigo-claro" id="foto-remover" ${U.fotoUrl(p) ? '' : 'hidden'}>${Icone('lixeira')}</button>
             </div>
+            <div class="fp-fundo" id="foto-fundo" ${U.fotoUrl(p) ? '' : 'hidden'}></div>
             <div class="fp-celular" id="foto-celular-painel" hidden></div>
             <small class="fp-ajuda">A foto aparece no caixa para conferir se bipou a peça certa.${novo ? ' Vale para todos os tamanhos e cores criados agora.' : ''}</small>
             ${novo ? '' : `<label class="check fp-ajuda"><input type="checkbox" id="foto-cor" checked> Usar a mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
@@ -329,14 +330,86 @@ Telas.produtos = (() => {
     // Foto: undefined = não mexeu; null = remover; string = nova imagem.
     let foto;
     const previa = corpo.querySelector('#foto-previa');
+    // Tirar o fundo: a peça recortada (para trocar o fundo sem recortar de novo) e a foto original.
+    let recorte = null;
+    let original = null;
+    let estilo = TirarFundo.FUNDOS[cfg.foto_fundo] ? cfg.foto_fundo : 'rosa';
+    const barraFundo = corpo.querySelector('#foto-fundo');
+    const mostrar = (url) => {
+      previa.innerHTML = `<img src="${url}" alt="">`;
+      corpo.querySelector('#foto-remover').hidden = false;
+    };
+    const desenharBarra = () => {
+      const temFoto = !!(foto || (foto === undefined && U.fotoUrl(p)));
+      barraFundo.hidden = !temFoto;
+      if (!temFoto) return;
+      barraFundo.innerHTML = recorte
+        ? `<small>Fundo:</small>${Object.entries(TirarFundo.FUNDOS).map(([k, f]) => `<button type="button" class="fp-fundo-cor ${foto !== original && k === estilo ? 'sel' : ''}"
+            data-fundo="${k}" title="${f.nome}" style="background:linear-gradient(${f.cores[0]},${f.cores[1]})"></button>`).join('')}
+          <button type="button" class="link ${foto === original ? 'sel' : ''}" data-fundo="original">original</button>`
+        : `<button type="button" class="btn btn-claro btn-peq" data-fundo="tirar">${Icone('raio')} Tirar o fundo</button>`;
+      barraFundo.insertAdjacentHTML('beforeend', `<label class="check fp-fundo-auto" title="Vale para as próximas fotos">
+        <input type="checkbox" id="foto-auto" ${cfg.foto_sem_fundo === '0' ? '' : 'checked'}> tirar o fundo sozinho</label>`);
+    };
+    async function tirarFundo(fonte) {
+      previa.insertAdjacentHTML('beforeend', `<span class="fp-processando"><span class="girando"></span>Tirando o fundo…</span>`);
+      // Não salva no meio do recorte (a foto ainda vai mudar).
+      const salvar = corpo.querySelector('.fp-rodape .btn-primario');
+      salvar.disabled = true;
+      try {
+        recorte = await TirarFundo.recortar(fonte);
+        foto = TirarFundo.montar(recorte, estilo);
+        mostrar(foto);
+      } catch (e) {
+        aviso(e.message || 'Não deu para tirar o fundo desta foto.', 'alerta');
+      } finally {
+        previa.querySelector('.fp-processando')?.remove();
+        salvar.disabled = false;
+        desenharBarra();
+      }
+    }
+    /** Foto nova (do computador ou do celular): mostra na hora e, se ligado, tira o fundo. */
+    async function novaFoto(arquivo) {
+      original = await U.reduzirImagem(arquivo, 900);
+      recorte = null;
+      foto = original;
+      mostrar(foto);
+      desenharBarra();
+      if (cfg.foto_sem_fundo !== '0') await tirarFundo(arquivo);
+    }
+    barraFundo.onclick = async (ev) => {
+      const b = ev.target.closest('[data-fundo]');
+      if (!b) return;
+      const k = b.dataset.fundo;
+      if (k === 'tirar') {
+        // Foto já salva: busca ela para recortar.
+        try {
+          const blob = foto ? await (await fetch(foto)).blob() : await (await fetch(U.fotoUrl(p))).blob();
+          if (!original) original = foto || await U.reduzirImagem(blob, 900);
+          await tirarFundo(blob);
+        } catch (e) { erro(e); }
+        return;
+      }
+      if (k === 'original') foto = original;
+      else {
+        estilo = k;
+        foto = TirarFundo.montar(recorte, k);
+        api('/api/config', { metodo: 'PUT', corpo: { foto_fundo: k } }).then(() => { cfg.foto_fundo = k; }).catch(() => {});
+      }
+      mostrar(foto);
+      desenharBarra();
+    };
+    barraFundo.onchange = (ev) => {
+      if (ev.target.id !== 'foto-auto') return;
+      cfg.foto_sem_fundo = ev.target.checked ? '1' : '0';
+      api('/api/config', { metodo: 'PUT', corpo: { foto_sem_fundo: cfg.foto_sem_fundo } }).catch(erro);
+    };
+    desenharBarra();
     corpo.querySelector('#foto-arquivo').onchange = async (ev) => {
       const arq = ev.target.files[0];
+      ev.target.value = '';
       if (!arq) return;
-      try {
-        foto = await U.reduzirImagem(arq);
-        previa.innerHTML = `<img src="${foto}" alt="">`;
-        corpo.querySelector('#foto-remover').hidden = false;
-      } catch (e) { erro(e); }
+      try { await novaFoto(arq); } catch (e) { erro(e); }
     };
     // Foto pelo celular: QR Code com o endereço do PDV na rede da loja; a foto chega sozinha.
     corpo.querySelector('#foto-celular').onclick = async () => {
@@ -384,13 +457,10 @@ Telas.produtos = (() => {
         try {
           const r = await api(`/api/celular/foto/${s.token}`);
           if (r.foto) {
-            // Mesmo tamanho das fotos escolhidas no computador (o celular manda maior).
-            foto = await U.reduzirImagem(await (await fetch(r.foto)).blob());
-            previa.innerHTML = `<img src="${foto}" alt="">`;
-            corpo.querySelector('#foto-remover').hidden = false;
             const st = painel.querySelector('#cel-status');
             if (st) st.innerHTML = `${Icone('check')} Foto recebida! Se quiser outra, é só tirar de novo no celular.`;
             U.som('ok');
+            await novaFoto(await (await fetch(r.foto)).blob());
           }
         } catch (e) {
           if (e.status === 404) { const st = painel.querySelector('#cel-status'); if (st) st.textContent = 'O QR Code venceu. Feche e gere outro.'; return; }
@@ -402,8 +472,11 @@ Telas.produtos = (() => {
 
     corpo.querySelector('#foto-remover').onclick = () => {
       foto = null;
+      recorte = null;
+      original = null;
       previa.innerHTML = semFoto;
       corpo.querySelector('#foto-remover').hidden = true;
+      desenharBarra();
     };
     const salvarFoto = async (ids) => {
       if (foto === undefined) return;

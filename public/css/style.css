@@ -2064,3 +2064,15 @@ small.bloco { display: block; color: var(--suave); font-size: 11.5px; }
 .cat-previa figcaption { display: flex; gap: 6px; justify-content: center; }
 .cat-acoes { display: flex; justify-content: flex-end; }
 @media (max-width: 860px) { .cat { grid-template-columns: 1fr; } }
+
+/* Tirar o fundo da foto */
+.fp-lateral .foto-previa { position: relative; }
+.fp-processando { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(255,255,255,.78); backdrop-filter: blur(2px); font-size: 13.5px; font-weight: 600; color: var(--rosa-escuro); }
+.fp-processando .girando { width: 26px; height: 26px; border-width: 3px; border-color: var(--rosa-claro); border-top-color: var(--rosa); }
+.fp-fundo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--suave); }
+.fp-fundo-cor { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--borda-forte); cursor: pointer; padding: 0; }
+.fp-fundo-cor.sel { outline: 2px solid var(--rosa); outline-offset: 2px; border-color: transparent; }
+.fp-fundo .link.sel { font-weight: 700; text-decoration: none; color: var(--rosa-escuro); }
+.fp-fundo .btn-peq { flex: none; }
+.fp-fundo-auto { flex-basis: 100%; flex-direction: row; font-size: 12px; margin: 0; }

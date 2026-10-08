@@ -1,0 +1,5 @@
+u2netp.onnx — modelo U^2-Net (versão pequena) usado para tirar o fundo das fotos das peças.
+Autores: Xuebin Qin et al. — https://github.com/xuebinqin/U-2-Net
+Licença: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Arquivo .onnx convertido pelo projeto rembg (https://github.com/danielgatis/rembg, licença MIT).
+Roda inteiro no computador da loja, sem internet.
