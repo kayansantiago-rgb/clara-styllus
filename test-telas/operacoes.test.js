@@ -232,7 +232,7 @@ test('foto pelo celular: QR Code no cadastro, o celular tira a foto e ela aparec
   try {
     const d = await dadosBasicos(sis);
     const { enderecosLocais } = require('../src/celular');
-    const ip = enderecosLocais()[0];
+    const ip = (await enderecosLocais())[0];
     if (!ip) return; // máquina sem rede: não dá para simular o celular
     await sis.ir('produtos');
     await sis.pagina.click('[data-acao=editar]');

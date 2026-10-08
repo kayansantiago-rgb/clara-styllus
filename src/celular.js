@@ -11,22 +11,61 @@
 
 const os = require('node:os');
 const crypto = require('node:crypto');
+const dgram = require('node:dgram');
 
 const VALIDADE_MS = 15 * 60e3;
 
-/** Endereços IPv4 deste computador na rede local (Wi-Fi/cabo), os de rede doméstica primeiro. */
-function enderecosLocais() {
+// Faixas usadas por programas de máquina virtual (VirtualBox 192.168.56.x, Docker, WSL/Hyper-V…):
+// existem só dentro do computador, o celular nunca alcança.
+const FAIXA_VIRTUAL = /^(192\.168\.56\.|192\.168\.99\.|172\.17\.|169\.254\.)/;
+const NOME_VIRTUAL = /virtual|vmware|vbox|wsl|hyper-v|vethernet|docker|loopback|bluetooth/i;
+
+/**
+ * Ordena os endereços: primeiro o da placa que o Windows usa para sair para a rede (Wi-Fi ou cabo de
+ * verdade), depois os de rede local comum; placas virtuais e endereços sem rede por último.
+ */
+function ordenarEnderecos(interfaces, preferido) {
   const lista = [];
-  for (const [nome, ifs] of Object.entries(os.networkInterfaces())) {
+  for (const [nome, ifs] of Object.entries(interfaces)) {
     for (const i of ifs || []) {
-      if (i.family !== 'IPv4' || i.internal) continue;
+      if (i.family !== 'IPv4' && i.family !== 4) continue;
+      if (i.internal) continue;
       const privado = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(i.address);
-      // Placas virtuais (VirtualBox, VMware, WSL, Hyper-V) vão para o fim.
-      const virtual = /virtual|vmware|vbox|wsl|hyper-v|vethernet|docker/i.test(nome);
-      lista.push({ ip: i.address, peso: (privado ? 0 : 2) + (virtual ? 1 : 0) });
+      // Faixa conhecida de máquina virtual pesa mais que só o nome (o VirtualBox aparece como "Ethernet 2").
+      const peso = i.address === preferido ? -10
+        : (privado ? 0 : 2) + (NOME_VIRTUAL.test(nome) ? 5 : 0) + (FAIXA_VIRTUAL.test(i.address) ? 6 : 0);
+      lista.push({ ip: i.address, peso, nome });
     }
   }
   return lista.sort((a, b) => a.peso - b.peso).map((x) => x.ip);
+}
+
+/**
+ * Endereço da placa que o sistema usa para sair para a rede: "conecta" um UDP num endereço externo
+ * (nada é enviado, só a rota é calculada) e lê o IP de origem escolhido. Sem rede, devolve null.
+ */
+function ipDaRotaPrincipal() {
+  return new Promise((ok) => {
+    let feito = false;
+    const s = dgram.createSocket('udp4');
+    const fim = (ip) => {
+      if (feito) return;
+      feito = true;
+      try { s.close(); } catch { /* já fechado */ }
+      ok(ip);
+    };
+    s.on('error', () => fim(null));
+    try {
+      s.connect(53, '8.8.8.8', () => {
+        try { fim(s.address().address); } catch { fim(null); }
+      });
+    } catch { fim(null); }
+    setTimeout(() => fim(null), 800).unref();
+  });
+}
+
+async function enderecosLocais() {
+  return ordenarEnderecos(os.networkInterfaces(), await ipDaRotaPrincipal());
 }
 
 function instalarCelular({ rota, erro, texto }) {
@@ -43,12 +82,12 @@ function instalarCelular({ rota, erro, texto }) {
   };
 
   /** Computador: abre a sessão e recebe os endereços para montar o QR Code. */
-  rota('POST', '/api/celular/sessao', ({ corpo }) => {
+  rota('POST', '/api/celular/sessao', async ({ corpo }) => {
     limpar();
     if (sessoes.size > 50) throw erro(429, 'Muitas fotos pendentes. Espere alguns minutos.');
     const token = crypto.randomBytes(16).toString('hex');
     sessoes.set(token, { criada: Date.now(), nome: texto(corpo && corpo.nome, 120) || 'Produto', foto: null });
-    return { token, enderecos: enderecosLocais(), validade_min: VALIDADE_MS / 60e3 };
+    return { token, enderecos: await enderecosLocais(), validade_min: VALIDADE_MS / 60e3 };
   }, 'admin');
 
   /** Celular: confere o código e mostra o nome da peça. */
@@ -82,4 +121,4 @@ function instalarCelular({ rota, erro, texto }) {
   }, 'admin');
 }
 
-module.exports = { instalarCelular, enderecosLocais };
+module.exports = { instalarCelular, enderecosLocais, ordenarEnderecos, ipDaRotaPrincipal };

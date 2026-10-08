@@ -1976,3 +1976,8 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .fp-celular-status .girando { width: 16px; height: 16px; border-width: 2px; border-color: var(--rosa-claro); border-top-color: var(--rosa); }
 .fp-celular-txt { align-items: center; }
 .fp-celular-txt .link { margin-top: 2px; }
+.fp-celular-end { font-size: 12.5px; font-weight: 650; color: var(--texto); background: #fff; border: 1px solid var(--borda); border-radius: 8px; padding: 3px 8px; word-break: break-all; }
+.fp-celular-ends { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.fp-celular-ip { font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; border: 1px solid var(--borda-forte); background: #fff; color: #5d5157; border-radius: 99px; padding: 4px 10px; cursor: pointer; }
+.fp-celular-ip:hover { border-color: var(--rosa); }
+.fp-celular-ip.ativo { background: var(--rosa); border-color: var(--rosa); color: #fff; }

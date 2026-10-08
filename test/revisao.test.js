@@ -207,9 +207,9 @@ test('excluir produto: sem histórico apaga; vendido some das listas e libera o 
   assert.equal(chamar('POST', '/api/produtos', { nome: 'Outra', codigo, preco_venda: 100, estoque: 1 }).status, 200);
 });
 
-test('foto pelo celular: sessão do computador, envio pelo celular e entrega uma vez', () => {
+test('foto pelo celular: sessão do computador, envio pelo celular e entrega uma vez', async () => {
   const { chamar, sair } = novaApi();
-  const s = chamar('POST', '/api/celular/sessao', { nome: 'Vestido M' }).corpo;
+  const s = (await chamar('POST', '/api/celular/sessao', { nome: 'Vestido M' })).corpo;
   assert.match(s.token, /^[0-9a-f]{32}$/);
   assert.ok(Array.isArray(s.enderecos));
   sair(); // o celular não está logado
@@ -223,7 +223,7 @@ test('foto pelo celular: sessão do computador, envio pelo celular e entrega uma
 
 test('rede da loja: quem não está no computador só acessa a página da foto', async () => {
   const { enderecosLocais } = require('../src/celular');
-  const ip = enderecosLocais()[0];
+  const ip = (await enderecosLocais())[0];
   if (!ip) return; // máquina sem rede
   const { abrirBanco } = require('../src/db');
   const { criarServidor } = require('../server');
@@ -246,4 +246,20 @@ test('rede da loja: quem não está no computador só acessa a página da foto',
     db.close();
     fs.rmSync(pasta, { recursive: true, force: true });
   }
+});
+
+test('endereço do QR Code: o Wi-Fi de verdade vem antes do VirtualBox (192.168.56.1)', async () => {
+  const { ordenarEnderecos, ipDaRotaPrincipal } = require('../src/celular');
+  // Windows chama o adaptador do VirtualBox de "Ethernet 2": o nome não ajuda, a faixa sim.
+  const placas = {
+    'Ethernet 2': [{ family: 'IPv4', address: '192.168.56.1', internal: false }],
+    'Wi-Fi': [{ family: 'IPv4', address: '192.168.0.15', internal: false }],
+    'vEthernet (WSL)': [{ family: 'IPv4', address: '172.20.48.1', internal: false }],
+    'Loopback Pseudo-Interface 1': [{ family: 'IPv4', address: '127.0.0.1', internal: true }],
+  };
+  assert.deepEqual(ordenarEnderecos(placas, null), ['192.168.0.15', '172.20.48.1', '192.168.56.1']);
+  // A placa da rota principal (a que sai para a rede) sempre vem primeiro.
+  assert.equal(ordenarEnderecos(placas, '172.20.48.1')[0], '172.20.48.1');
+  const ip = await ipDaRotaPrincipal();
+  assert.ok(ip === null || /^\d+\.\d+\.\d+\.\d+$/.test(ip));
 });

@@ -342,14 +342,24 @@ Telas.produtos = (() => {
       const url = (ip) => `http://${ip}${porta}/celular#${s.token}`;
       painel.hidden = false;
       painel.innerHTML = `
-        <div class="fp-celular-qr">${QRCode.svg(url(s.enderecos[0]), { tamanho: 148, margem: 2 })}</div>
+        <div class="fp-celular-qr" id="cel-qr"></div>
+        <code class="fp-celular-end" id="cel-end"></code>
         <div class="fp-celular-txt">
           <b>Aponte a câmera do celular para o QR Code</b>
           <small>O celular precisa estar no mesmo Wi-Fi da loja. Tire a foto e ela aparece aqui sozinha.</small>
           <span class="fp-celular-status" id="cel-status"><span class="girando"></span> Esperando a foto…</span>
-          ${s.enderecos.length > 1 ? `<small>Não abriu? Tente: ${s.enderecos.slice(1, 3).map((ip) => `<code>${esc(url(ip).split('#')[0])}</code>`).join(' ou ')}</small>` : ''}
+          ${s.enderecos.length > 1 ? `<small>Não abriu no celular? Troque o endereço:</small>
+            <div class="fp-celular-ends">${s.enderecos.slice(0, 4).map((ip, i) => `<button type="button" class="fp-celular-ip${i ? '' : ' ativo'}" data-ip="${esc(ip)}">${esc(ip)}</button>`).join('')}</div>` : ''}
           <button type="button" class="link" id="cel-fechar">Fechar</button>
         </div>`;
+      // Mostra o QR Code de um endereço (e o endereço escrito, para digitar no celular se precisar).
+      const mostrar = (ip) => {
+        painel.querySelector('#cel-qr').innerHTML = QRCode.svg(url(ip), { tamanho: 148, margem: 2 });
+        painel.querySelector('#cel-end').textContent = url(ip).split('#')[0];
+        painel.querySelectorAll('[data-ip]').forEach((b) => b.classList.toggle('ativo', b.dataset.ip === ip));
+      };
+      mostrar(s.enderecos[0]);
+      painel.querySelectorAll('[data-ip]').forEach((b) => { b.onclick = () => mostrar(b.dataset.ip); });
       let ativo = true;
       const parar = () => {
         ativo = false;
