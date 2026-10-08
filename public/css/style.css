@@ -1718,10 +1718,9 @@ body.modo-pdv .menu { display: none; }
 .cfg-aba-btn.sel { background: #fff; color: var(--rosa-escuro); box-shadow: 0 1px 3px rgba(36,28,32,.12); }
 .cfg-aba-btn.sel .i { color: var(--rosa); }
 .cfg-aba > .cartao { margin-bottom: 14px; }
-#f-cfg { padding-bottom: 70px; }
-.cfg-salvar { position: sticky; bottom: 12px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; pointer-events: none; z-index: 2; margin-top: -58px; }
-.cfg-salvar > * { pointer-events: auto; }
-.cfg-salvar .btn { box-shadow: var(--sombra-2); }
+/* Barra de salvar: logo abaixo do conteúdo; em página comprida fica presa no rodapé (sem cobrir campos). */
+.cfg-salvar { position: sticky; bottom: -26px; z-index: 2; display: flex; justify-content: flex-end; align-items: center; gap: 14px;
+  margin: 4px -4px 0; padding: 12px 4px 14px; background: var(--fundo); border-top: 1px solid var(--borda); }
 .cfg-salvar #cfg-sujo { background: #fff6dc; border: 1px solid #f0d58a; padding: 8px 12px; border-radius: 10px; }
 .cfg-salvar #cfg-sujo { display: inline-flex; align-items: center; gap: 6px; color: #9a6a00; font-size: 13.5px; font-weight: 600; }
 .cfg-salvar #cfg-sujo[hidden] { display: none; }
