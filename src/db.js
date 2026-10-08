@@ -416,6 +416,10 @@ function migrar(db) {
   if (!colunas('crediario_recebimentos').includes('taxa')) {
     db.exec('ALTER TABLE crediario_recebimentos ADD COLUMN taxa INTEGER');
   }
+  // Produto excluído que já tem histórico (vendas, trocas…): some de todas as listas.
+  if (!colunas('produtos').includes('excluido_em')) {
+    db.exec('ALTER TABLE produtos ADD COLUMN excluido_em TEXT');
+  }
   // Cliente excluída que tem histórico (vendas, crediário…): some das listas, o nome fica nas vendas antigas.
   if (!colunas('clientes').includes('excluido_em')) {
     db.exec('ALTER TABLE clientes ADD COLUMN excluido_em TEXT');

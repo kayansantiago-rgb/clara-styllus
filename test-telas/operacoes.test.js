@@ -226,3 +226,63 @@ test('crediário quitado aparece em "Quitados"; administradora exclui o cadastro
     await sis.fechar();
   }
 });
+
+test('foto pelo celular: QR Code no cadastro, o celular tira a foto e ela aparece no produto', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    const { enderecosLocais } = require('../src/celular');
+    const ip = enderecosLocais()[0];
+    if (!ip) return; // máquina sem rede: não dá para simular o celular
+    await sis.ir('produtos');
+    await sis.pagina.click('[data-acao=editar]');
+    await sis.pagina.waitForSelector('#foto-celular');
+    const resp = sis.pagina.waitForResponse((r) => r.url().endsWith('/api/celular/sessao') && r.request().method() === 'POST');
+    await sis.pagina.click('#foto-celular');
+    const { token } = await (await resp).json();
+    await sis.pagina.waitForSelector('#foto-celular-painel svg.qrcode');
+
+    // "Celular": outra página, entrando pelo endereço da rede (não pelo computador).
+    const cel = await sis.navegador.newPage({ viewport: { width: 390, height: 800 } });
+    const fotoArq = require('node:path').join(sis.pasta, 'foto.png');
+    await cel.setContent('<div style="width:300px;height:300px;background:linear-gradient(45deg,#a14d6f,#f6dd9b)"></div>');
+    await cel.screenshot({ path: fotoArq });
+    await cel.goto(`http://${ip}:${sis.porta}/celular#${token}`);
+    await cel.waitForFunction(() => document.getElementById('nome').textContent !== 'Carregando…');
+    assert.match(await cel.textContent('#nome'), /Blusa Linho · P · Off/);
+    // O celular não consegue abrir o sistema.
+    assert.equal((await cel.goto(`http://${ip}:${sis.porta}/`)).status(), 403);
+    await cel.goto(`http://${ip}:${sis.porta}/celular#${token}`);
+    await cel.setInputFiles('#arquivo', fotoArq);
+    await cel.waitForSelector('.msg.ok');
+
+    // No computador, a foto aparece sozinha; salvar grava no produto.
+    await sis.pagina.waitForSelector('#foto-previa img', { timeout: 8000 });
+    assert.match(await sis.pagina.textContent('#foto-celular-painel'), /Foto recebida/);
+    await sis.pagina.click('#modal-corpo form .fp-rodape .btn-primario');
+    await sis.pagina.waitForTimeout(1000);
+    assert.ok((await sis.api(`/api/produtos/${d.blusa.id}`)).foto_versao, 'a foto foi gravada na blusa');
+    await cel.close();
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
+
+test('administradora exclui um produto pela tela de edição', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    await dadosBasicos(sis);
+    await sis.ir('produtos');
+    const antes = (await sis.api('/api/produtos')).length;
+    await sis.pagina.click('[data-acao=editar]');
+    await sis.pagina.waitForSelector('#excluir-produto');
+    await sis.pagina.click('#excluir-produto');
+    await sis.pagina.click('#modal-corpo [data-ok]');
+    await sis.pagina.waitForTimeout(800);
+    assert.equal((await sis.api('/api/produtos')).length, antes - 1);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

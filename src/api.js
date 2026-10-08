@@ -14,6 +14,7 @@ const { instalarTrocas } = require('./trocas');
 const { instalarCondicional } = require('./condicional');
 const { instalarReservas } = require('./reservas');
 const { instalarEspera } = require('./espera');
+const { instalarCelular } = require('./celular');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
 const documentos = require('./impressao/documentos');
@@ -314,6 +315,7 @@ function criarApi(db, opcoes = {}) {
     const limite = Math.min(inteiro(query.get('limite'), 'limite', { min: 1, padrao: 200 }), 1000);
     const where = [];
     const args = [];
+    where.push('excluido_em IS NULL');
     if (!incluirInativos) where.push('ativo = 1');
     if (estoqueBaixo) where.push('servico = 0 AND estoque <= estoque_minimo');
     if (q) {
@@ -588,10 +590,40 @@ function criarApi(db, opcoes = {}) {
     }));
   }, 'admin');
 
+  /**
+   * Exclui o produto (administrador). Não deixa se a peça está numa condicional ou reserva aberta.
+   * Nunca vendido/trocado: apaga de vez. Com histórico: some de todas as listas (as vendas antigas
+   * continuam com o nome) e o código de barras fica livre para outro produto.
+   */
   rota('DELETE', '/api/produtos/:id', ({ params }) => {
-    buscarProduto(params.id);
-    db.prepare('UPDATE produtos SET ativo = 0 WHERE id = ?').run(params.id);
-    return { ok: true };
+    const p = buscarProduto(params.id);
+    if (p.excluido_em) throw erro(404, 'Produto não encontrado.');
+    const conta = (sql) => db.prepare(sql).get(p.id).n;
+    if (conta(`SELECT COUNT(*) AS n FROM condicional_itens ci JOIN condicionais c ON c.id = ci.condicional_id WHERE ci.produto_id = ? AND c.status = 'aberta'`)) {
+      throw erro(409, 'Esta peça está numa condicional aberta. Feche a condicional antes de excluir.');
+    }
+    if (conta(`SELECT COUNT(*) AS n FROM reserva_itens ri JOIN reservas r ON r.id = ri.reserva_id WHERE ri.produto_id = ? AND r.status = 'aberta'`)) {
+      throw erro(409, 'Esta peça está numa reserva aberta. Retire ou cancele a reserva antes de excluir.');
+    }
+    if (conta(`SELECT COUNT(*) AS n FROM inventario_itens ii JOIN inventarios i ON i.id = ii.inventario_id WHERE ii.produto_id = ? AND i.status = 'aberto'`)) {
+      throw erro(409, 'Tem um inventário em andamento com esta peça. Finalize ou cancele o inventário antes.');
+    }
+    const historico = ['venda_itens', 'troca_itens', 'condicional_itens', 'reserva_itens', 'inventario_itens', 'inventario_leituras']
+      .some((t) => conta(`SELECT COUNT(*) AS n FROM ${t} WHERE produto_id = ?`));
+    return transacao(db, () => {
+      // Quem estava esperando esta peça continua na lista, com a descrição dela.
+      db.prepare(`UPDATE espera SET descricao = COALESCE(descricao, ?), tamanho = COALESCE(tamanho, ?), cor = COALESCE(cor, ?),
+        produto_id = NULL WHERE produto_id = ?`).run(p.nome, p.tamanho, p.cor, p.id);
+      db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
+      if (!historico) {
+        db.prepare('DELETE FROM estoque_movimentos WHERE produto_id = ?').run(p.id);
+        db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
+        return { ok: true, apagado: true, nome: p.nome };
+      }
+      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, codigo = codigo || '#excluido' || id,
+        excluido_em = datetime('now','localtime') WHERE id = ?`).run(p.id);
+      return { ok: true, apagado: false, nome: p.nome };
+    });
   }, 'admin');
 
   rota('POST', '/api/produtos/:id/estoque', ({ params, corpo }) => {
@@ -755,6 +787,7 @@ function criarApi(db, opcoes = {}) {
   instalarInventario({ db, rota, erro, inteiro, texto, plano, planos, transacao });
   const reservas = instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto });
   instalarEspera({ db, rota, erro, inteiro, texto, plano, planos });
+  instalarCelular({ rota, erro, texto });
 
   // ----------------------------------------------------------------- caixa
   // Venda conta no caixa em que foi feita se está concluída, ou se foi cancelada depois, com outro caixa aberto.

@@ -1739,8 +1739,8 @@ body.modo-pdv .menu { display: none; }
 .cp-sep { border-top: 1px dashed #333; margin: 6px 0; }
 .cp-sep.duplo { border-top: 3px double #333; }
 .cp-estrelas { color: #555; letter-spacing: 2px; }
-.cp-qr { width: 92px; height: 92px; margin: 6px auto; border: 2px dashed #333; border-radius: 6px; display: grid; place-items: center; align-content: center; gap: 2px; color: #333; }
-.cp-qr .i { width: 34px; height: 34px; }
+.cp-qr { width: 104px; height: 104px; margin: 6px auto; }
+.cp-qr svg { display: block; width: 100%; height: 100%; }
 .cp-barras { height: 34px; margin: 10px 24px 0; background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 4px, #111 4px 5px, #fff 5px 8px, #111 8px 11px, #fff 11px 12px); }
 .cfg-logo { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .cfg-logo-caixa { width: 200px; height: 110px; border: 2px dashed var(--borda); border-radius: var(--raio); display: grid; place-items: center; background: #fff; overflow: hidden; }
@@ -1963,3 +1963,16 @@ body.menu-recolhido .menu .menu-bolinha { position: absolute; top: 2px; right: 8
 .pag2-total .pag2-parcelas { display: inline-block; margin: 2px 0 4px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.18); font-weight: 700; font-size: 15px; color: #fff; }
 .pag2-modo.voltar .i { transform: scaleX(-1); }
 .cr-quitado { border-left: 4px solid #1baf7a; }
+
+/* ---------- Foto pelo celular ---------- */
+.fp-excluir { margin-right: auto; }
+.fp-celular { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; margin-top: 10px; padding: 12px; border: 1.5px dashed var(--rosa); border-radius: 14px; background: #fdf7fa; }
+.fp-celular-qr svg { display: block; border-radius: 8px; }
+.fp-celular-txt { display: flex; flex-direction: column; gap: 4px; font-size: 13px; min-width: 0; }
+.fp-celular-txt b { font-size: 14px; }
+.fp-celular-txt code { font-size: 11.5px; word-break: break-all; }
+.fp-celular-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; font-weight: 600; color: var(--rosa-escuro); }
+.fp-celular-status .i { color: #1d7a4e; }
+.fp-celular-status .girando { width: 16px; height: 16px; border-width: 2px; border-color: var(--rosa-claro); border-top-color: var(--rosa); }
+.fp-celular-txt { align-items: center; }
+.fp-celular-txt .link { margin-top: 2px; }

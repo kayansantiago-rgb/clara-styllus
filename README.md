@@ -72,7 +72,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   a taxa fica gravada em cada venda e os Relatórios mostram o líquido por forma, parcela e bandeira.
 - **Painel Início** (administrador): vendas de hoje × ontem, meta do mês com projeção, gráfico dos
   últimos 14 dias, mais vendidos, aniversariantes (com mensagem pronta no WhatsApp) e crediário do dia.
-- **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda.
+- **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
+  pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
+  precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Excluir produto** (administrador): nunca vendido, apaga de vez; já vendido, some das listas e continua nas
+  vendas antigas (o código de barras fica livre).
 - **Grade de estoque** tamanho × cor, colorida (com estoque, no mínimo, esgotado).
 - **Tela de venda com alertas** (crediário vencido, última peça, caixa esquecido aberto), **som ao bipar**
   e **troco em tamanho grande** ao concluir.
@@ -138,8 +142,10 @@ Para gerar localmente (Linux/WSL com `nsis` instalado): `bash instalador/build.s
 2. **Windows**: dois cliques em `iniciar.bat`. **Linux/macOS**: `./iniciar.sh` (ou `npm start`).
 3. Abra <http://localhost:3456>. Os dados ficam em `dados/clara-styllus.db`.
 
-Variáveis opcionais: `PORTA` (padrão 3456), `BANCO` (caminho do arquivo do banco) e `HOST`
-(use `0.0.0.0` para acessar de outro computador da rede).
+Variáveis opcionais: `PORTA` (padrão 3456), `BANCO` (caminho do arquivo do banco), `HOST`
+(padrão `0.0.0.0`; use `127.0.0.1` para não aceitar nada da rede) e `REDE_LIBERADA=1` (libera o sistema
+todo para outro computador da rede). Sem `REDE_LIBERADA`, quem está na rede (o celular) só acessa a página
+de enviar a foto do produto, com o código de uso único gerado no computador.
 
 ## Impressão direta (sem a janela do navegador)
 

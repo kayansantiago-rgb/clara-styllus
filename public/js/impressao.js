@@ -51,6 +51,7 @@ const Impressao = (() => {
       .msg { font-weight: bold; margin: 6px 0; }
       .msg::before, .msg::after { content: '* * *'; display: block; font-weight: normal; }
       .qr-txt { margin-top: 4px; word-break: break-all; }
+      .qr svg { width: 26mm; height: 26mm; display: block; margin: 2mm auto 0; }
     `;
   }
 
@@ -73,7 +74,8 @@ const Impressao = (() => {
   /** Mensagem final e o link do Instagram/WhatsApp (o QR Code sai só na impressão direta). */
   const rodape = (cfg) => `
       ${cfg.cupom_mensagem ? `<div class="c msg">${esc(cfg.cupom_mensagem)}</div>` : ''}
-      ${cfg.cupom_qr_texto ? `<div class="c qr-txt">${cfg.cupom_qr_legenda ? `${esc(cfg.cupom_qr_legenda)}<br>` : ''}<b>${esc(cfg.cupom_qr_texto)}</b></div>` : ''}`;
+      ${cfg.cupom_qr_texto ? `<div class="c qr-txt">${cfg.cupom_qr_legenda ? `${esc(cfg.cupom_qr_legenda)}<br>` : ''}
+        <div class="qr">${QRCode.svg(cfg.cupom_qr_texto.trim(), { tamanho: 110, margem: 2 })}</div></div>` : ''}`;
 
   function htmlCupom(venda, cfg, via) {
     const itens = venda.itens.map((it, i) => `

@@ -196,8 +196,10 @@ Telas.produtos = (() => {
             <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : semFoto}</div>
             <div class="fp-foto-acoes">
               <label class="btn btn-claro">${Icone('camera')} ${U.fotoUrl(p) ? 'Trocar foto' : 'Escolher foto'}<input type="file" accept="image/*" capture="environment" id="foto-arquivo" hidden></label>
+              <button type="button" class="btn btn-claro" id="foto-celular" title="Tirar a foto com o celular (mesmo Wi-Fi da loja)">${Icone('telefone')} Pelo celular</button>
               <button type="button" class="btn btn-fantasma btn-perigo-claro" id="foto-remover" ${U.fotoUrl(p) ? '' : 'hidden'}>${Icone('lixeira')}</button>
             </div>
+            <div class="fp-celular" id="foto-celular-painel" hidden></div>
             <small class="fp-ajuda">A foto aparece no caixa para conferir se bipou a peça certa.${novo ? ' Vale para todos os tamanhos e cores criados agora.' : ''}</small>
             ${novo ? '' : `<label class="check fp-ajuda"><input type="checkbox" id="foto-cor" checked> Usar a mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
             <div class="fp-margem" id="margem-box" hidden>
@@ -264,6 +266,7 @@ Telas.produtos = (() => {
     .map((c) => `<option value="${c}">`).join('')}</datalist>
 
         <div class="fp-rodape">
+          ${novo ? '' : `<button type="button" class="btn btn-fantasma btn-perigo-claro fp-excluir" id="excluir-produto">${Icone('lixeira')} Excluir produto</button>`}
           <button type="button" class="btn" data-fechar>Cancelar</button>
           <button class="btn btn-primario">${Icone('check')} ${novo ? 'Cadastrar produto' : 'Salvar alterações'}</button>
         </div>
@@ -293,6 +296,25 @@ Telas.produtos = (() => {
         el.querySelector('button').onclick = () => { form.preco_venda.value = num(sug); margem(); };
       }
     };
+    const bExcluir = corpo.querySelector('#excluir-produto');
+    if (bExcluir) {
+      bExcluir.onclick = async () => {
+        const desc = [p.nome, p.tamanho && `tam ${p.tamanho}`, p.cor].filter(Boolean).join(' · ');
+        const ok = await U.confirmar('Excluir produto?',
+          `${desc} sai do cadastro, da busca e do caixa. Se a peça já foi vendida, ela continua aparecendo nas vendas antigas. Não dá para desfazer.`,
+          { ok: 'Excluir produto', perigo: true });
+        if (!ok) return formulario(p, opcoes);
+        try {
+          const r = await api(`/api/produtos/${p.id}`, { metodo: 'DELETE' });
+          aviso(`${r.nome} foi excluído.`);
+          carregar();
+        } catch (e) {
+          erro(e);
+          formulario(p, opcoes);
+        }
+      };
+    }
+
     // Foto: undefined = não mexeu; null = remover; string = nova imagem.
     let foto;
     const previa = corpo.querySelector('#foto-previa');
@@ -305,6 +327,58 @@ Telas.produtos = (() => {
         corpo.querySelector('#foto-remover').hidden = false;
       } catch (e) { erro(e); }
     };
+    // Foto pelo celular: QR Code com o endereço do PDV na rede da loja; a foto chega sozinha.
+    corpo.querySelector('#foto-celular').onclick = async () => {
+      const painel = corpo.querySelector('#foto-celular-painel');
+      if (!painel.hidden) return;
+      let s;
+      try {
+        s = await api('/api/celular/sessao', { metodo: 'POST', corpo: { nome: [p.nome || corpo.querySelector('[name=nome]').value, p.tamanho, p.cor].filter(Boolean).join(' · ') } });
+      } catch (e) { return erro(e); }
+      if (!s.enderecos.length) {
+        return aviso('Este computador não está conectado a uma rede (Wi-Fi ou cabo). Ligue a rede para usar o celular.', 'erro');
+      }
+      const porta = location.port ? `:${location.port}` : '';
+      const url = (ip) => `http://${ip}${porta}/celular#${s.token}`;
+      painel.hidden = false;
+      painel.innerHTML = `
+        <div class="fp-celular-qr">${QRCode.svg(url(s.enderecos[0]), { tamanho: 148, margem: 2 })}</div>
+        <div class="fp-celular-txt">
+          <b>Aponte a câmera do celular para o QR Code</b>
+          <small>O celular precisa estar no mesmo Wi-Fi da loja. Tire a foto e ela aparece aqui sozinha.</small>
+          <span class="fp-celular-status" id="cel-status"><span class="girando"></span> Esperando a foto…</span>
+          ${s.enderecos.length > 1 ? `<small>Não abriu? Tente: ${s.enderecos.slice(1, 3).map((ip) => `<code>${esc(url(ip).split('#')[0])}</code>`).join(' ou ')}</small>` : ''}
+          <button type="button" class="link" id="cel-fechar">Fechar</button>
+        </div>`;
+      let ativo = true;
+      const parar = () => {
+        ativo = false;
+        painel.hidden = true;
+        api(`/api/celular/sessao/${s.token}`, { metodo: 'DELETE' }).catch(() => {});
+      };
+      painel.querySelector('#cel-fechar').onclick = parar;
+      const verificar = async () => {
+        if (!ativo) return;
+        if (!painel.isConnected) { parar(); return; } // fechou o cadastro
+        try {
+          const r = await api(`/api/celular/foto/${s.token}`);
+          if (r.foto) {
+            // Mesmo tamanho das fotos escolhidas no computador (o celular manda maior).
+            foto = await U.reduzirImagem(await (await fetch(r.foto)).blob());
+            previa.innerHTML = `<img src="${foto}" alt="">`;
+            corpo.querySelector('#foto-remover').hidden = false;
+            const st = painel.querySelector('#cel-status');
+            if (st) st.innerHTML = `${Icone('check')} Foto recebida! Se quiser outra, é só tirar de novo no celular.`;
+            U.som('ok');
+          }
+        } catch (e) {
+          if (e.status === 404) { const st = painel.querySelector('#cel-status'); if (st) st.textContent = 'O QR Code venceu. Feche e gere outro.'; return; }
+        }
+        setTimeout(verificar, 1500);
+      };
+      setTimeout(verificar, 1500);
+    };
+
     corpo.querySelector('#foto-remover').onclick = () => {
       foto = null;
       previa.innerHTML = semFoto;

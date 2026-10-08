@@ -50,6 +50,20 @@ function criarServidor(db, opcoes = {}) {
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
 
+    // Quem não está neste computador (celular na rede da loja) só acessa a página da foto do produto.
+    if (!opcoes.redeLiberada && !ehLocal(req) && !liberadoParaCelular(req.method, url.pathname)) {
+      req.resume();
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('O sistema só pode ser usado no computador da loja.');
+    }
+    if (url.pathname === '/celular') {
+      return fs.readFile(path.join(PASTA_PUBLICA, 'celular.html'), (err, dados) => {
+        if (err) { res.writeHead(404); return res.end(); }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(dados);
+      });
+    }
+
     // Envio do instalador (arquivo binário grande) para atualizar sem internet.
     if (url.pathname === '/api/atualizacao/arquivo' && req.method === 'POST') {
       // Confere o login antes de receber o arquivo (até 300 MB) para ninguém encher a memória.
@@ -158,6 +172,20 @@ function lerCookie(cabecalho, nome) {
   return null;
 }
 
+/** Pedido vindo deste mesmo computador? */
+function ehLocal(req) {
+  const ip = req.socket.remoteAddress || '';
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+}
+
+/** O que o celular pode acessar: a página da foto e o envio da foto (com o código da sessão). */
+function liberadoParaCelular(metodo, caminho) {
+  if (metodo === 'GET' && caminho === '/celular') return true;
+  if (metodo === 'GET' && /^\/api\/celular\/sessao\/[0-9a-f]{32}$/.test(caminho)) return true;
+  if (metodo === 'POST' && /^\/api\/celular\/foto\/[0-9a-f]{32}$/.test(caminho)) return true;
+  return false;
+}
+
 function enviarJson(res, status, obj) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
@@ -170,9 +198,12 @@ if (require.main === module) {
   // Backups ficam ao lado da pasta de dados (no Windows: C:\ProgramData\ClaraStyllus\backups).
   const pastaBackup = process.env.PASTA_BACKUP || path.join(path.dirname(arquivoBanco), '..', 'backups');
   const pastaAtualizacoes = path.join(path.dirname(arquivoBanco), '..', 'atualizacoes');
-  // Só aceita conexões desta máquina; defina HOST=0.0.0.0 para usar em outro computador da rede.
-  const host = process.env.HOST || '127.0.0.1';
-  criarServidor(db, { pastaBackup, pastaAtualizacoes, agendarBackup: true }).listen(porta, host, () => {
+  // Escuta na rede da loja para o celular mandar a foto do produto, mas quem não está neste computador
+  // só acessa essa página (ver liberadoParaCelular). REDE_LIBERADA=1 libera o sistema todo na rede
+  // (outro computador como caixa); HOST=127.0.0.1 desliga o acesso pela rede.
+  const host = process.env.HOST || '0.0.0.0';
+  const redeLiberada = process.env.REDE_LIBERADA === '1';
+  criarServidor(db, { pastaBackup, pastaAtualizacoes, agendarBackup: true, redeLiberada }).listen(porta, host, () => {
     console.log('');
     console.log('  Clara Styllus PDV rodando!');
     console.log(`  Abra no navegador: http://localhost:${porta}`);

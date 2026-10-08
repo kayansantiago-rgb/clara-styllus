@@ -207,7 +207,7 @@ Telas.config = (() => {
       <div class="cp-sep duplo"></div>
       ${v('cupom_mensagem') ? `<div class="cp-c cp-estrelas">* * *</div><div class="cp-c cp-b">${esc(v('cupom_mensagem'))}</div><div class="cp-c cp-estrelas">* * *</div>` : ''}
       ${v('cupom_qr_texto') ? `${v('cupom_qr_legenda') ? `<div class="cp-c">${esc(v('cupom_qr_legenda'))}</div>` : ''}
-        <div class="cp-qr" title="${esc(v('cupom_qr_texto'))}">${Icone('codigo')}<small>QR Code</small></div>` : ''}
+        <div class="cp-qr" title="${esc(v('cupom_qr_texto'))}">${QRCode.svg(v('cupom_qr_texto').trim(), { tamanho: 104, margem: 2 })}</div>` : ''}
       <div class="cp-barras"></div>`;
   }
 

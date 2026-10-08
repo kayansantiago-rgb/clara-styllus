@@ -35,8 +35,10 @@ async function novoSistema({ logar = true, largura = 1366, altura = 768 } = {}) 
   const { criarServidor } = require('../server');
   const db = abrirBanco(path.join(pasta, 'teste.db'));
   const servidor = criarServidor(db, { pastaBackup: path.join(pasta, 'backups'), pastaAtualizacoes: path.join(pasta, 'atualizacoes') });
-  await new Promise((ok) => servidor.listen(0, '127.0.0.1', ok));
-  const url = `http://127.0.0.1:${servidor.address().port}/`;
+  // Escuta na rede também (como na loja), para o teste do celular.
+  await new Promise((ok) => servidor.listen(0, '0.0.0.0', ok));
+  const porta = servidor.address().port;
+  const url = `http://127.0.0.1:${porta}/`;
 
   const navegador = await playwright.chromium.launch();
   const pagina = await navegador.newPage({ viewport: { width: largura, height: altura } });
@@ -45,7 +47,7 @@ async function novoSistema({ logar = true, largura = 1366, altura = 768 } = {}) 
   pagina.on('dialog', (d) => d.dismiss());
 
   const sis = {
-    url, pagina, erros, db, pasta,
+    url, porta, navegador, pagina, erros, db, pasta,
     /** Chama a API de dentro da página (com a sessão de quem está logado). */
     api: (caminho, opcoes) => pagina.evaluate(([c, o]) => U.api(c, o), [caminho, opcoes || {}]),
     /** Vai para uma tela e espera ela desenhar. */

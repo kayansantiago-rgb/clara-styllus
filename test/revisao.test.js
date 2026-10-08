@@ -185,3 +185,65 @@ test('excluir cliente: bloqueia quem deve; sem histórico apaga; com histórico 
   assert.equal(ficha.telefone, null);
   assert.equal(chamar('GET', '/api/vendas').corpo[0].cliente_nome, 'Bia Devendo');
 });
+
+test('excluir produto: sem histórico apaga; vendido some das listas e libera o código; bloqueia em condicional aberta', () => {
+  const { chamar, p, cli } = loja();
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  const novo = chamar('POST', '/api/produtos', { nome: 'Nunca Vendido', preco_venda: 100, estoque: 1 }).corpo;
+  assert.equal(chamar('DELETE', `/api/produtos/${novo.id}`).corpo.apagado, true);
+  assert.equal(chamar('GET', `/api/produtos/${novo.id}`).status, 404);
+
+  chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 1 }], pagamentos: [{ forma: 'pix', valor: 10000 }] });
+  const c = chamar('POST', '/api/condicionais', { cliente_id: cli.id, itens: [{ produto_id: p.id, quantidade: 1 }] }).corpo;
+  assert.equal(chamar('DELETE', `/api/produtos/${p.id}`).status, 409);
+  chamar('POST', `/api/condicionais/${c.id}/cancelar`);
+  const codigo = p.codigo;
+  const r = chamar('DELETE', `/api/produtos/${p.id}`).corpo;
+  assert.equal(r.apagado, false);
+  assert.equal(chamar('GET', '/api/produtos?inativos=1').corpo.some((x) => x.id === p.id), false);
+  assert.equal(chamar('GET', `/api/produtos/codigo/${codigo}`).status, 404);
+  assert.equal(chamar('GET', '/api/vendas').corpo.length, 1);
+  // O código ficou livre para outra peça.
+  assert.equal(chamar('POST', '/api/produtos', { nome: 'Outra', codigo, preco_venda: 100, estoque: 1 }).status, 200);
+});
+
+test('foto pelo celular: sessão do computador, envio pelo celular e entrega uma vez', () => {
+  const { chamar, sair } = novaApi();
+  const s = chamar('POST', '/api/celular/sessao', { nome: 'Vestido M' }).corpo;
+  assert.match(s.token, /^[0-9a-f]{32}$/);
+  assert.ok(Array.isArray(s.enderecos));
+  sair(); // o celular não está logado
+  assert.equal(chamar('GET', `/api/celular/sessao/${s.token}`).corpo.nome, 'Vestido M');
+  assert.equal(chamar('POST', `/api/celular/foto/${s.token}`, { imagem: 'data:text/html;base64,PGI+' }).status, 400);
+  const foto = 'data:image/jpeg;base64,' + Buffer.from('jpeg-falso').toString('base64');
+  assert.equal(chamar('POST', `/api/celular/foto/${s.token}`, { imagem: foto }).status, 200);
+  assert.equal(chamar('GET', `/api/celular/foto/${s.token}`).status, 401); // só o computador logado busca
+  assert.equal(chamar('GET', '/api/celular/sessao/0123456789abcdef0123456789abcdef').status, 404);
+});
+
+test('rede da loja: quem não está no computador só acessa a página da foto', async () => {
+  const { enderecosLocais } = require('../src/celular');
+  const ip = enderecosLocais()[0];
+  if (!ip) return; // máquina sem rede
+  const { abrirBanco } = require('../src/db');
+  const { criarServidor } = require('../server');
+  const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'pdv-rede-'));
+  const db = abrirBanco(path.join(pasta, 't.db'));
+  const srv = criarServidor(db, { pastaBackup: path.join(pasta, 'b'), pastaAtualizacoes: path.join(pasta, 'a') });
+  await new Promise((ok) => srv.listen(0, '0.0.0.0', ok));
+  const porta = srv.address().port;
+  const rede = `http://${ip}:${porta}`;
+  try {
+    assert.equal((await fetch(`${rede}/`)).status, 403);
+    assert.equal((await fetch(`${rede}/api/produtos`)).status, 403);
+    assert.equal((await fetch(`${rede}/api/login`, { method: 'POST', body: '{}' })).status, 403);
+    assert.equal((await fetch(`${rede}/celular`)).status, 200);
+    assert.equal((await fetch(`${rede}/api/celular/sessao/0123456789abcdef0123456789abcdef`)).status, 404);
+    // No próprio computador, tudo funciona.
+    assert.equal((await fetch(`http://127.0.0.1:${porta}/`)).status, 200);
+  } finally {
+    await new Promise((ok) => srv.close(ok));
+    db.close();
+    fs.rmSync(pasta, { recursive: true, force: true });
+  }
+});

@@ -154,6 +154,10 @@ Section "Instalar"
   ${If} $0 != 0
     MessageBox MB_ICONEXCLAMATION "Não foi possível registrar o serviço (código $0). Veja os logs em $Dados\logs."
   ${EndIf}
+  ; Celular na rede da loja (foto do produto): libera a porta do sistema no firewall do Windows.
+  ; O servidor só atende a página da foto para quem não está neste computador.
+  nsExec::Exec 'netsh advfirewall firewall delete rule name="Clara Styllus PDV"'
+  nsExec::Exec 'netsh advfirewall firewall add rule name="Clara Styllus PDV" dir=in action=allow protocol=TCP localport=3456 profile=any'
   nsExec::ExecToLog '"$INSTDIR\${SERVICO}.exe" start'
   Pop $0
 
@@ -191,6 +195,7 @@ Section "Instalar"
 SectionEnd
 
 Section "Uninstall"
+  nsExec::Exec 'netsh advfirewall firewall delete rule name="Clara Styllus PDV"'
   SetShellVarContext all
   SetRegView 64
   StrCpy $Dados "$APPDATA\ClaraStyllus"
