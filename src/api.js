@@ -378,6 +378,39 @@ function criarApi(db, opcoes = {}) {
     return Number.isFinite(n) ? 100 + n : 1000;
   };
 
+  /**
+   * Variações "vazias": cadastradas com 0 e que nunca tiveram estoque nem movimento (o cadastro em grade
+   * cruza todos os tamanhos com todas as cores). Aparecem como esgotadas sem nunca terem existido.
+   */
+  const SQL_VAZIAS = `SELECT p.id, p.nome, p.referencia, p.tamanho, p.cor FROM produtos p
+    WHERE p.ativo = 1 AND p.excluido_em IS NULL AND p.servico = 0 AND p.estoque = 0
+      AND NOT EXISTS (SELECT 1 FROM estoque_movimentos m WHERE m.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM venda_itens x WHERE x.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM troca_itens x WHERE x.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM condicional_itens x WHERE x.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM reserva_itens x WHERE x.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM inventario_itens x WHERE x.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM inventario_leituras x WHERE x.produto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM espera x WHERE x.produto_id = p.id)`;
+  rota('GET', '/api/produtos/vazias', ({ query }) => {
+    const nome = texto(query.get('nome'));
+    const ref = texto(query.get('referencia'));
+    return planos(db.prepare(`${SQL_VAZIAS} ${nome ? 'AND p.nome = ? COLLATE NOCASE AND (? IS NULL OR p.referencia = ?)' : ''}
+      ORDER BY p.nome, p.cor, p.tamanho`).all(...(nome ? [nome, ref, ref] : [])));
+  }, 'admin');
+  rota('POST', '/api/produtos/vazias/apagar', ({ corpo }) => {
+    const ids = new Set((Array.isArray(corpo.ids) ? corpo.ids : []).map(Number));
+    // Confere de novo: só apaga o que continua vazio agora.
+    const alvo = planos(db.prepare(SQL_VAZIAS).all()).filter((p) => ids.has(p.id));
+    transacao(db, () => {
+      for (const p of alvo) {
+        db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
+        db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
+      }
+    });
+    return { apagados: alvo.length };
+  }, 'admin');
+
   rota('GET', '/api/produtos/grade', ({ query }) => {
     const nome = texto(query.get('nome'));
     if (!nome) throw erro(400, 'Informe o nome do produto.');
@@ -707,15 +740,42 @@ function criarApi(db, opcoes = {}) {
       .some((t) => conta(`SELECT COUNT(*) AS n FROM ${t} WHERE cliente_id = ?`));
     return transacao(db, () => {
       db.prepare('DELETE FROM espera WHERE cliente_id = ?').run(c.id);
+      db.prepare('DELETE FROM cliente_fotos WHERE cliente_id = ?').run(c.id);
       if (!historico) {
         db.prepare('DELETE FROM clientes WHERE id = ?').run(c.id);
         return { ok: true, apagado: true, nome: c.nome };
       }
-      db.prepare(`UPDATE clientes SET cpf = NULL, telefone = NULL, email = NULL, aniversario = NULL, observacao = NULL,
+      db.prepare(`UPDATE clientes SET cpf = NULL, telefone = NULL, email = NULL, aniversario = NULL, observacao = NULL, foto_versao = NULL,
         excluido_em = datetime('now','localtime') WHERE id = ?`).run(c.id);
       return { ok: true, apagado: false, nome: c.nome };
     });
   }, 'admin');
+
+  rota('GET', '/api/clientes/:id/foto', ({ params }) => {
+    const f = db.prepare('SELECT tipo, dados FROM cliente_fotos WHERE cliente_id = ?').get(params.id);
+    if (!f) throw erro(404, 'Cliente sem foto.');
+    return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: Buffer.from(f.dados) };
+  });
+
+  rota('PUT', '/api/clientes/:id/foto', ({ params, corpo }) => {
+    if (!db.prepare('SELECT 1 FROM clientes WHERE id = ? AND excluido_em IS NULL').get(params.id)) throw erro(404, 'Cliente não encontrada.');
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(corpo.imagem || '');
+    if (!m) throw erro(400, 'Imagem inválida (use JPG, PNG ou WEBP).');
+    const dados = Buffer.from(m[2], 'base64');
+    if (dados.length > 1e6) throw erro(400, 'Imagem muito grande.');
+    const versao = Date.now();
+    transacao(db, () => {
+      db.prepare('INSERT OR REPLACE INTO cliente_fotos (cliente_id, tipo, dados) VALUES (?,?,?)').run(params.id, m[1], dados);
+      db.prepare('UPDATE clientes SET foto_versao = ? WHERE id = ?').run(versao, params.id);
+    });
+    return { ok: true, foto_versao: versao };
+  });
+
+  rota('DELETE', '/api/clientes/:id/foto', ({ params }) => {
+    db.prepare('DELETE FROM cliente_fotos WHERE cliente_id = ?').run(params.id);
+    db.prepare('UPDATE clientes SET foto_versao = NULL WHERE id = ?').run(params.id);
+    return { ok: true };
+  });
 
   rota('GET', '/api/clientes/:id', ({ params }) => {
     const c = plano(db.prepare('SELECT * FROM clientes WHERE id = ?').get(params.id));

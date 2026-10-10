@@ -86,14 +86,15 @@ function instalarCelular({ rota, erro, texto }) {
     limpar();
     if (sessoes.size > 50) throw erro(429, 'Muitas fotos pendentes. Espere alguns minutos.');
     const token = crypto.randomBytes(16).toString('hex');
-    sessoes.set(token, { criada: Date.now(), nome: texto(corpo && corpo.nome, 120) || 'Produto', foto: null });
+    const tipo = corpo && corpo.tipo === 'cliente' ? 'cliente' : 'produto';
+    sessoes.set(token, { criada: Date.now(), nome: texto(corpo && corpo.nome, 120) || (tipo === 'cliente' ? 'Cliente' : 'Produto'), tipo, foto: null });
     return { token, enderecos: await enderecosLocais(), validade_min: VALIDADE_MS / 60e3 };
-  }, 'admin');
+  }, 'logado');
 
   /** Celular: confere o código e mostra o nome da peça. */
   rota('GET', '/api/celular/sessao/:token', ({ params }) => {
     const s = sessao(params.token);
-    return { nome: s.nome, recebida: !!s.foto };
+    return { nome: s.nome, tipo: s.tipo, recebida: !!s.foto };
   }, 'publico');
 
   /** Celular: envia a foto (JPEG/PNG/WEBP em base64, já reduzida pelo celular). */
@@ -112,13 +113,13 @@ function instalarCelular({ rota, erro, texto }) {
     const foto = s.foto;
     s.foto = null;
     return { foto };
-  }, 'admin');
+  }, 'logado');
 
   /** Computador: fechou o cadastro, a sessão acaba. */
   rota('DELETE', '/api/celular/sessao/:token', ({ params }) => {
     sessoes.delete(String(params.token));
     return { ok: true };
-  }, 'admin');
+  }, 'logado');
 }
 
 module.exports = { instalarCelular, enderecosLocais, ordenarEnderecos, ipDaRotaPrincipal };

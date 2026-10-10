@@ -32,7 +32,7 @@
 <body>
   <div class="marca"><i>CS</i><b>Clara Styllus</b></div>
   <div class="cartao">
-    <h1>Foto do produto</h1>
+    <h1 id="titulo">Foto do produto</h1>
     <div class="produto" id="nome">Carregando…</div>
     <div class="previa" id="previa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.5"/></svg>
@@ -61,6 +61,11 @@
         .then(function (x) {
           if (!x.ok) throw new Error(x.j.erro || 'Código vencido.');
           nome.textContent = x.j.nome;
+          if (x.j.tipo === 'cliente') {
+            document.title = 'Foto da cliente · Clara Styllus';
+            document.getElementById('titulo').textContent = 'Foto da cliente';
+            document.getElementById('msg').textContent = 'A foto aparece sozinha no cadastro da cliente, no computador da loja.';
+          }
         })
         .catch(function (e) { nome.textContent = '—'; aviso(e.message, 'erro'); document.getElementById('tirar').hidden = true; document.getElementById('galeria').hidden = true; });
 

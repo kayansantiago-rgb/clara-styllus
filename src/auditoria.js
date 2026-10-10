@@ -90,6 +90,7 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
     },
     'POST /api/produtos/liquidacao': { depois: (c) => ({ tipo: 'produto', acao: 'Aplicou liquidação', descricao: `${c.corpo.percentual}% em ${(c.corpo.ids || []).length} produto(s)` }) },
     'POST /api/produtos/liquidacao/encerrar': { depois: (c) => ({ tipo: 'produto', acao: 'Encerrou liquidação', descricao: `${(c.corpo.ids || []).length} produto(s)` }) },
+    'POST /api/produtos/vazias/apagar': { depois: (c, r) => (r.apagados ? { tipo: 'produto', acao: 'Apagou tamanhos/cores vazios', descricao: `${r.apagados} combinação(ões) que nunca tiveram estoque` } : null) },
     'DELETE /api/produtos/:id': {
       antes: (c) => seguro(() => buscarProduto(c.params.id)),
       depois: (c, r, a) => ({ tipo: 'produto', acao: 'Excluiu produto', descricao: `${nomeProd(a)}${r.apagado ? '' : ' (continua nas vendas antigas)'}`, importante: true }),

@@ -75,6 +75,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Foto da cliente**: no cadastro da cliente, escolha a foto no computador ou tire pelo celular (QR Code, igual à foto do
+  produto). Aparece na lista e na ficha. Ao excluir o cadastro, a foto é apagada.
+- **Cadastro em grade sem "esgotados" falsos**: só são criadas as combinações de tamanho × cor que têm quantidade (a
+  opção de cadastrar as com 0 fica desmarcada). Se já existirem combinações criadas com 0 que nunca tiveram peça, a tela
+  de Produtos avisa e deixa apagar (também pela grade do produto).
 - **Receber crediário pelo caixa**: botão **Crediário** (ou F10) na tela de venda. Se a cliente da venda deve, abre o
   recebimento dela; senão, mostra quem está devendo para escolher. Vendedoras também recebem, o valor entra no caixa
   aberto e o recibo sai na impressora. No aviso de "vencido no crediário" há o atalho **receber agora**.

@@ -33,6 +33,7 @@ Telas.produtos = (() => {
         </div>
       </div>
       <div class="chips-filtro pr-categorias" id="categorias"></div>
+      <div id="vazias-aviso"></div>
       <div id="lista"></div>`;
     const recarregar = U.debounce(carregar, 200);
     raiz.querySelector('#q').addEventListener('input', recarregar);
@@ -77,6 +78,53 @@ Telas.produtos = (() => {
       todos = await api(`/api/produtos?q=${encodeURIComponent(q)}${extra}&limite=1000`);
     } catch (e) { return erro(e); }
     desenhar();
+    avisoVazias();
+  }
+
+  /** Aviso de tamanhos/cores cadastrados com 0 que nunca existiram (aparecem como esgotados à toa). */
+  async function avisoVazias() {
+    const el = raiz && raiz.querySelector('#vazias-aviso');
+    if (!el || !U.sessao.ehAdmin()) return;
+    let vs = [];
+    try { vs = await api('/api/produtos/vazias'); } catch { return; }
+    if (!raiz || !raiz.contains(el)) return;
+    el.innerHTML = vs.length ? `<div class="pr-vazias">${Icone('alerta')}
+      <span><b>${vs.length} tamanho(s)/cor(es) aparecem como esgotados, mas nunca tiveram peça.</b>
+        <small>Foram criados com quantidade 0 no cadastro em grade.</small></span>
+      <button class="btn btn-peq" id="ver-vazias">Ver e apagar</button></div>` : '';
+    const b = el.querySelector('#ver-vazias');
+    if (b) b.onclick = () => limparVazias(vs);
+  }
+
+  /** Lista as variações vazias (todas ou de um modelo) para apagar de uma vez. */
+  function limparVazias(vs, depois) {
+    const grupos = new Map();
+    for (const v of vs) {
+      const k = `${v.nome}|${v.referencia || ''}`;
+      if (!grupos.has(k)) grupos.set(k, { nome: v.nome, referencia: v.referencia, itens: [] });
+      grupos.get(k).itens.push(v);
+    }
+    const corpo = abrirModal('Tamanhos e cores que nunca tiveram peça', `
+      <p class="dica">Estas combinações foram criadas com quantidade 0 e nunca tiveram estoque, venda nem pedido na lista de espera.
+        Apagar não mexe em nada do que já foi vendido. Se um dia chegar, é só usar <b>Adicionar tamanhos ou cores</b>.</p>
+      <div class="vz-lista">${[...grupos.values()].map((g) => `
+        <div class="vz-grupo"><b>${esc(g.nome)}${g.referencia ? ` <small>Ref ${esc(g.referencia)}</small>` : ''}</b>
+          <div class="vz-itens">${g.itens.map((v) => `<label class="vz-item"><input type="checkbox" data-id="${v.id}" checked>
+            ${esc([v.tamanho && `Tam ${v.tamanho}`, v.cor].filter(Boolean).join(' · ') || 'sem tamanho/cor')}</label>`).join('')}</div>
+        </div>`).join('')}</div>
+      <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button>
+        <button type="button" class="btn btn-primario" id="vz-apagar">${Icone('lixeira')} Apagar marcados</button></div>`, { largura: '620px' });
+    corpo.querySelector('#vz-apagar').onclick = U.umaVez(corpo.querySelector('#vz-apagar'), async () => {
+      const ids = [...corpo.querySelectorAll('[data-id]:checked')].map((x) => Number(x.dataset.id));
+      if (!ids.length) return aviso('Marque pelo menos um.', 'alerta');
+      try {
+        const r = await api('/api/produtos/vazias/apagar', { metodo: 'POST', corpo: { ids } });
+        fecharModal();
+        aviso(`${r.apagados} combinação(ões) apagada(s).`);
+        if (depois) depois();
+        if (raiz) carregar();
+      } catch (e) { erro(e); }
+    });
   }
 
   const situacao = (p) => (p.servico ? 'servico' : p.estoque <= 0 ? 'zero' : p.estoque <= p.estoque_minimo ? 'baixo' : 'ok');
@@ -264,7 +312,7 @@ Telas.produtos = (() => {
           <p class="dica">Cada combinação vira um produto com seu próprio código de barras. Peças sem etiqueta do fornecedor
             recebem um código da loja automaticamente.</p>
           <div id="grade-editor"></div>
-          <label class="check"><input type="checkbox" id="criar-zeradas" checked> Cadastrar também as combinações com quantidade 0 (para repor depois)</label>
+          <label class="check"><input type="checkbox" id="criar-zeradas"> Cadastrar também as combinações com quantidade 0 (aparecem como esgotadas, para repor depois)</label>
         </section>` : ''}
 
         <section class="fp-opcoes">
@@ -412,63 +460,10 @@ Telas.produtos = (() => {
       try { await novaFoto(arq); } catch (e) { erro(e); }
     };
     // Foto pelo celular: QR Code com o endereço do PDV na rede da loja; a foto chega sozinha.
-    corpo.querySelector('#foto-celular').onclick = async () => {
-      const painel = corpo.querySelector('#foto-celular-painel');
-      if (!painel.hidden) return;
-      let s;
-      try {
-        s = await api('/api/celular/sessao', { metodo: 'POST', corpo: { nome: [p.nome || corpo.querySelector('[name=nome]').value, p.tamanho, p.cor].filter(Boolean).join(' · ') } });
-      } catch (e) { return erro(e); }
-      if (!s.enderecos.length) {
-        return aviso('Este computador não está conectado a uma rede (Wi-Fi ou cabo). Ligue a rede para usar o celular.', 'erro');
-      }
-      const porta = location.port ? `:${location.port}` : '';
-      const url = (ip) => `http://${ip}${porta}/celular#${s.token}`;
-      painel.hidden = false;
-      painel.innerHTML = `
-        <div class="fp-celular-qr" id="cel-qr"></div>
-        <code class="fp-celular-end" id="cel-end"></code>
-        <div class="fp-celular-txt">
-          <b>Aponte a câmera do celular para o QR Code</b>
-          <small>O celular precisa estar no mesmo Wi-Fi da loja. Tire a foto e ela aparece aqui sozinha.</small>
-          <span class="fp-celular-status" id="cel-status"><span class="girando"></span> Esperando a foto…</span>
-          ${s.enderecos.length > 1 ? `<small>Não abriu no celular? Troque o endereço:</small>
-            <div class="fp-celular-ends">${s.enderecos.slice(0, 4).map((ip, i) => `<button type="button" class="fp-celular-ip${i ? '' : ' ativo'}" data-ip="${esc(ip)}">${esc(ip)}</button>`).join('')}</div>` : ''}
-          <button type="button" class="link" id="cel-fechar">Fechar</button>
-        </div>`;
-      // Mostra o QR Code de um endereço (e o endereço escrito, para digitar no celular se precisar).
-      const mostrar = (ip) => {
-        painel.querySelector('#cel-qr').innerHTML = QRCode.svg(url(ip), { tamanho: 148, margem: 2 });
-        painel.querySelector('#cel-end').textContent = url(ip).split('#')[0];
-        painel.querySelectorAll('[data-ip]').forEach((b) => b.classList.toggle('ativo', b.dataset.ip === ip));
-      };
-      mostrar(s.enderecos[0]);
-      painel.querySelectorAll('[data-ip]').forEach((b) => { b.onclick = () => mostrar(b.dataset.ip); });
-      let ativo = true;
-      const parar = () => {
-        ativo = false;
-        painel.hidden = true;
-        api(`/api/celular/sessao/${s.token}`, { metodo: 'DELETE' }).catch(() => {});
-      };
-      painel.querySelector('#cel-fechar').onclick = parar;
-      const verificar = async () => {
-        if (!ativo) return;
-        if (!painel.isConnected) { parar(); return; } // fechou o cadastro
-        try {
-          const r = await api(`/api/celular/foto/${s.token}`);
-          if (r.foto) {
-            const st = painel.querySelector('#cel-status');
-            if (st) st.innerHTML = `${Icone('check')} Foto recebida! Se quiser outra, é só tirar de novo no celular.`;
-            U.som('ok');
-            await novaFoto(await (await fetch(r.foto)).blob());
-          }
-        } catch (e) {
-          if (e.status === 404) { const st = painel.querySelector('#cel-status'); if (st) st.textContent = 'O QR Code venceu. Feche e gere outro.'; return; }
-        }
-        setTimeout(verificar, 1500);
-      };
-      setTimeout(verificar, 1500);
-    };
+    corpo.querySelector('#foto-celular').onclick = () => FotoCelular.abrir(corpo.querySelector('#foto-celular-painel'), {
+      nome: [p.nome || corpo.querySelector('[name=nome]').value, p.tamanho, p.cor].filter(Boolean).join(' · '),
+      aoReceber: (blob) => novaFoto(blob),
+    });
 
     corpo.querySelector('#foto-remover').onclick = () => {
       foto = null;
@@ -527,9 +522,11 @@ Telas.produtos = (() => {
           await salvarFoto(ids);
           aviso('Produto atualizado.');
         } else {
-          const variantes = editor.variantes(corpo.querySelector('#criar-zeradas').checked);
+          // Só cadastra o que tem peça; com uma combinação só (ou serviço) vale mesmo com 0.
+          const todas = editor.variantes(true);
+          const variantes = corpo.querySelector('#criar-zeradas').checked || base.servico || todas.length === 1 ? todas : editor.variantes(false);
           if (!variantes.length) {
-            return aviso(opcoes.base ? 'Escolha pelo menos um tamanho ou cor novo.' : 'Coloque a quantidade de pelo menos uma combinação (ou marque "cadastrar com quantidade 0").', 'erro');
+            return aviso(opcoes.base && !todas.length ? 'Escolha pelo menos um tamanho ou cor novo.' : 'Coloque a quantidade de pelo menos uma combinação (ou marque "cadastrar com quantidade 0").', 'erro');
           }
           const criados = await api('/api/produtos/grade', { metodo: 'POST', corpo: { ...base, variantes } });
           await salvarFoto(criados.map((x) => x.id));
@@ -730,8 +727,18 @@ Telas.produtos = (() => {
         </table>
       </div>
       <p class="dica so-admin">Clique em um número para lançar entrada ou ajuste daquele tamanho/cor.</p>
-      <div class="acoes so-admin"><button type="button" class="btn" id="grade-add">+ Adicionar tamanhos ou cores</button></div>`, { largura: '720px' });
+      <div class="acoes so-admin"><button type="button" class="btn btn-fantasma" id="grade-vazias" hidden></button>
+        <button type="button" class="btn" id="grade-add">+ Adicionar tamanhos ou cores</button></div>`, { largura: '720px' });
     corpo.querySelector('#grade-add').onclick = () => formulario(null, { base: p });
+    if (U.sessao.ehAdmin()) {
+      api(`/api/produtos/vazias?nome=${encodeURIComponent(p.nome)}${p.referencia ? `&referencia=${encodeURIComponent(p.referencia)}` : ''}`).then((vs) => {
+        const b = corpo.querySelector('#grade-vazias');
+        if (!vs.length || !b) return;
+        b.hidden = false;
+        b.innerHTML = `${Icone('lixeira')} Apagar os ${vs.length} que nunca tiveram peça`;
+        b.onclick = () => limparVazias(vs, () => grade(p));
+      }).catch(() => {});
+    }
     corpo.querySelector('tbody').onclick = async (ev) => {
       const b = ev.target.closest('[data-id]');
       if (!b || !U.sessao.ehAdmin()) return;

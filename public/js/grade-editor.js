@@ -147,8 +147,10 @@ const GradeEditor = (() => {
 
     function atualizarRodape() {
       const vs = variantes(true);
+      const comPecas = vs.filter((v) => v.quantidade > 0).length;
       const pecas = vs.reduce((a, v) => a + v.quantidade, 0);
-      $('#ge-rodape').innerHTML = `<b>${vs.length}</b> variação(ões) · <b>${pecas}</b> peça(s) no total`;
+      $('#ge-rodape').innerHTML = `<b>${comPecas}</b> variação(ões) com peças · <b>${pecas}</b> peça(s) no total${vs.length > comPecas && vs.length > 1
+        ? ` <small>(as ${vs.length - comPecas} sem quantidade não são cadastradas)</small>` : ''}`;
     }
 
     el.addEventListener('input', (ev) => {

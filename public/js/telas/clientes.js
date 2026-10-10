@@ -21,6 +21,29 @@ Telas.clientes = (() => {
     return meses < 12 ? `há ${meses} meses` : `há ${Math.floor(meses / 12)} ano(s)`;
   }
   const aniversarioTxt = (a) => (a ? a.split('-').reverse().slice(0, 2).join('/') : '');
+  const fotoUrl = (c) => (c && c.foto_versao ? `/api/clientes/${c.id}/foto?v=${c.foto_versao}` : null);
+  /** Avatar: a foto da cliente ou as iniciais. */
+  const avatar = (c, classe) => (fotoUrl(c)
+    ? `<img class="avatar ${classe} cl-foto" src="${fotoUrl(c)}" alt="" loading="lazy">`
+    : `<span class="avatar ${classe}">${esc(iniciais(c.nome))}</span>`);
+
+  /** Foto quadrada (corta o meio), 600 × 600, para o avatar. */
+  function quadrada(arquivo, lado = 600) {
+    return new Promise((ok, falha) => {
+      const img = new Image();
+      img.onload = () => {
+        const m = Math.min(img.width, img.height);
+        const c = document.createElement('canvas');
+        c.width = Math.min(lado, m);
+        c.height = c.width;
+        c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => falha(new Error('Não consegui abrir a foto.'));
+      img.src = URL.createObjectURL(arquivo);
+    });
+  }
 
   async function abrir(el) {
     raiz = el;
@@ -66,7 +89,7 @@ Telas.clientes = (() => {
     raiz.querySelector('#lista').innerHTML = lista.length ? lista.map((c, i) => {
       const w = zap(c.telefone);
       return `<div class="cl-linha" data-i="${i}" tabindex="0">
-        <span class="avatar cl-avatar">${esc(iniciais(c.nome))}</span>
+        ${avatar(c, 'cl-avatar')}
         <div class="cl-nome"><b>${esc(c.nome)}</b>
           <small>${[c.telefone, c.aniversario && `aniversário ${aniversarioTxt(c.aniversario)}`].filter(Boolean).map(esc).join(' · ') || 'sem contato'}</small></div>
         <div class="cl-num"><small>Comprou</small><b>${brl(c.total_comprado)}</b><small>${c.compras} compra(s)</small></div>
@@ -88,7 +111,7 @@ Telas.clientes = (() => {
     const cr = c.crediario || {};
     const corpo = abrirModal('Ficha da cliente', `
       <div class="cl-ficha-topo">
-        <span class="avatar cl-avatar-g">${esc(iniciais(c.nome))}</span>
+        ${avatar(c, 'cl-avatar-g')}
         <div class="cl-ficha-nome">
           <h2>${esc(c.nome)}</h2>
           <div class="cl-contatos">
@@ -171,6 +194,19 @@ Telas.clientes = (() => {
     c = c || {};
     const corpo = abrirModal(c.id ? 'Editar cliente' : 'Nova cliente', `
       <form class="form fp" autocomplete="off">
+        <section class="fp-secao cl-foto-secao">
+          <div class="cl-foto-previa" id="cl-foto-previa">${fotoUrl(c) ? `<img src="${fotoUrl(c)}" alt="">` : `<span>${Icone('usuario')}</span>`}</div>
+          <div class="cl-foto-acoes">
+            <b>Foto da cliente</b>
+            <small>Ajuda a reconhecer a cliente no caixa e no crediário. Opcional.</small>
+            <div class="fp-foto-acoes">
+              <label class="btn btn-claro btn-peq">${Icone('camera')} Escolher foto<input type="file" accept="image/*" id="cl-foto-arquivo" hidden></label>
+              <button type="button" class="btn btn-claro btn-peq" id="cl-foto-celular">${Icone('telefone')} Pelo celular</button>
+              <button type="button" class="btn btn-fantasma btn-perigo-claro btn-peq" id="cl-foto-remover" ${fotoUrl(c) ? '' : 'hidden'} title="Tirar a foto">${Icone('lixeira')}</button>
+            </div>
+          </div>
+          <div class="fp-celular cl-celular" id="cl-celular-painel" hidden></div>
+        </section>
         <section class="fp-secao">
           <h3>Dados da cliente</h3>
           <label>Nome *<input name="nome" class="campo-destaque" required value="${esc(c.nome)}" autofocus placeholder="Nome completo"></label>
@@ -192,6 +228,31 @@ Telas.clientes = (() => {
           <button class="btn btn-primario">${Icone('check')} Salvar</button>
         </div>
       </form>`, { largura: '640px' });
+    // Foto: undefined = não mexeu; null = tirar; string = nova.
+    let foto;
+    const previa = corpo.querySelector('#cl-foto-previa');
+    const usarFoto = async (arquivo) => {
+      try {
+        foto = await quadrada(arquivo);
+        previa.innerHTML = `<img src="${foto}" alt="">`;
+        corpo.querySelector('#cl-foto-remover').hidden = false;
+      } catch (e) { erro(e); }
+    };
+    corpo.querySelector('#cl-foto-arquivo').onchange = (ev) => {
+      const arq = ev.target.files[0];
+      ev.target.value = '';
+      if (arq) usarFoto(arq);
+    };
+    corpo.querySelector('#cl-foto-celular').onclick = () => FotoCelular.abrir(corpo.querySelector('#cl-celular-painel'), {
+      tipo: 'cliente',
+      nome: corpo.querySelector('[name=nome]').value.trim() || c.nome || 'Cliente nova',
+      aoReceber: usarFoto,
+    });
+    corpo.querySelector('#cl-foto-remover').onclick = () => {
+      foto = null;
+      previa.innerHTML = `<span>${Icone('usuario')}</span>`;
+      corpo.querySelector('#cl-foto-remover').hidden = true;
+    };
     corpo.querySelector('form').onsubmit = async (ev) => {
       ev.preventDefault();
       const d = U.dadosForm(ev.target);
@@ -202,6 +263,10 @@ Telas.clientes = (() => {
       }
       try {
         const salvo = await api(c.id ? `/api/clientes/${c.id}` : '/api/clientes', { metodo: c.id ? 'PUT' : 'POST', corpo: d });
+        if (foto !== undefined) {
+          const r = await api(`/api/clientes/${salvo.id}/foto`, foto ? { metodo: 'PUT', corpo: { imagem: foto } } : { metodo: 'DELETE' });
+          salvo.foto_versao = foto ? r.foto_versao : null;
+        }
         aviso('Cliente salva.');
         fecharModal();
         if (aoSalvar) aoSalvar(salvo);

@@ -489,6 +489,15 @@ function migrar(db) {
     tipo TEXT NOT NULL,
     dados BLOB NOT NULL
   )`);
+  // Foto da cliente (tirada no computador ou pelo celular).
+  if (!colunas('clientes').includes('foto_versao')) {
+    db.exec('ALTER TABLE clientes ADD COLUMN foto_versao INTEGER');
+  }
+  db.exec(`CREATE TABLE IF NOT EXISTS cliente_fotos (
+    cliente_id INTEGER PRIMARY KEY REFERENCES clientes(id),
+    tipo TEXT NOT NULL,
+    dados BLOB NOT NULL
+  )`);
   if (!colunas('clientes').includes('limite_credito')) {
     db.exec('ALTER TABLE clientes ADD COLUMN limite_credito INTEGER');
   }

@@ -163,3 +163,87 @@ test('foto da peça: tira o fundo sozinho, troca o fundo e volta para a original
     assert.deepEqual(sis.erros, []);
   } finally { await sis.fechar(); }
 });
+
+test('cadastro em grade só cria o que tem peça; aviso limpa tamanhos/cores vazios antigos', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    await sis.ir('produtos');
+    await p.click('#novo');
+    await p.fill('#f-prod [name=nome]', 'Blusa Teste');
+    await p.fill('#f-prod [name=preco_venda]', '79,90');
+    for (const t of ['P', 'M']) { await p.fill('#ge-tam-novo', t); await p.press('#ge-tam-novo', 'Enter'); }
+    for (const c of ['Preto', 'Azul']) { await p.fill('#ge-cor-novo', c); await p.press('#ge-cor-novo', 'Enter'); }
+    await p.evaluate(() => {
+      const por = (t, c, n) => {
+        const i = document.querySelector(`.ge-qtd[data-k="${GradeEditor.chave(t, c)}"]`);
+        i.value = n;
+        i.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      por('P', 'Preto', 2);
+      por('M', 'Azul', 1);
+    });
+    assert.match(await p.textContent('#ge-rodape'), /2 variação\(ões\) com peças · 3 peça\(s\)[\s\S]*2 sem quantidade não são cadastradas/);
+    await p.click('#f-prod .fp-rodape .btn-primario');
+    await p.waitForTimeout(900);
+    const criados = sis.db.prepare(`SELECT tamanho, cor, estoque FROM produtos WHERE nome = 'Blusa Teste' ORDER BY tamanho`).all().map((x) => ({ ...x }));
+    assert.deepEqual(criados, [{ tamanho: 'M', cor: 'Azul', estoque: 1 }, { tamanho: 'P', cor: 'Preto', estoque: 2 }]);
+    // Dados antigos: combinação criada com 0 que nunca teve peça.
+    await sis.api('/api/produtos/grade', { metodo: 'POST', corpo: { nome: 'Blusa Teste', preco_venda: 7990, variantes: [{ tamanho: 'P', cor: 'Azul', quantidade: 0 }] } });
+    await sis.ir('produtos');
+    await p.waitForSelector('.pr-vazias');
+    assert.match(await p.textContent('.pr-vazias'), /1 tamanho\(s\)\/cor\(es\) aparecem como esgotados/);
+    await print(sis, 'vazias-aviso', p.locator('.pr-vazias'));
+    await p.click('#ver-vazias');
+    await p.waitForSelector('.vz-item');
+    await print(sis, 'vazias-modal', p.locator('.modal'));
+    await p.click('#vz-apagar');
+    await p.waitForTimeout(800);
+    assert.equal(sis.db.prepare(`SELECT COUNT(*) AS n FROM produtos WHERE nome = 'Blusa Teste'`).get().n, 2);
+    assert.equal(await p.locator('.pr-vazias').count(), 0);
+    assert.deepEqual(sis.erros, []);
+  } finally { await sis.fechar(); }
+});
+
+test('foto da cliente pelo celular: QR Code no cadastro, aparece na lista e na ficha', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    const { enderecosLocais } = require('../src/celular');
+    const ip = (await enderecosLocais())[0];
+    await sis.ir('clientes');
+    await p.click('#novo');
+    await p.fill('#modal-corpo [name=nome]', 'Joana Prado');
+    if (ip) {
+      const resp = p.waitForResponse((r) => r.url().endsWith('/api/celular/sessao') && r.request().method() === 'POST');
+      await p.click('#cl-foto-celular');
+      const { token } = await (await resp).json();
+      await p.waitForSelector('#cl-celular-painel svg.qrcode');
+      await print(sis, 'cliente-qr', p.locator('.modal'));
+      const cel = await sis.navegador.newPage({ viewport: { width: 390, height: 800 } });
+      const fotoArq = require('node:path').join(sis.pasta, 'rosto.png');
+      await cel.setContent('<div style="width:400px;height:300px;background:radial-gradient(circle,#e9b9a0 40%,#6b4a3a 41%)"></div>');
+      await cel.screenshot({ path: fotoArq });
+      await cel.goto(`http://${ip}:${sis.porta}/celular#${token}`);
+      await cel.waitForFunction(() => document.getElementById('nome').textContent !== 'Carregando…');
+      assert.equal(await cel.textContent('#titulo'), 'Foto da cliente');
+      assert.match(await cel.textContent('#nome'), /Joana Prado/);
+      await cel.setInputFiles('#arquivo', fotoArq);
+      await cel.waitForSelector('.msg.ok');
+      await cel.close();
+      await p.waitForSelector('#cl-foto-previa img[src^="data:image/jpeg"]', { timeout: 8000 });
+    } else {
+      await p.setInputFiles('#cl-foto-arquivo', require('node:path').join(__dirname, 'fotos/vestido-cabide.jpg'));
+      await p.waitForSelector('#cl-foto-previa img[src^="data:image/jpeg"]');
+    }
+    // Foto quadrada.
+    assert.deepEqual(await p.$eval('#cl-foto-previa img', (i) => i.naturalWidth === i.naturalHeight), true);
+    await p.click('#modal-corpo .fp-rodape .btn-primario');
+    await p.waitForTimeout(800);
+    const c = sis.db.prepare(`SELECT id, foto_versao FROM clientes WHERE nome = 'Joana Prado'`).get();
+    assert.ok(c.foto_versao);
+    await p.waitForSelector('.cl-linha img.cl-foto');
+    await print(sis, 'cliente-lista', p.locator('#lista'));
+    assert.deepEqual(sis.erros, []);
+  } finally { await sis.fechar(); }
+});

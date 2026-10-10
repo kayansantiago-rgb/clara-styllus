@@ -91,3 +91,39 @@ test('relatório traz vendas por dia da semana × hora (mapa de calor)', () => {
   assert.equal(c.vendas, 2);
   assert.equal(c.faturamento, 10000);
 });
+
+test('tamanhos/cores vazios: lista só o que nunca teve peça e apaga com segurança', () => {
+  const { chamar, db, vestidoM, ana } = preparar();
+  const grade = chamar('POST', '/api/produtos/grade', {
+    nome: 'Blusa Grade', preco_venda: 5000,
+    variantes: [{ tamanho: 'P', cor: 'Preto', quantidade: 2 }, { tamanho: 'M', cor: 'Azul', quantidade: 1 },
+      { tamanho: 'P', cor: 'Azul', quantidade: 0 }, { tamanho: 'M', cor: 'Preto', quantidade: 0 }, { tamanho: 'G', cor: 'Azul', quantidade: 0 }],
+  }).corpo;
+  const [, , azulP, pretoM, azulG] = grade;
+  // Uma das vazias tem cliente esperando: fica.
+  chamar('POST', '/api/espera', { cliente_id: ana.id, produto_id: azulG.id });
+  // Produto que esgotou de verdade (teve estoque e vendeu) não é "vazio".
+  db.prepare('UPDATE produtos SET estoque = 0 WHERE id = ?').run(vestidoM.id);
+  const vs = chamar('GET', '/api/produtos/vazias').corpo;
+  assert.deepEqual(vs.map((v) => v.id).sort(), [azulP.id, pretoM.id].sort());
+  assert.deepEqual(chamar('GET', '/api/produtos/vazias?nome=blusa%20grade').corpo.length, 2);
+  // Só apaga o que continua vazio: o Preto M recebe peça antes de apagar.
+  chamar('POST', `/api/produtos/${pretoM.id}/estoque`, { tipo: 'entrada', quantidade: 1 });
+  assert.equal(chamar('POST', '/api/produtos/vazias/apagar', { ids: [azulP.id, pretoM.id, vestidoM.id] }).corpo.apagados, 1);
+  assert.equal(chamar('GET', `/api/produtos/${azulP.id}`).status, 404);
+  assert.equal(chamar('GET', `/api/produtos/${pretoM.id}`).corpo.estoque, 1);
+  assert.equal(chamar('GET', `/api/produtos/${vestidoM.id}`).status, 200);
+});
+
+test('foto da cliente: grava, entrega, troca e some ao excluir o cadastro', () => {
+  const { chamar, db, ana } = preparar();
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  assert.equal(chamar('PUT', `/api/clientes/${ana.id}/foto`, { imagem: 'data:text/html;base64,PGI+' }).status, 400);
+  const r = chamar('PUT', `/api/clientes/${ana.id}/foto`, { imagem: png }).corpo;
+  assert.ok(r.foto_versao);
+  assert.equal(chamar('GET', `/api/clientes/${ana.id}`).corpo.foto_versao, r.foto_versao);
+  const f = chamar('GET', `/api/clientes/${ana.id}/foto`).corpo;
+  assert.equal(f.tipo, 'image/png');
+  chamar('DELETE', `/api/clientes/${ana.id}`);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM cliente_fotos').get().n, 0);
+});

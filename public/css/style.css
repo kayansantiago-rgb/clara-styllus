@@ -2076,3 +2076,27 @@ small.bloco { display: block; color: var(--suave); font-size: 11.5px; }
 .fp-fundo .link.sel { font-weight: 700; text-decoration: none; color: var(--rosa-escuro); }
 .fp-fundo .btn-peq { flex: none; }
 .fp-fundo-auto { flex-basis: 100%; flex-direction: row; font-size: 12px; margin: 0; }
+
+/* Tamanhos/cores vazios (cadastrados com 0, nunca tiveram peça) */
+.pr-vazias { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: #fffaee; border: 1px solid #f1dfb3; color: #6b4a06; }
+.pr-vazias > .i { width: 20px; height: 20px; flex: none; color: #b07c0c; }
+.pr-vazias > span { flex: 1; display: flex; flex-direction: column; font-size: 13.5px; }
+.pr-vazias small { color: #8a6a2a; }
+.vz-lista { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow: auto; margin: 10px 0; }
+.vz-grupo { border: 1px solid var(--borda); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.vz-grupo small { color: var(--suave); font-weight: 400; }
+.vz-itens { display: flex; flex-wrap: wrap; gap: 6px; }
+.vz-item { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; border: 1px solid var(--borda); border-radius: 99px; padding: 4px 10px; background: #fff; cursor: pointer; color: var(--texto); }
+.vz-item:has(input:checked) { border-color: var(--rosa); background: #fdf7fa; }
+
+/* Foto da cliente */
+img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro); }
+.cl-foto-secao { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; }
+.cl-foto-previa { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; background: var(--rosa-claro); color: #c58ea6; display: grid; place-items: center; border: 1.5px dashed var(--rosa-borda); }
+.cl-foto-previa img { width: 100%; height: 100%; object-fit: cover; }
+.cl-foto-previa .i { width: 40px; height: 40px; }
+.cl-foto-acoes { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cl-foto-acoes small { color: var(--suave); font-size: 12.5px; }
+.cl-foto-acoes .fp-foto-acoes { margin-top: 6px; flex-wrap: wrap; }
+.cl-foto-acoes .fp-foto-acoes > label.btn { flex: none; }
+.cl-celular { grid-column: 1 / -1; }
