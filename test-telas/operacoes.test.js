@@ -330,3 +330,72 @@ test('vendedora recebe parcela do crediário pelo caixa (botão Crediário)', OP
     await sis.fechar();
   }
 });
+
+test('condicional: confere bipando o que voltou; o que não voltou vai para o caixa', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    const p = sis.pagina;
+    await p.evaluate(async (x) => U.api('/api/condicionais', { metodo: 'POST', corpo: {
+      cliente_id: x.ana.id, itens: [{ produto_id: x.vestido.id, quantidade: 2 }, { produto_id: x.blusa.id, quantidade: 1 }] } }), d);
+    await sis.ir('condicional');
+    await p.click('.cd-card');
+    await p.waitForSelector('#cd-bipe');
+    const bipe = async (cod) => { await p.fill('#cd-bipe', cod); await p.press('#cd-bipe', 'Enter'); await p.waitForTimeout(250); };
+    await bipe('7890000000000'); // não é da condicional
+    assert.equal(await p.locator('.tr-item.cd-ok').count(), 0);
+    await bipe(d.vestido.codigo);
+    await bipe(d.blusa.codigo);
+    assert.match(await p.textContent('#cd-conf'), /Voltaram 2 de 3[\s\S]*Faltando: Vestido Midi Floral/);
+    assert.equal(await p.locator('.tr-item.cd-ok').count(), 1); // a blusa
+    assert.equal(await p.locator('.tr-item.cd-falta').count(), 1); // o vestido (1 de 2)
+    if (process.env.PRINTS) await p.locator('.modal').screenshot({ path: `${process.env.PRINTS}/condicional-conferencia.png` });
+    // Bipar a blusa de novo: ela só levou 1.
+    await bipe(d.blusa.codigo);
+    assert.match(await p.textContent('#cd-conf'), /Voltaram 2 de 3/);
+    // Primeiro clique só avisa; o segundo fecha e o vestido que faltou vai para o caixa.
+    await p.click('#fechar');
+    await p.waitForTimeout(300);
+    assert.match(await p.textContent('#fechar'), /1 peça\(s\) não voltaram/);
+    await p.click('#fechar');
+    await p.waitForTimeout(1500);
+    assert.equal((await sis.api(`/api/produtos/${d.blusa.id}`)).estoque, 5);
+    assert.equal((await sis.api(`/api/produtos/${d.vestido.id}`)).estoque, 10); // volta tudo; sai de novo ao concluir a venda
+    assert.match(await p.textContent('.p4-venda'), /Vestido Midi Floral/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
+
+test('WhatsApp: a mensagem abre para editar antes e dá para guardar como padrão', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    const p = sis.pagina;
+    await p.evaluate(async (x) => U.api('/api/vendas', { metodo: 'POST', corpo: { cliente_id: x.ana.id, itens: [{ produto_id: x.blusa.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 8990, parcelas: 2 }] } }), d);
+    await sis.ir('crediario');
+    await p.evaluate((id) => Telas.crediario.detalhe(id), d.ana.id);
+    await p.waitForSelector('a[data-zap="crediario"]');
+    await p.click('a[data-zap="crediario"]');
+    await p.waitForSelector('#zap-texto');
+    assert.match(await p.inputValue('#zap-texto'), /^Olá, Ana! Aqui é da Clara Styllus\. Passando para lembrar do seu crediário: saldo de R\$\s?89,90\./);
+    await p.fill('#zap-texto', 'Oi Ana, tudo bem? Seu saldo no crediário da Clara Styllus é R$ 89,90. Beijos!');
+    await p.check('#zap-salvar');
+    if (process.env.PRINTS) await p.locator('.zap-caixa').screenshot({ path: `${process.env.PRINTS}/zap-editor.png` });
+    await p.context().route('https://wa.me/**', (r) => r.fulfill({ body: 'whatsapp' }));
+    const [popup] = await Promise.all([p.context().waitForEvent('page'), p.click('#zap-enviar')]);
+    await popup.waitForLoadState().catch(() => {});
+    assert.match(decodeURIComponent(popup.url()), /wa\.me\/5563988881111\?text=Oi Ana, tudo bem\?/);
+    await popup.close();
+    await p.waitForTimeout(500);
+    const salvo = sis.db.prepare("SELECT valor FROM config WHERE chave = 'msg_crediario'").get().valor;
+    assert.equal(salvo, 'Oi {nome}, tudo bem? Seu saldo no crediário da {loja} é {saldo}. Beijos!');
+    // Na configuração aparece o texto guardado.
+    await sis.ir('config');
+    assert.equal(await p.inputValue('[name=msg_crediario]'), salvo);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

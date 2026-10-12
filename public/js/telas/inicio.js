@@ -15,10 +15,6 @@ Telas.inicio = (() => {
     return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   };
 
-  const whats = (tel, msg) => {
-    const d = String(tel || '').replace(/\D/g, '').replace(/^55/, '');
-    return d.length >= 10 ? `https://wa.me/55${d}?text=${encodeURIComponent(msg)}` : null;
-  };
 
   async function abrir(raiz) {
     const [r, bk, conds, at, esp, res] = await Promise.all([
@@ -106,10 +102,10 @@ Telas.inicio = (() => {
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('presente')} Aniversariantes</h3>
           ${r.aniversariantes.map((c) => {
-    const link = whats(c.telefone, `Feliz aniversário, ${c.nome.split(' ')[0]}! 🎉 A Clara Styllus deseja um dia lindo. Passa aqui na loja que temos um presente para você!`);
+    const link = Zap.attrs(c.telefone, 'aniversario', { nome: c.nome });
     return `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b>
               <small>${c.em_dias === 0 ? '<b class="txt-rosa">hoje!</b>' : c.em_dias === 1 ? 'amanhã' : `em ${c.em_dias} dias`} · ${c.aniversario.slice(8)}/${c.aniversario.slice(5, 7)}</small></span>
-              ${link ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${link}"><i data-icone="whatsapp"></i> Parabéns</a>` : ''}</div>`;
+              ${link ? `<a class="btn btn-peq" ${link}><i data-icone="whatsapp"></i> Parabéns</a>` : ''}</div>`;
   }).join('') || U.vazio({ ilu: 'presente', compacto: true, texto: 'Ninguém faz aniversário nos próximos 7 dias.' })}
         </div>
 
@@ -122,7 +118,7 @@ Telas.inicio = (() => {
           </div>
           <h4>Vencendo hoje</h4>
           ${r.crediario.vencendo_hoje.map((c) => `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b><small>${brl(c.valor)}</small></span>
-            ${whats(c.telefone, '') ? `<a class="btn btn-peq" target="_blank" rel="noopener" href="${whats(c.telefone, `Olá, ${c.nome.split(' ')[0]}! Aqui é da Clara Styllus. Lembrando que hoje vence sua parcela do crediário de ${brl(c.valor)}. Obrigada!`)}"><i data-icone="whatsapp"></i> Lembrar</a>` : ''}</div>`).join('')
+            ${Zap.attrs(c.telefone, 'parcela_hoje', { nome: c.nome, valor: brl(c.valor) }) ? `<a class="btn btn-peq" ${Zap.attrs(c.telefone, 'parcela_hoje', { nome: c.nome, valor: brl(c.valor) })}><i data-icone="whatsapp"></i> Lembrar</a>` : ''}</div>`).join('')
     || U.vazio({ ilu: 'caderno', compacto: true, texto: 'Nenhuma parcela vence hoje.' })}
           <a href="#/crediario">Ver crediário completo →</a>
         </div>

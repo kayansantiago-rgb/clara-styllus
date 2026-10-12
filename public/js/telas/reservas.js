@@ -209,7 +209,6 @@ Telas.reservas = (() => {
     try { r = await api(`/api/reservas/${id}`); } catch (e) { return erro(e); }
     const aberta = r.status === 'aberta';
     const tel = String(r.cliente_telefone || '').replace(/\D/g, '').replace(/^55/, '');
-    const msg = encodeURIComponent(`Olá, ${r.cliente_nome.split(' ')[0]}! Aqui é da Clara Styllus 💕 Suas peças estão separadinhas te esperando (reserva até ${dataBr(r.prazo)}). Falta ${brl(r.falta)}. Quando vem buscar?`);
     const DESTINO = { venda: 'retirada e paga', vale: `sinal virou crédito (vale ${esc(r.vale_codigo || '')})`, dinheiro: 'sinal devolvido em dinheiro', loja: 'a loja ficou com o sinal', nenhum: 'sem sinal' };
     const corpo = abrirModal(`Reserva nº ${r.id} — ${r.cliente_nome}`, `
       <div class="tr-cab">
@@ -231,7 +230,8 @@ Telas.reservas = (() => {
       </div>
       <div class="acoes">
         ${aberta ? `<button class="btn btn-fantasma btn-perigo-claro" id="cancelar" style="margin-right:auto">${Icone('fechar')} Cancelar</button>` : ''}
-        ${tel.length >= 10 && aberta ? `<a class="btn cl-btn-zap" target="_blank" rel="noopener" href="https://wa.me/55${tel}?text=${msg}">${Icone('whatsapp')} Lembrar</a>` : ''}
+        ${aberta && Zap.attrs(tel, 'reserva', { nome: r.cliente_nome, prazo: dataBr(r.prazo), falta: brl(r.falta) })
+    ? `<a class="btn cl-btn-zap" ${Zap.attrs(tel, 'reserva', { nome: r.cliente_nome, prazo: dataBr(r.prazo), falta: brl(r.falta) })}>${Icone('whatsapp')} Lembrar</a>` : ''}
         ${aberta ? `<button class="btn" id="prazo">${Icone('relogio')} Mudar prazo</button>` : ''}
         ${aberta && r.falta ? `<button class="btn" id="sinal">${Icone('mais')} Receber mais</button>` : ''}
         <button class="btn" id="reimprimir">${Icone('impressora')} Imprimir</button>

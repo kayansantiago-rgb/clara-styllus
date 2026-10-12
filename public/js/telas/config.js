@@ -248,6 +248,16 @@ Telas.config = (() => {
             ${campo('loja_telefone', 'Telefone / WhatsApp')}
             ${campo('loja_instagram', 'Instagram')}
           </div>
+        </div>
+        <div class="cartao">
+          <h3 class="titulo-ico">${Icone('whatsapp')} Mensagens do WhatsApp</h3>
+          <p class="dica">Textos que o sistema prepara para mandar às clientes. As palavras entre chaves trocam sozinhas
+            (ex.: <code>{nome}</code> vira o primeiro nome). Deixe vazio para usar o texto padrão. Antes de mandar, sempre dá para editar a mensagem.</p>
+          <div class="cfg-msgs">${Object.entries(Zap.MODELOS).map(([k, m]) => `
+            <label class="cfg-msg"><span><b>${esc(m.titulo)}</b>
+              <small>${Object.entries(m.vars).map(([v, d]) => `<code>{${v}}</code> ${esc(d)}`).join(' · ')}</small></span>
+              <textarea name="msg_${k}" rows="3" placeholder="${esc(m.padrao)}">${esc(c[`msg_${k}`] || '')}</textarea>
+              <button type="button" class="link cfg-msg-padrao" data-msg-padrao="${k}">usar o texto padrão</button></label>`).join('')}</div>
         </div>`)}
         ${secao('cupom', `
         <div class="cfg-cupom">
@@ -470,6 +480,13 @@ Telas.config = (() => {
     };
     api('/api/backup/status').then(mostrarBackup).catch((e) => { raiz.querySelector('#backup-status').textContent = e.message; });
     raiz.querySelector('#zerar').onclick = zerarSistema;
+    raiz.querySelectorAll('[data-msg-padrao]').forEach((b) => {
+      b.onclick = () => {
+        const t = raiz.querySelector(`[name="msg_${b.dataset.msgPadrao}"]`);
+        t.value = '';
+        t.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+    });
     raiz.querySelector('#backup-agora').onclick = async (ev) => {
       ev.target.disabled = true;
       try {
@@ -500,6 +517,7 @@ Telas.config = (() => {
       try {
         await api('/api/config', { metodo: 'PUT', corpo: dados });
         await U.config(true);
+        Zap.recarregar();
         sujo.hidden = true;
         aviso('Configurações salvas.');
         Atualizacao.desenharStatus(raiz.querySelector('#at-status'));

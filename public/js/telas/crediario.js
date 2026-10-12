@@ -125,9 +125,6 @@ Telas.crediario = (() => {
       </div>`;
     };
     const tel = (d.cliente.telefone || '').replace(/\D/g, '');
-    const msg = encodeURIComponent(`Olá, ${d.cliente.nome.split(' ')[0]}! Aqui é da Clara Styllus. ` +
-      `Passando para lembrar do seu crediário: saldo de ${brl(d.saldo.aberto)}` +
-      `${d.saldo.vencido ? `, sendo ${brl(d.saldo.vencido)} vencido` : ''}. Qualquer dúvida estamos à disposição!`);
     const corpo = abrirModal(`Crediário — ${d.cliente.nome}`, `
       <div class="cl-kpis cr-det-kpis">
         <div><small>Deve no total</small><b>${brl(d.saldo.aberto)}</b></div>
@@ -137,7 +134,8 @@ Telas.crediario = (() => {
       <div class="acoes acoes-esq">
         <button class="btn btn-primario" id="receber" ${d.saldo.aberto ? '' : 'disabled'}>${Icone('dinheiro')} Receber pagamento</button>
         <button class="btn so-admin" id="debito">${Icone('mais')} Lançar débito</button>
-        ${tel.length >= 10 && d.saldo.aberto ? `<a class="btn cl-btn-zap" target="_blank" rel="noopener" href="https://wa.me/55${tel.replace(/^55/, '')}?text=${msg}">${Icone('whatsapp')} Cobrar no WhatsApp</a>` : ''}
+        ${d.saldo.aberto && Zap.attrs(tel, 'crediario', { nome: d.cliente.nome, saldo: brl(d.saldo.aberto), vencido: d.saldo.vencido ? `, sendo ${brl(d.saldo.vencido)} vencido` : '' })
+    ? `<a class="btn cl-btn-zap" ${Zap.attrs(tel, 'crediario', { nome: d.cliente.nome, saldo: brl(d.saldo.aberto), vencido: d.saldo.vencido ? `, sendo ${brl(d.saldo.vencido)} vencido` : '' })}>${Icone('whatsapp')} Cobrar no WhatsApp</a>` : ''}
       </div>
       <div class="cr-det">
         <div><h4>Parcelas em aberto</h4>

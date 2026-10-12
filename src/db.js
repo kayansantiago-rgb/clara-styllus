@@ -198,6 +198,13 @@ const CONFIG_PADRAO = {
   estoque_negativo: '0',
   desconto_maximo_pct: '30',
   desconto_presets: '5, 10, 15, 20', // botões prontos na janela de desconto (%)
+  // Mensagens do WhatsApp (vazio = texto padrão do sistema; {nome}, {loja}… trocam sozinhos)
+  msg_crediario: '',
+  msg_parcela_hoje: '',
+  msg_condicional: '',
+  msg_reserva: '',
+  msg_espera: '',
+  msg_aniversario: '',
   impressao_automatica: '1',
   // Impressão direta (sem o diálogo do navegador)
   impressao_cupom_modo: 'direta',

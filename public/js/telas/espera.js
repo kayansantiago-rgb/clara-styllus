@@ -11,13 +11,11 @@ Telas.espera = (() => {
     ? [e.produto_nome, e.produto_tamanho && `Tam ${e.produto_tamanho}`, e.produto_cor].filter(Boolean).join(' · ')
     : [e.descricao, e.tamanho && `Tam ${e.tamanho}`, e.cor].filter(Boolean).join(' · '));
   const whats = (e) => {
-    const tel = String(e.cliente_telefone || '').replace(/\D/g, '').replace(/^55/, '');
-    if (tel.length < 10) return null;
     const p = e.chegou;
     const peca = p ? [p.nome, p.tamanho && `tamanho ${p.tamanho}`, p.cor].filter(Boolean).join(', ') : pecaTxt(e);
-    const msg = `Oi, ${e.cliente_nome.split(' ')[0]}! Aqui é da Clara Styllus 💕 Chegou ${peca}${p ? ` (${brl(p.preco_venda)})` : ''} que você pediu! Quer que eu separe para você?`;
-    return `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+    return Zap.attrs(e.cliente_telefone, 'espera', { nome: e.cliente_nome, peca, preco: p ? ` (${brl(p.preco_venda)})` : '' });
   };
+
 
   const ABAS = [
     ['chegou', 'Chegou', (e) => e.chegou && e.status === 'aguardando'],
@@ -83,7 +81,7 @@ Telas.espera = (() => {
         </div>
         <div class="es-acoes">
           ${['aguardando', 'avisada'].includes(e.status) ? `
-            ${p && link ? `<a class="btn cl-btn-zap btn-peq" href="${link}" target="_blank" rel="noopener" data-avisar>${Icone('whatsapp')} Avisar</a>` : ''}
+            ${p && link ? `<a class="btn cl-btn-zap btn-peq" ${link} data-avisar>${Icone('whatsapp')} Avisar</a>` : ''}
             ${p ? `<button class="btn btn-primario btn-peq" data-vender>${Icone('sacola')} Vender</button>` : ''}
             <button class="btn-ico" data-atendida title="Marcar como atendida">${Icone('check')}</button>
             <button class="btn-ico" data-cancelar title="Tirar da lista">${Icone('lixeira')}</button>`
