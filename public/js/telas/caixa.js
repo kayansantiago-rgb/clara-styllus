@@ -150,34 +150,65 @@ Telas.caixa = (() => {
     }
     const NOTAS = [20000, 10000, 5000, 2000, 1000, 500, 200];
     const MOEDAS = [100, 50, 25, 10, 5];
-    const cel = (v) => `<label class="fc-cel ${v < 200 ? 'moeda' : ''}"><span>${v >= 100 ? `R$ ${v / 100}` : `${v} centavos`}</span>
-      <input type="number" min="0" inputmode="numeric" data-v="${v}" placeholder="0"><small data-sub="${v}"></small></label>`;
+    const nomeValor = (v) => (v >= 100 ? `R$ ${v / 100}` : `R$ 0,${String(v).padStart(2, '0')}`);
+    const linhaContagem = (v) => `
+      <div class="fc-linha ${v < 200 ? 'moeda' : ''}">
+        <span class="fc-valor">${nomeValor(v)}</span>
+        <div class="fc-passo">
+          <button type="button" class="fc-mm" data-menos="${v}" tabindex="-1" aria-label="menos">−</button>
+          <input type="text" inputmode="numeric" maxlength="4" data-v="${v}" placeholder="0" aria-label="Quantidade de ${nomeValor(v)}">
+          <button type="button" class="fc-mm" data-mais="${v}" tabindex="-1" aria-label="mais">+</button>
+        </div>
+        <small class="fc-sub" data-sub="${v}">—</small>
+      </div>`;
+    // Resumo: o que tem que estar na gaveta (dinheiro) e o que fica fora (cartão, PIX…).
+    const din = (f) => f.forma === 'dinheiro';
+    const vendasDinheiro = (r.formas.find(din)?.valor || 0) - r.vendas.troco;
+    const credDin = (r.recebimentos_crediario || []).filter(din).reduce((a, f) => a + f.valor, 0);
+    const sinalDin = (r.sinais_reserva || []).filter(din).reduce((a, f) => a + f.valor, 0);
+    const suprimentos = r.movimentos.filter((m) => m.tipo === 'suprimento');
+    const sangrias = r.movimentos.filter((m) => m.tipo === 'sangria');
+    const fora = [
+      ...r.formas.filter((f) => !din(f)).map((f) => [rotulo(f.forma), f.valor, COR_FORMA[f.forma] || '#4a3aa7']),
+      ...(r.recebimentos_crediario || []).filter((f) => !din(f)).map((f) => [`Crediário recebido · ${U.FORMAS[f.forma] || f.forma}`, f.valor, '#e87ba4']),
+      ...(r.sinais_reserva || []).filter((f) => !din(f)).map((f) => [`Sinal de reserva · ${U.FORMAS[f.forma] || f.forma}`, f.valor, '#4a3aa7']),
+    ];
+    const linha = (rot, valor, extra = '') => `<div class="linha ${extra}"><span>${rot}</span><span>${valor}</span></div>`;
     const corpo = abrirModal('Fechar o caixa', `
-      <form class="fc">
+      <form class="fc fc2">
         <div class="fc-contar">
           <div class="p4-passo"><span>1</span>Conte o dinheiro da gaveta</div>
-          <p class="dica">Digite quantas notas e moedas de cada valor tem na gaveta — o sistema soma.</p>
-          <div class="fc-grade">${NOTAS.map(cel).join('')}</div>
-          <div class="fc-grade fc-moedas">${MOEDAS.map(cel).join('')}</div>
-          <label class="fc-total">Total contado<div class="campo-moeda"><span>R$</span><input name="valor" inputmode="decimal" required class="campo-destaque" placeholder="0,00"></div>
-            <small>Preenche sozinho pela contagem acima, ou digite o total direto.</small></label>
+          <p class="dica">Digite quantas notas e moedas tem de cada valor (Enter passa para a próxima). O sistema soma.</p>
+          <div class="fc-colunas">
+            <div class="fc-lista"><h4>Notas</h4>${NOTAS.map(linhaContagem).join('')}</div>
+            <div class="fc-lista"><h4>Moedas</h4>${MOEDAS.map(linhaContagem).join('')}
+              <button type="button" class="link fc-limpar" id="fc-limpar">Limpar contagem</button></div>
+          </div>
+          <label class="fc-total"><span>Total contado <small>preenche sozinho, ou digite o total direto</small></span>
+            <div class="campo-moeda"><span>R$</span><input name="valor" inputmode="decimal" required class="campo-destaque" placeholder="0,00"></div></label>
         </div>
         <div class="fc-resumo">
           <div class="p4-passo"><span>2</span>Confira e feche</div>
-          <div class="cx-mov">
-            <div class="linha"><span>Vendas</span><b>${r.vendas.quantidade} · ${brl(r.vendas.total)}</b></div>
-            ${r.formas.map((f) => `<div class="linha"><span><i class="fc-ponto" style="background:${COR_FORMA[f.forma] || '#4a3aa7'}"></i>${rotulo(f.forma)}</span><span>${brl(f.forma === 'dinheiro' ? f.valor - r.vendas.troco : f.valor)}</span></div>`).join('')}
-            ${(r.recebimentos_crediario || []).map((f) => `<div class="linha"><span>Crediário recebido · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
-            ${(r.sinais_reserva || []).map((f) => `<div class="linha"><span>Sinal de reserva · ${U.FORMAS[f.forma] || f.forma}</span><span>${brl(f.valor)}</span></div>`).join('')}
-            ${r.movimentos.map((m) => `<div class="linha"><span>${m.tipo === 'sangria' ? 'Sangria' : 'Suprimento'} ${esc(m.motivo || '')}</span><span>${m.tipo === 'sangria' ? '−' : '+'}${brl(m.valor)}</span></div>`).join('')}
-            <div class="linha"><span>Troco inicial</span><span>${brl(r.caixa.valor_abertura)}</span></div>
-            <div class="linha total"><span>Esperado na gaveta</span><b>${brl(r.dinheiro_esperado)}</b></div>
+          <div class="fc-bloco">
+            <h4>${Icone('gaveta')} Na gaveta (dinheiro)</h4>
+            ${linha('Troco inicial', brl(r.caixa.valor_abertura))}
+            ${linha('Vendas em dinheiro <small>(já sem o troco)</small>', brl(vendasDinheiro))}
+            ${credDin ? linha('Crediário recebido', `+ ${brl(credDin)}`) : ''}
+            ${sinalDin ? linha('Sinais de reserva', `+ ${brl(sinalDin)}`) : ''}
+            ${suprimentos.map((m) => linha(`Suprimento ${m.motivo ? `<small>${esc(m.motivo)}</small>` : ''}`, `+ ${brl(m.valor)}`)).join('')}
+            ${sangrias.map((m) => linha(`Sangria ${m.motivo ? `<small>${esc(m.motivo)}</small>` : ''}`, `− ${brl(m.valor)}`, 'fc-menos')).join('')}
+            ${linha('<b>Esperado na gaveta</b>', `<b>${brl(r.dinheiro_esperado)}</b>`, 'total')}
           </div>
+          ${fora.length ? `<div class="fc-bloco fc-fora">
+            <h4>${Icone('cartao')} Fora da gaveta <small>confira na maquininha e no banco</small></h4>
+            ${fora.map(([rot, v, cor]) => linha(`<i class="fc-ponto" style="background:${cor}"></i>${rot}`, brl(v))).join('')}
+          </div>` : ''}
+          <p class="fc-vendas">${r.vendas.quantidade} venda(s) no caixa · ${brl(r.vendas.total)}</p>
           <div class="fc-dif" id="dif"><small>Diferença</small><b>—</b><span>Conte o dinheiro para ver se bate.</span></div>
-          <label>Observação <small>opcional</small><textarea name="obs" rows="2" placeholder="Ex.: faltou R$ 2 de troco"></textarea></label>
+          <input name="obs" class="fc-obs" maxlength="300" placeholder="Observação (opcional) — ex.: faltou R$ 2 de troco">
           <button class="btn btn-perigo btn-grande">${Icone('cadeado')} Fechar caixa e imprimir</button>
         </div>
-      </form>`, { largura: '980px' });
+      </form>`, { largura: '1000px' });
     const form = corpo.querySelector('form');
     const atualizarDif = () => {
       const v = U.paraCentavos(form.valor.value);
@@ -198,13 +229,35 @@ Telas.caixa = (() => {
         form.querySelectorAll('[data-v]').forEach((x) => {
           const n = Math.max(0, Number(x.value) || 0);
           total += n * Number(x.dataset.v);
-          form.querySelector(`[data-sub="${x.dataset.v}"]`).textContent = n ? brl(n * Number(x.dataset.v)) : '';
+          const sub = form.querySelector(`[data-sub="${x.dataset.v}"]`);
+          sub.textContent = n ? brl(n * Number(x.dataset.v)) : '—';
+          sub.closest('.fc-linha').classList.toggle('tem', !!n);
         });
         form.valor.value = U.num(total);
         atualizarDif();
       };
     });
     form.valor.oninput = atualizarDif;
+    const somar = () => form.querySelector('[data-v]').oninput();
+    form.querySelectorAll('[data-v]').forEach((x) => {
+      x.addEventListener('beforeinput', (e) => { if (e.data && /\D/.test(e.data)) e.preventDefault(); });
+    });
+    form.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mais],[data-menos]');
+      if (b) {
+        const inp = form.querySelector(`[data-v="${b.dataset.mais || b.dataset.menos}"]`);
+        inp.value = Math.max(0, (Number(inp.value) || 0) + (b.dataset.mais ? 1 : -1)) || '';
+        somar();
+        return;
+      }
+      if (e.target.closest('#fc-limpar')) {
+        form.querySelectorAll('[data-v]').forEach((x) => { x.value = ''; });
+        somar();
+        form.valor.value = '';
+        atualizarDif();
+        form.querySelector('[data-v]').focus();
+      }
+    });
     // Na contagem, Enter passa para a próxima nota/moeda (não fecha o caixa no meio da contagem).
     const contagem = [...form.querySelectorAll('[data-v]')];
     contagem.forEach((inp, i) => {
