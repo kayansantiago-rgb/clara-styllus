@@ -104,10 +104,10 @@ Telas.despesas = (() => {
           <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('prancheta')} Lançamentos${categoria ? ` · ${esc(categoria)}` : ''}</h3>
             ${categoria ? '<button class="btn btn-peq" id="todas">Ver todas</button>' : ''}</div>
           ${lanc.length ? `<div class="tabela-rolagem"><table class="tabela dp-tabela">
-            <thead><tr><th>Data</th><th>Descrição</th><th>Para quem</th><th>Categoria</th><th>Pagamento</th><th class="r">Valor</th><th></th></tr></thead>
+            <thead><tr><th>Data</th><th>Descrição</th><th>Para quem</th><th>Categoria</th><th>Pago com</th><th class="r">Valor</th><th></th></tr></thead>
             <tbody>${lanc.map((d) => `<tr>
-              <td>${dataBr(d.data)}</td>
-              <td><b class="dsp-desc">${esc(d.descricao)}</b>${d.observacao ? `<small class="bloco">${esc(d.observacao)}</small>` : ''}<small class="bloco">lançado por ${esc(d.usuario || '—')}</small></td>
+              <td class="nowrap">${dataBr(d.data).slice(0, 5)}<small class="bloco">${d.data.slice(0, 4)}</small></td>
+              <td title="Lançado por ${esc(d.usuario || '—')}"><b class="dsp-desc">${esc(d.descricao)}</b>${d.observacao ? `<small class="bloco">${esc(d.observacao)}</small>` : ''}</td>
               <td>${esc(d.favorecido || '—')}</td>
               <td><span class="dp-chip">${esc(d.categoria || 'Outras')}</span></td>
               <td><small>${d.forma ? FORMA_TXT[d.forma] || d.forma : '—'}${d.sangria_id ? ' · da gaveta' : ''}</small></td>

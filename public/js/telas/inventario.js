@@ -43,7 +43,7 @@ Telas.inventario = (() => {
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('relogio')} Inventários anteriores</h3>
           <table class="tabela">
-            <thead><tr><th>Nº</th><th>Descrição</th><th>Data</th><th class="r">Ajustes</th><th class="r">Falta (custo)</th><th class="r">Sobra (custo)</th></tr></thead>
+            <thead><tr><th>Nº</th><th>Descrição</th><th>Data</th><th class="r">Ajustes</th><th class="r" title="Valor de custo das peças que faltaram">Falta</th><th class="r" title="Valor de custo das peças que sobraram">Sobra</th></tr></thead>
             <tbody id="hist">${historico.map((i) => `
               <tr class="${i.status === 'finalizado' ? 'clicavel' : 'inativo'}" data-id="${i.id}">
                 <td>${i.id}</td><td>${esc(i.descricao || '')}${i.status === 'cancelado' ? ' <span class="selo perigo">cancelado</span>' : ''}</td>

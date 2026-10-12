@@ -32,7 +32,7 @@ Telas.crediario = (() => {
           <button class="segmento ${situacao === 'abertos' ? 'sel' : ''}" data-sit="abertos">Em aberto</button>
           <button class="segmento ${situacao === 'quitados' ? 'sel' : ''}" data-sit="quitados">${Icone('check')} Quitados</button>
         </div>
-        <div class="busca-ico pr-busca">${Icone('busca')}<input id="q" type="search" placeholder="Buscar cliente por nome, CPF ou telefone" autofocus autocomplete="off"></div>
+        <div class="busca-ico pr-busca">${Icone('busca')}<input id="q" type="search" placeholder="Nome, CPF ou telefone" autofocus autocomplete="off"></div>
         <label class="interruptor vd-canceladas"><input type="checkbox" id="atraso"><span class="trilho"></span><span class="txt"><b>Só quem está em atraso</b></span></label>
         <span class="semaforo-legenda">${selo({ cor: 'verde', txt: 'em dia' })}${selo({ cor: 'amarelo', txt: 'vence em 7 dias' })}${selo({ cor: 'vermelho', txt: 'atrasado' })}</span>
       </div>

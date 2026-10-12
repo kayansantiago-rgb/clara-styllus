@@ -2151,3 +2151,43 @@ img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro
 .dsp-forma .segmentos { flex-wrap: wrap; }
 .dsp-form .acoes { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 1100px) { .dsp-grade { grid-template-columns: 1fr; } .dsp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ===== Revisão visual (v2.15) ===== */
+/* Menu: a lista rola sozinha e o rodapé (quem está logado, caixa, recolher) fica sempre à vista. */
+.menu { overflow: hidden; }
+.menu nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; margin: 0 -4px; padding: 0 4px; }
+.menu .usuario-box { margin-top: 8px; }
+@media (max-height: 860px) {
+  .menu { padding-top: 12px; }
+  .marca { padding-bottom: 10px; }
+  .menu nav a { padding: 5px 12px; font-size: 13.5px; }
+  .menu-titulo { padding: 7px 12px 2px; }
+  .menu .usuario-box { padding-top: 8px; }
+  .menu .status-caixa { margin-top: 6px; padding: 6px 12px; }
+  .menu-recolher { margin-top: 2px; padding: 6px 12px; }
+}
+/* Números grandes dos cartões nunca quebram (ex.: lucro negativo). */
+.vd-kpi b { white-space: nowrap; }
+/* Clientes: coluna do "deve" com largura fixa para as linhas ficarem alinhadas. */
+.cl-linha { grid-template-columns: 44px minmax(200px, 1.6fr) 140px 140px 150px 40px; }
+.cl-tags { display: flex; justify-content: flex-end; }
+/* Cadastro de produto: botões da foto sem quebrar o texto. */
+.fp-lateral .fp-foto-acoes { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.fp-lateral .fp-foto-acoes > .btn { white-space: nowrap; justify-content: center; }
+.fp-lateral .fp-foto-acoes > #foto-celular { grid-column: 1 / -1; grid-row: 2; }
+.fp-lateral .fp-foto-acoes:has(#foto-remover[hidden]) > label.btn { grid-column: 1 / -1; }
+/* Despesas: mais espaço para a lista. */
+.dsp-grade { grid-template-columns: 300px minmax(0, 1fr); }
+.dp-tabela th { white-space: nowrap; }
+.dp-tabela .dsp-desc { display: inline-block; min-width: 140px; }
+.dp-chip { display: inline-block; }
+@media (max-height: 800px) {
+  .menu nav a { padding: 4px 12px; }
+  .menu-titulo { padding: 5px 12px 1px; }
+  .marca-sub { display: none; }
+  .marca { padding-bottom: 8px; }
+  .menu .usuario-box { padding-top: 6px; margin-top: 6px; }
+}
+.dp-tabela th, .dp-tabela td { padding-left: 8px; padding-right: 8px; }
+.dp-tabela .dsp-desc { min-width: 110px; }
+.dp-tabela td:last-child { white-space: nowrap; width: 1%; }
