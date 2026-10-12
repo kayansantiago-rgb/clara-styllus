@@ -95,9 +95,29 @@ Function AcharNavegador
   ${EndIf}
 FunctionEnd
 
+; Perfil do navegador só do sistema: sem preencher endereço/nome/telefone salvos, sem senhas salvas e
+; sem tela de boas-vindas. Fica em ProgramData (todos os usuários do Windows podem usar).
+!define PERFIL_ARGS '--user-data-dir="$Dados\navegador" --no-first-run --no-default-browser-check --disable-features=AutofillServerCommunication'
+
+Function CriarPerfilNavegador
+  CreateDirectory "$Dados\navegador\Default"
+  ; Só na primeira vez (depois o próprio navegador mantém o arquivo).
+  ${IfNot} ${FileExists} "$Dados\navegador\Default\Preferences"
+    FileOpen $0 "$Dados\navegador\Default\Preferences" w
+    FileWrite $0 '{"autofill":{"enabled":false,"profile_enabled":false,"credit_card_enabled":false},'
+    FileWrite $0 '"credentials_enable_service":false,"credentials_enable_autosignin":false,'
+    FileWrite $0 '"profile":{"password_manager_enabled":false},"translate":{"enabled":false},'
+    FileWrite $0 '"browser":{"check_default_browser":false},"search":{"suggest_enabled":false}}'
+    FileClose $0
+  ${EndIf}
+  ; Usuários do Windows (S-1-5-32-545) podem gravar no perfil.
+  nsExec::Exec 'icacls "$Dados\navegador" /grant *S-1-5-32-545:(OI)(CI)M /T /Q'
+  Pop $0
+FunctionEnd
+
 !macro CriarAtalho caminho
   ${If} $Navegador != ""
-    CreateShortCut "${caminho}" "$Navegador" "--app=${URL} --start-maximized" "$INSTDIR\icone.ico" 0
+    CreateShortCut "${caminho}" "$Navegador" '${PERFIL_ARGS} --app=${URL} --start-maximized' "$INSTDIR\icone.ico" 0
   ${Else}
     ; Sem Edge/Chrome: abre no navegador padrão.
     CreateShortCut "${caminho}" "$WINDIR\explorer.exe" "${URL}" "$INSTDIR\icone.ico" 0
@@ -168,13 +188,14 @@ Section "Instalar"
 
   ; Atalhos
   Call AcharNavegador
+  Call CriarPerfilNavegador
   CreateDirectory "$SMPROGRAMS\${APP}"
   !insertmacro CriarAtalho "$SMPROGRAMS\${APP}\${APP}.lnk"
   !insertmacro CriarAtalho "$DESKTOP\${APP}.lnk"
   ; Atalho do caixa em tela cheia (F11 sai da tela cheia).
   ${If} $Navegador != ""
-    CreateShortCut "$SMPROGRAMS\${APP}\${APP} - Caixa (tela cheia).lnk" "$Navegador" "--app=${URL}/#/pdv --start-fullscreen" "$INSTDIR\icone.ico" 0
-    CreateShortCut "$DESKTOP\${APP} - Caixa.lnk" "$Navegador" "--app=${URL}/#/pdv --start-fullscreen" "$INSTDIR\icone.ico" 0
+    CreateShortCut "$SMPROGRAMS\${APP}\${APP} - Caixa (tela cheia).lnk" "$Navegador" '${PERFIL_ARGS} --app=${URL}/#/pdv --start-fullscreen' "$INSTDIR\icone.ico" 0
+    CreateShortCut "$DESKTOP\${APP} - Caixa.lnk" "$Navegador" '${PERFIL_ARGS} --app=${URL}/#/pdv --start-fullscreen' "$INSTDIR\icone.ico" 0
   ${EndIf}
   CreateShortCut "$SMPROGRAMS\${APP}\Pasta de dados e backups.lnk" "$WINDIR\explorer.exe" '"$Dados"'
   ; Esqueci a senha: o sistema grava o código neste arquivo (só quem está no computador consegue ler).

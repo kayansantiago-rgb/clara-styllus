@@ -99,6 +99,8 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Relatórios → Despesas da loja**: resumo por categoria, comparação com o período anterior, % das vendas e as
   sangrias do caixa, que podem virar despesa com um clique.
 - **Sem sugestões do navegador**: nenhum campo mostra a lista de palavras/números digitados antes nem corretor.
+  Os atalhos do sistema abrem o Edge/Chrome num **perfil só do Clara Styllus** (`C:\ProgramData\ClaraStyllus\navegador`),
+  com preenchimento automático de endereço/nome/telefone, senhas salvas e sugestões desligados.
 - **Desconto com botões prontos**: no F7 (venda toda) e no "desconto" de cada peça aparecem 5%, 10%, 15% e 20%, já
   mostrando quanto sai e quanto fica; teclas 1, 2, 3, 4 escolhem. Dá para digitar outro valor (em % ou R$). Os botões
   mudam em Configurações → Vendas, e os acima do desconto máximo ficam desligados.
