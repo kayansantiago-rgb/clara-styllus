@@ -101,3 +101,32 @@ test('esqueci minha senha: gera o código no computador e troca a senha pela tel
     await sis.fechar();
   }
 });
+
+test('configurações: zerar o sistema com a senha da administradora', { skip: pular, timeout: 60000 }, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    const { dadosBasicos } = require('./ajuda');
+    const d = await dadosBasicos(sis);
+    await p.evaluate((x) => U.api('/api/vendas', { metodo: 'POST', corpo: { itens: [{ produto_id: x.blusa.id, quantidade: 1 }], pagamentos: [{ forma: 'pix', valor: 8990 }] } }), d);
+    await p.evaluate(() => { location.hash = '#/config?aba=backup'; });
+    await p.waitForTimeout(300);
+    await p.reload();
+    await p.waitForSelector('#zerar');
+    await p.click('#zerar');
+    await p.waitForSelector('.zr-modo');
+    assert.match(await p.textContent('.zr-modo'), /Apaga 1 venda/);
+    assert.equal(await p.isDisabled('#zr-ok'), true);
+    await p.fill('.zr [name=senha]', '1234');
+    await p.fill('.zr [name=confirmacao]', 'zerar');
+    if (process.env.PRINTS) await p.locator('.modal').screenshot({ path: `${process.env.PRINTS}/zerar.png` });
+    assert.equal(await p.isDisabled('#zr-ok'), false);
+    await p.click('#zr-ok');
+    await p.waitForTimeout(2600);
+    assert.equal(sis.db.prepare('SELECT COUNT(*) AS n FROM vendas').get().n, 0);
+    assert.equal(sis.db.prepare('SELECT COUNT(*) AS n FROM produtos').get().n, 3);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

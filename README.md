@@ -75,6 +75,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Começar do zero** (Configurações → Backup, administradora): zera o sistema com a senha da administradora e
+  digitando ZERAR. Três opções: **só o movimento** (vendas, caixa, crediário, trocas, condicionais, reservas, despesas e
+  histórico; mantém produtos com o estoque atual, clientes, vendedores e configurações), **tudo da loja** (também
+  produtos e clientes) ou **como novo** (inclusive vendedores e configurações, volta ao primeiro acesso). Antes, guarda
+  uma cópia completa "antes-de-zerar-….db" na pasta de backups, que não é apagada pelo rodízio.
 - **Esqueci minha senha** (tela de entrada): vendedora pede à administradora (Vendedores → Editar → Nova senha).
   A administradora clica em **Gerar código**; o código de 6 números é gravado em
   `C:\ProgramData\ClaraStyllus\REDEFINIR-SENHA.txt` (atalho **Clara Styllus → Código para redefinir a senha** no

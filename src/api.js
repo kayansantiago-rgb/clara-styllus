@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { transacao } = require('./db');
+const { transacao, CONFIG_PADRAO } = require('./db');
 const { gerarEan13Interno } = require('./codigos');
 const { hashSenha, conferirSenha, novoToken } = require('./auth');
 const { instalarCrediario } = require('./crediario');
@@ -1753,6 +1753,94 @@ function criarApi(db, opcoes = {}) {
       tipo: 'application/octet-stream',
       conteudo,
     };
+  }, 'admin');
+
+  // ------------------------------------------------------- começar do zero
+  /*
+   * Zerar o sistema (só a administradora, com a senha dela). Antes, guarda uma cópia completa
+   * "antes-de-zerar-…db" na pasta de backups (fora do rodízio, não é apagada sozinha).
+   *  - movimento: apaga vendas, caixa, crediário, trocas, condicionais, reservas, despesas, estoque
+   *    lançado e histórico; mantém produtos (com o estoque de agora), clientes, vendedores e configurações.
+   *  - tudo: também produtos e clientes; mantém vendedores e configurações.
+   *  - fabrica: apaga tudo, inclusive vendedores e configurações (volta ao primeiro acesso).
+   */
+  const MOVIMENTO = ['venda_pagamentos', 'venda_itens', 'vendas', 'caixa_movimentos', 'crediario_recebimento_parcelas',
+    'crediario_recebimentos', 'crediario_parcelas', 'troca_itens', 'trocas', 'vales', 'condicional_itens', 'condicionais',
+    'reserva_sinais', 'reserva_itens', 'reservas', 'espera', 'despesas', 'estoque_movimentos', 'inventario_leituras',
+    'inventario_itens', 'inventarios', 'caixas', 'auditoria'];
+  const CADASTROS = ['produto_fotos', 'produtos', 'cliente_fotos', 'clientes'];
+  const tentativasZerar = { falhas: 0, ate: 0 };
+
+  rota('GET', '/api/sistema/contagem', () => {
+    const n = (t, w = '') => db.prepare(`SELECT COUNT(*) AS n FROM ${t} ${w}`).get().n;
+    return {
+      vendas: n('vendas'), produtos: n('produtos', 'WHERE excluido_em IS NULL'), clientes: n('clientes', 'WHERE excluido_em IS NULL'),
+      crediario_aberto: n('crediario_parcelas', "WHERE status = 'aberta'"), despesas: n('despesas'), caixas: n('caixas'),
+      usuarios: n('usuarios'),
+    };
+  }, 'admin');
+
+  rota('POST', '/api/sistema/zerar', ({ corpo, usuario, definirSessao }) => {
+    if (tentativasZerar.ate > Date.now()) throw erro(429, 'Senha errada muitas vezes. Espere alguns minutos.');
+    const modo = ['movimento', 'tudo', 'fabrica'].includes(corpo.modo) ? corpo.modo : null;
+    if (!modo) throw erro(400, 'Escolha o que apagar.');
+    if (String(corpo.confirmacao || '').trim().toUpperCase() !== 'ZERAR') throw erro(400, 'Digite ZERAR para confirmar.');
+    if (!conferirSenha(corpo.senha ?? '', usuario.senha_hash)) {
+      tentativasZerar.falhas++;
+      if (tentativasZerar.falhas >= 5) { tentativasZerar.ate = Date.now() + 5 * 60e3; tentativasZerar.falhas = 0; }
+      throw erro(401, 'Senha da administradora incorreta.');
+    }
+    tentativasZerar.falhas = 0;
+    // Cópia completa antes de apagar.
+    const pasta = (config().backup_pasta || '').trim() || opcoes.pastaBackup || path.join(os.tmpdir(), 'clara-styllus-backups');
+    const p2 = (x) => String(x).padStart(2, '0');
+    const d = new Date();
+    const base = `antes-de-zerar-${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+    let copia = path.join(pasta, `${base}.db`);
+    for (let i = 2; fs.existsSync(copia); i++) copia = path.join(pasta, `${base}_${i}.db`);
+    try {
+      fs.mkdirSync(pasta, { recursive: true });
+      db.prepare('VACUUM INTO ?').run(copia);
+    } catch (e) {
+      throw erro(500, `Não apaguei nada: não consegui fazer a cópia de segurança antes (${e.message}).`);
+    }
+    const tabelas = modo === 'movimento' ? MOVIMENTO : [...MOVIMENTO, ...CADASTROS];
+    // As tabelas são esvaziadas inteiras: a ordem das chaves estrangeiras não importa aqui.
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+    transacao(db, () => {
+      if (modo === 'movimento') {
+        // Peças que estavam em condicional ou reserva aberta voltam para o estoque.
+        db.prepare(`UPDATE produtos SET estoque = estoque + (SELECT COALESCE(SUM(ci.quantidade), 0)
+          FROM condicional_itens ci JOIN condicionais c ON c.id = ci.condicional_id WHERE c.status = 'aberta' AND ci.produto_id = produtos.id)`).run();
+        db.prepare(`UPDATE produtos SET estoque = estoque + (SELECT COALESCE(SUM(ri.quantidade), 0)
+          FROM reserva_itens ri JOIN reservas r ON r.id = ri.reserva_id WHERE r.status = 'aberta' AND ri.produto_id = produtos.id)`).run();
+      }
+      for (const t of tabelas) db.prepare(`DELETE FROM ${t}`).run();
+      if (modo === 'movimento') {
+        // Excluídos que só ficavam por causa das vendas antigas agora podem sair de vez.
+        db.prepare('DELETE FROM produto_fotos WHERE produto_id IN (SELECT id FROM produtos WHERE excluido_em IS NOT NULL)').run();
+        db.prepare('DELETE FROM produtos WHERE excluido_em IS NOT NULL').run();
+        db.prepare('DELETE FROM cliente_fotos WHERE cliente_id IN (SELECT id FROM clientes WHERE excluido_em IS NOT NULL)').run();
+        db.prepare('DELETE FROM clientes WHERE excluido_em IS NOT NULL').run();
+      }
+      if (modo === 'fabrica') {
+        db.prepare('DELETE FROM sessoes').run();
+        db.prepare('DELETE FROM usuarios').run();
+        db.prepare('DELETE FROM config').run();
+        const ins = db.prepare('INSERT INTO config (chave, valor) VALUES (?, ?)');
+        for (const [k, v] of Object.entries(CONFIG_PADRAO)) ins.run(k, v);
+      }
+      // Numeração (venda nº 1, caixa nº 1…) recomeça.
+      const zerarSeq = db.prepare('DELETE FROM sqlite_sequence WHERE name = ?');
+      for (const t of [...tabelas, ...(modo === 'fabrica' ? ['usuarios'] : [])]) zerarSeq.run(t);
+    });
+    } finally {
+      db.exec('PRAGMA foreign_keys = ON');
+    }
+    try { db.exec('VACUUM'); } catch { /* só para diminuir o arquivo */ }
+    if (modo === 'fabrica' && definirSessao) definirSessao(null); // ninguém mais logado: volta ao primeiro acesso
+    return { ok: true, modo, copia, fabrica: modo === 'fabrica' };
   }, 'admin');
 
   // -------------------------------------------------------------- impressão

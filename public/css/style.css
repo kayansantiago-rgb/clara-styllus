@@ -2208,3 +2208,19 @@ img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro
 .esq .acoes { display: flex; justify-content: flex-end; gap: 8px; }
 .esq-ok { display: block; }
 .esq-ok .i { width: 15px; height: 15px; vertical-align: -3px; margin-right: 4px; }
+
+/* Zerar o sistema */
+.cfg-perigo { border: 1px solid #f3c4bf; background: #fffaf9; }
+.cfg-perigo .titulo-ico { color: var(--perigo); }
+.zr { display: flex; flex-direction: column; gap: 12px; }
+.zr-modos { display: flex; flex-direction: column; gap: 8px; }
+.zr-modo { flex-direction: row; align-items: flex-start; gap: 10px; border: 1.5px solid var(--borda); border-radius: 14px; padding: 12px 14px; cursor: pointer; color: var(--texto); }
+.zr-modo:has(input:checked) { border-color: var(--perigo); background: #fff5f4; }
+.zr-modo input { margin-top: 3px; accent-color: var(--perigo); }
+.zr-modo span { display: flex; flex-direction: column; gap: 3px; }
+.zr-modo b { font-size: 15px; }
+.zr-modo small { font-size: 12.5px; color: var(--suave); line-height: 1.4; }
+.zr-modo .zr-apaga { color: #a32c21; }
+.zr-alerta { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fffaee; border: 1px solid #f1dfb3; color: #6b4a06; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; }
+.zr-alerta .i { width: 18px; height: 18px; flex: none; color: #b07c0c; }
+.zr .acoes { display: flex; justify-content: flex-end; gap: 8px; }

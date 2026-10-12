@@ -409,6 +409,12 @@ Telas.config = (() => {
             <label class="col2">Segunda cópia (pendrive ou Google Drive) <small>opcional</small>
               <input name="backup_pasta_extra" value="${esc(c.backup_pasta_extra)}" placeholder="ex.: E:\\Backup Clara Styllus  ou  C:\\Users\\Clara\\Google Drive\\Backup PDV"></label>
           </div>
+        </div>
+        <div class="cartao cfg-perigo">
+          <h3 class="titulo-ico">${Icone('alerta')} Começar do zero</h3>
+          <p class="dica">Apaga os dados para começar a usar o sistema como se fosse novo (por exemplo, depois dos testes).
+            Antes de apagar, o sistema guarda uma <b>cópia completa</b> na pasta de backups. Precisa da sua senha.</p>
+          <div class="acoes acoes-esq"><button type="button" class="btn btn-perigo" id="zerar">${Icone('lixeira')} Zerar o sistema…</button></div>
         </div>`)}
         ${secao('atualizacao', `
         <div class="cartao" id="atualizacoes">
@@ -463,6 +469,7 @@ Telas.config = (() => {
           <code>dados\\clara-styllus.db</code> pela cópia escolhida (renomeando). Se tiver dúvida, peça ajuda antes.</p>`;
     };
     api('/api/backup/status').then(mostrarBackup).catch((e) => { raiz.querySelector('#backup-status').textContent = e.message; });
+    raiz.querySelector('#zerar').onclick = zerarSistema;
     raiz.querySelector('#backup-agora').onclick = async (ev) => {
       ev.target.disabled = true;
       try {
@@ -498,6 +505,56 @@ Telas.config = (() => {
         Atualizacao.desenharStatus(raiz.querySelector('#at-status'));
       } catch (e) { erro(e); }
     };
+  }
+
+  /** Zerar o sistema: escolhe o que apagar, confirma com a senha da administradora e digitando ZERAR. */
+  async function zerarSistema() {
+    let n;
+    try { n = await U.api('/api/sistema/contagem'); } catch (e) { return U.erro(e); }
+    const MODOS = [
+      ['movimento', 'Só o movimento', `Apaga ${n.vendas} venda(s), ${n.caixas} caixa(s), crediário, trocas, condicionais, reservas, ${n.despesas} despesa(s) e o histórico.`,
+        `Mantém os ${n.produtos} produto(s) (com o estoque de agora), os ${n.clientes} cliente(s), vendedores e configurações.`],
+      ['tudo', 'Tudo da loja', 'Apaga o movimento e também produtos, fotos e clientes.', 'Mantém vendedores, senhas e configurações (nome da loja, cupom, impressoras, taxas).'],
+      ['fabrica', 'Como novo (de fábrica)', 'Apaga absolutamente tudo, inclusive vendedores, senhas e configurações.', 'O sistema volta à tela de primeiro acesso.'],
+    ];
+    const corpo = U.abrirModal('Zerar o sistema', `
+      <form class="form zr">
+        <div class="zr-modos">${MODOS.map(([k, t, apaga, mantem], i) => `
+          <label class="zr-modo"><input type="radio" name="modo" value="${k}" ${i === 0 ? 'checked' : ''}>
+            <span><b>${t}</b><small class="zr-apaga">${apaga}</small><small>${mantem}</small></span></label>`).join('')}</div>
+        ${n.crediario_aberto ? `<p class="zr-alerta">${Icone('alerta')} Tem <b>${n.crediario_aberto} parcela(s) de crediário em aberto</b>. Anote quem deve antes: elas também serão apagadas.</p>` : ''}
+        <p class="dica">Uma cópia completa dos dados é guardada antes, na pasta de backups (arquivo "antes-de-zerar"). Não dá para desfazer pela tela.</p>
+        <label>Sua senha (administradora)${U.campoSenha('senha', 'required autocomplete="off"')}</label>
+        <label><span>Para confirmar, digite <b>ZERAR</b></span><input name="confirmacao" required autocomplete="off" placeholder="ZERAR"></label>
+        <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button>
+          <button class="btn btn-perigo" id="zr-ok" disabled>${Icone('lixeira')} Zerar agora</button></div>
+      </form>`, { largura: '600px' });
+    U.ligarOlhos(corpo);
+    const form = corpo.querySelector('form');
+    const ok = corpo.querySelector('#zr-ok');
+    const atualizar = () => { ok.disabled = form.confirmacao.value.trim().toUpperCase() !== 'ZERAR' || !form.senha.value; };
+    form.addEventListener('input', atualizar);
+    form.onsubmit = U.umaVez(form, async (ev) => {
+      ev.preventDefault();
+      const d = U.dadosForm(form);
+      try {
+        const r = await U.api('/api/sistema/zerar', { metodo: 'POST', corpo: d });
+        U.fecharModal();
+        if (r.fabrica) {
+          try { localStorage.clear(); } catch { /* sem armazenamento */ }
+          location.hash = '';
+          location.reload();
+          return;
+        }
+        U.aviso(`Pronto! O sistema foi zerado. Cópia guardada em: ${r.copia}`);
+        try { ['pdv_carrinho', 'pdv_vale_pendente'].forEach((k) => localStorage.removeItem(k)); } catch { /* sem armazenamento */ }
+        setTimeout(() => { location.hash = '#/inicio'; location.reload(); }, 1800);
+      } catch (e) {
+        form.senha.value = '';
+        atualizar();
+        U.erro(e);
+      }
+    });
   }
 
   return { abrir };

@@ -164,6 +164,12 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
     'POST /api/inventarios/:id/finalizar': { depois: (c, r) => ({ tipo: 'estoque', acao: 'Finalizou inventário', descricao: `Nº ${r.id} · ${r.ajustados} produto(s) ajustado(s) · falta ${brl(r.valor_falta)} · sobra ${brl(r.valor_sobra)}`, importante: r.valor_falta > 0 }) },
     'POST /api/inventarios/:id/cancelar': { depois: (c, r) => ({ tipo: 'estoque', acao: 'Cancelou inventário', descricao: `Nº ${r.id}` }) },
     'POST /api/despesas': { depois: (c) => ({ tipo: 'despesa', acao: 'Lançou despesa', descricao: `${c.corpo.descricao} · ${brl(c.corpo.valor)}`, valor: Number(c.corpo.valor) }) },
+    'POST /api/sistema/zerar': {
+      depois: (c, r) => (r.fabrica ? null : {
+        tipo: 'config', importante: true, acao: 'Zerou o sistema',
+        descricao: r.modo === 'tudo' ? 'Apagou vendas, caixa, crediário, despesas, produtos e clientes' : 'Apagou vendas, caixa, crediário, despesas e histórico (manteve produtos e clientes)',
+      }),
+    },
     'POST /api/senha/redefinir': { depois: (c, r) => ({ tipo: 'acesso', acao: 'Redefiniu a senha pelo código do computador', descricao: `${r.nome} (${r.login})`, importante: true }) },
     'PUT /api/despesas/:id': { depois: (c, r) => ({ tipo: 'despesa', acao: 'Editou despesa', descricao: `${r.descricao} · ${brl(r.valor)}` }) },
     'DELETE /api/despesas/:id': {

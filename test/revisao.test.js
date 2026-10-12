@@ -294,3 +294,40 @@ test('esqueci a senha: código no arquivo do computador troca a senha (uma vez, 
   assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'bia', codigo: 'abc', nova_senha: 'xxxx' }).status, 429);
   assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'bia', codigo: 'abc', nova_senha: 'xxxx' }).status, 410);
 });
+
+test('zerar o sistema: precisa da senha e de ZERAR, guarda cópia e apaga conforme o modo', () => {
+  const fs = require('node:fs');
+  const { chamar, db } = novaApi();
+  const p = chamar('POST', '/api/produtos', { nome: 'Vestido', preco_venda: 10000, estoque: 5 }).corpo;
+  const cli = chamar('POST', '/api/clientes', { nome: 'Ana' }).corpo;
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 1 }], pagamentos: [{ forma: 'pix', valor: 10000 }] });
+  chamar('POST', '/api/reservas', { cliente_id: cli.id, itens: [{ produto_id: p.id, quantidade: 2 }] });
+  chamar('POST', '/api/despesas', { descricao: 'Luz', valor: 5000 });
+  assert.equal(chamar('GET', `/api/produtos/${p.id}`).corpo.estoque, 2);
+  // Sem senha certa ou sem ZERAR: nada acontece.
+  assert.equal(chamar('POST', '/api/sistema/zerar', { modo: 'movimento', senha: 'errada', confirmacao: 'ZERAR' }).status, 401);
+  assert.equal(chamar('POST', '/api/sistema/zerar', { modo: 'movimento', senha: '1234', confirmacao: 'sim' }).status, 400);
+  assert.equal(chamar('GET', '/api/sistema/contagem').corpo.vendas, 1);
+  // Só o movimento: produtos (estoque volta da reserva) e clientes ficam; numeração recomeça.
+  const r = chamar('POST', '/api/sistema/zerar', { modo: 'movimento', senha: '1234', confirmacao: 'zerar' }).corpo;
+  assert.ok(fs.existsSync(r.copia), 'cópia antes de zerar');
+  const n = chamar('GET', '/api/sistema/contagem').corpo;
+  assert.deepEqual([n.vendas, n.despesas, n.caixas, n.produtos, n.clientes], [0, 0, 0, 1, 1]);
+  assert.equal(chamar('GET', `/api/produtos/${p.id}`).corpo.estoque, 4);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM auditoria').get().n, 1); // só o "Zerou o sistema"
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  const v = chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 1 }], pagamentos: [{ forma: 'pix', valor: 10000 }] }).corpo;
+  assert.equal(v.id, 1);
+  // Tudo: produtos e clientes também; vendedores e configurações ficam.
+  chamar('PUT', '/api/config', { loja_nome: 'Minha Loja' });
+  chamar('POST', '/api/sistema/zerar', { modo: 'tudo', senha: '1234', confirmacao: 'ZERAR' });
+  const m = chamar('GET', '/api/sistema/contagem').corpo;
+  assert.deepEqual([m.vendas, m.produtos, m.clientes, m.usuarios], [0, 0, 0, 1]);
+  assert.equal(chamar('GET', '/api/config').corpo.loja_nome, 'Minha Loja');
+  // De fábrica: volta ao primeiro acesso.
+  const f = chamar('POST', '/api/sistema/zerar', { modo: 'fabrica', senha: '1234', confirmacao: 'ZERAR' }).corpo;
+  assert.equal(f.fabrica, true);
+  assert.equal(chamar('GET', '/api/sessao').corpo.primeiro_acesso, true);
+  assert.equal(db.prepare("SELECT valor FROM config WHERE chave = 'loja_nome'").get().valor !== 'Minha Loja', true);
+});
