@@ -2317,3 +2317,6 @@ img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro
 .cb-linha .cl-btn-zap:focus-visible { outline: 3px solid #1d9c55; outline-offset: 2px; }
 .cr-cobrancas { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
 .cr-cobrancas .i { width: 15px; height: 15px; color: #1d9c55; }
+/* Sem zoom por gesto (pinça) nas telas de toque; toque duplo também não amplia. */
+html, body { touch-action: pan-x pan-y; }
+button, a, input, select, textarea, label { touch-action: manipulation; }

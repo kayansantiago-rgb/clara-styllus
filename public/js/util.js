@@ -305,6 +305,17 @@ const U = (() => {
   }
   const pctTxt = (n) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
 
+  // ------------------------------------------------------------ sem zoom
+  // A tela não amplia nem diminui (Ctrl + rodinha, Ctrl +/−, pinça no touchpad ou na tela de toque).
+  // Ctrl + 0 continua funcionando: volta para 100% se a tela já estava com zoom.
+  window.addEventListener('wheel', (ev) => { if (ev.ctrlKey) ev.preventDefault(); }, { passive: false });
+  window.addEventListener('keydown', (ev) => {
+    if ((ev.ctrlKey || ev.metaKey) && ['+', '-', '=', '_', 'Add', 'Subtract'].includes(ev.key)) ev.preventDefault();
+    if ((ev.ctrlKey || ev.metaKey) && ['NumpadAdd', 'NumpadSubtract', 'Equal', 'Minus'].includes(ev.code)) ev.preventDefault();
+  }, true);
+  for (const tipo of ['gesturestart', 'gesturechange']) document.addEventListener(tipo, (ev) => ev.preventDefault());
+  document.addEventListener('touchmove', (ev) => { if (ev.touches && ev.touches.length > 1) ev.preventDefault(); }, { passive: false });
+
   // ------------------------------------------------ sem sugestões do navegador
   // Nenhum campo do sistema mostra a lista de palavras/números digitados antes, nem corretor
   // ortográfico. As listas próprias do sistema (ex.: tamanhos e cores na grade) continuam.

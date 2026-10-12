@@ -81,6 +81,8 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Mensagens do WhatsApp editáveis**: todo botão de WhatsApp (cobrança do crediário, parcela do dia, condicional,
   reserva, lista de espera, aniversário) abre a mensagem para editar antes de mandar; a administradora pode guardar o
   texto como padrão. Os modelos ficam em Configurações → Loja, com {nome}, {loja}, {saldo}… que trocam sozinhos.
+- **Sem zoom**: Ctrl + rodinha, Ctrl +/− e a pinça (touchpad ou tela de toque) não ampliam a tela; Ctrl + 0 volta
+  para 100% se já estava ampliada.
 - **Cobrança em fila** (Crediário → Cobrar hoje): lista de quem tem parcela vencida ou vencendo hoje (ou nos próximos
   dias, em Configurações → Crediário), a mais atrasada primeiro. **Cobrar** abre a mensagem pronta; depois de mandar,
   fica registrada ("cobrada hoje", histórico na ficha) e a próxima cliente já fica selecionada. Aviso no Início.

@@ -130,3 +130,31 @@ test('configurações: zerar o sistema com a senha da administradora', { skip: p
     await sis.fechar();
   }
 });
+
+test('sem zoom: Ctrl + rodinha e Ctrl +/− não ampliam a tela', { skip: pular, timeout: 60000 }, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    const bloqueado = await p.evaluate(() => {
+      const r = {};
+      const roda = new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true });
+      document.body.dispatchEvent(roda);
+      r.roda = roda.defaultPrevented;
+      const mais = new KeyboardEvent('keydown', { key: '+', code: 'Equal', ctrlKey: true, cancelable: true, bubbles: true });
+      document.body.dispatchEvent(mais);
+      r.mais = mais.defaultPrevented;
+      const zero = new KeyboardEvent('keydown', { key: '0', code: 'Digit0', ctrlKey: true, cancelable: true, bubbles: true });
+      document.body.dispatchEvent(zero);
+      r.zero = zero.defaultPrevented;
+      const rolar = new WheelEvent('wheel', { deltaY: 100, cancelable: true, bubbles: true });
+      document.body.dispatchEvent(rolar);
+      r.rolar = rolar.defaultPrevented;
+      return r;
+    });
+    assert.deepEqual(bloqueado, { roda: true, mais: true, zero: false, rolar: false });
+    assert.match(await p.getAttribute('meta[name=viewport]', 'content'), /user-scalable=no/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
