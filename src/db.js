@@ -205,6 +205,7 @@ const CONFIG_PADRAO = {
   msg_reserva: '',
   msg_espera: '',
   msg_aniversario: '',
+  cobranca_dias_antes: '0', // fila de cobrança: avisar também quem vence nos próximos N dias
   impressao_automatica: '1',
   // Impressão direta (sem o diálogo do navegador)
   impressao_cupom_modo: 'direta',
@@ -501,6 +502,14 @@ function migrar(db) {
   for (const [col, tipo] of [['forma', 'TEXT'], ['favorecido', 'TEXT'], ['observacao', 'TEXT'], ['sangria_id', 'INTEGER']]) {
     if (!colunas('despesas').includes(col)) db.exec(`ALTER TABLE despesas ADD COLUMN ${col} ${tipo}`);
   }
+  // Cobranças do crediário feitas pelo WhatsApp (fila de cobrança).
+  db.exec(`CREATE TABLE IF NOT EXISTS crediario_cobrancas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL REFERENCES clientes(id),
+    usuario TEXT,
+    vencido INTEGER NOT NULL DEFAULT 0,
+    criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  )`);
   // Foto da cliente (tirada no computador ou pelo celular).
   if (!colunas('clientes').includes('foto_versao')) {
     db.exec('ALTER TABLE clientes ADD COLUMN foto_versao INTEGER');

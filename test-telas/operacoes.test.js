@@ -131,7 +131,13 @@ test('condicional: sai pelo caixa, volta uma peça e a outra vai para a venda', 
     await sis.ir('condicional');
     await sis.pagina.click('.cd-card');
     await sis.pagina.waitForSelector('#cd-itens');
-    await sis.pagina.click('#cd-itens [data-mais]'); // ficou com a primeira peça (vestido)
+    // Sem bipar nada ela fica com tudo; bipa a blusa que voltou (fica com o vestido).
+    assert.match(await sis.pagina.textContent('#cd-conf'), /Nenhuma peça bipada/);
+    assert.match(await sis.pagina.textContent('#fechar'), /levar 2 peça/);
+    await sis.pagina.fill('#cd-bipe', d.blusa.codigo);
+    await sis.pagina.press('#cd-bipe', 'Enter');
+    await sis.pagina.waitForTimeout(300);
+    assert.match(await sis.pagina.textContent('#fechar'), /levar 1 peça/);
     await sis.pagina.click('#fechar');
     await sis.pagina.waitForTimeout(1500);
     assert.equal((await sis.api(`/api/produtos/${d.blusa.id}`)).estoque, 5);
@@ -353,10 +359,8 @@ test('condicional: confere bipando o que voltou; o que não voltou vai para o ca
     // Bipar a blusa de novo: ela só levou 1.
     await bipe(d.blusa.codigo);
     assert.match(await p.textContent('#cd-conf'), /Voltaram 2 de 3/);
-    // Primeiro clique só avisa; o segundo fecha e o vestido que faltou vai para o caixa.
-    await p.click('#fechar');
-    await p.waitForTimeout(300);
-    assert.match(await p.textContent('#fechar'), /1 peça\(s\) não voltaram/);
+    // O vestido que não voltou fica com a cliente e vai para o caixa.
+    assert.match(await p.textContent('#fechar'), /levar 1 peça/);
     await p.click('#fechar');
     await p.waitForTimeout(1500);
     assert.equal((await sis.api(`/api/produtos/${d.blusa.id}`)).estoque, 5);
@@ -383,10 +387,12 @@ test('WhatsApp: a mensagem abre para editar antes e dá para guardar como padrã
     await p.fill('#zap-texto', 'Oi Ana, tudo bem? Seu saldo no crediário da Clara Styllus é R$ 89,90. Beijos!');
     await p.check('#zap-salvar');
     if (process.env.PRINTS) await p.locator('.zap-caixa').screenshot({ path: `${process.env.PRINTS}/zap-editor.png` });
-    await p.context().route('https://wa.me/**', (r) => r.fulfill({ body: 'whatsapp' }));
+    // WhatsApp Web: abre sempre na mesma aba, direto na conversa.
+    await p.click('[data-destino=web]');
+    await p.context().route('https://web.whatsapp.com/**', (r) => r.fulfill({ body: 'whatsapp' }));
     const [popup] = await Promise.all([p.context().waitForEvent('page'), p.click('#zap-enviar')]);
     await popup.waitForLoadState().catch(() => {});
-    assert.match(decodeURIComponent(popup.url()), /wa\.me\/5563988881111\?text=Oi Ana, tudo bem\?/);
+    assert.match(decodeURIComponent(popup.url()), /web\.whatsapp\.com\/send\?phone=5563988881111&text=Oi Ana, tudo bem\?/);
     await popup.close();
     await p.waitForTimeout(500);
     const salvo = sis.db.prepare("SELECT valor FROM config WHERE chave = 'msg_crediario'").get().valor;
@@ -394,6 +400,50 @@ test('WhatsApp: a mensagem abre para editar antes e dá para guardar como padrã
     // Na configuração aparece o texto guardado.
     await sis.ir('config');
     assert.equal(await p.inputValue('[name=msg_crediario]'), salvo);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
+
+test('cobrança em fila: lista de quem cobrar hoje, cobra no WhatsApp e passa para a próxima', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    const p = sis.pagina;
+    const bia = await p.evaluate(async (x) => {
+      const V = (cli, prod, n) => U.api('/api/vendas', { metodo: 'POST', corpo: { cliente_id: cli.id, itens: [{ produto_id: prod.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: prod.preco_venda, parcelas: n }] } });
+      const b = await U.api('/api/clientes', { metodo: 'POST', corpo: { nome: 'Bia Lima', telefone: '63 97777-2222' } });
+      await V(x.ana, x.blusa, 2);
+      await V(b, x.vestido, 3);
+      return b;
+    }, d);
+    // Uma parcela da Ana venceu há 5 dias; uma da Bia vence hoje.
+    sis.db.prepare(`UPDATE crediario_parcelas SET vencimento = date('now','localtime','-5 days') WHERE id = (SELECT MIN(id) FROM crediario_parcelas WHERE cliente_id = ?)`).run(d.ana.id);
+    sis.db.prepare(`UPDATE crediario_parcelas SET vencimento = date('now','localtime') WHERE id = (SELECT MIN(id) FROM crediario_parcelas WHERE cliente_id = ?)`).run(bia.id);
+    await sis.ir('inicio');
+    assert.match(await p.textContent('#conteudo'), /Hoje tem\s+2 cliente\(s\)\s+para cobrar/);
+    await p.click('a[href="#/crediario?aba=cobrar"]');
+    await p.waitForSelector('.cb-linha');
+    const linhas = await p.$$eval('.cb-linha .cr-nome b', (xs) => xs.map((x) => x.textContent));
+    assert.deepEqual(linhas, ['Ana Paula Souza', 'Bia Lima']); // a atrasada primeiro
+    assert.match(await p.textContent('.cb-linha'), /atrasada 5 dias/);
+    if (process.env.PRINTS) { await p.waitForTimeout(1200); await p.locator('#conteudo').screenshot({ path: `${process.env.PRINTS}/cobranca-fila.png` }); }
+    await p.evaluate(() => U.local.gravar('zap_destino', 'web'));
+    await p.context().route('https://web.whatsapp.com/**', (r) => r.fulfill({ body: 'whatsapp' }));
+    await p.click('.cb-linha [data-zap]');
+    await p.waitForSelector('#zap-texto');
+    assert.match(await p.inputValue('#zap-texto'), /saldo de R\$\s?89,90, sendo R\$\s?44,95 vencido/);
+    const [popup] = await Promise.all([p.context().waitForEvent('page'), p.click('#zap-enviar')]);
+    await popup.close();
+    await p.waitForTimeout(600);
+    assert.equal(sis.db.prepare('SELECT COUNT(*) AS n FROM crediario_cobrancas WHERE cliente_id = ?').get(d.ana.id).n, 1);
+    assert.match(await p.textContent('.cb-linha'), /cobrada agora/);
+    // A próxima (Bia, vence hoje) já fica selecionada, com a mensagem da parcela do dia.
+    assert.equal(await p.evaluate(() => document.activeElement.closest('.cb-linha')?.querySelector('.cr-nome b').textContent), 'Bia Lima');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('#zap-texto');
+    assert.match(await p.inputValue('#zap-texto'), /hoje vence sua parcela/);
     assert.deepEqual(sis.erros, []);
   } finally {
     await sis.fechar();

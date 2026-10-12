@@ -78,9 +78,9 @@ Telas.condicional = (() => {
       ${c.observacao ? `<p class="dica">${esc(c.observacao)}</p>` : ''}
       ${aberta ? `<div class="cd-conf">
         <div class="busca-ico cd-leitor">${Icone('codigo')}<input id="cd-bipe" placeholder="Bipe aqui as peças que voltaram (ou digite o código e Enter)" autocomplete="off"></div>
-        <div class="cd-conf-status" id="cd-conf">Bipe cada peça que a cliente trouxe de volta: o sistema confere o que voltou e o que está faltando.</div>
+        <div class="cd-conf-status" id="cd-conf"></div>
       </div>
-      <div class="p4-passo"><span>1</span>Quantas peças ela ficou? <small class="cd-passo-dica">(bipando, o sistema preenche sozinho)</small></div>` : ''}
+      <div class="p4-passo"><span>1</span>Quantas peças ela ficou? <small class="cd-passo-dica">(o que não for bipado fica com a cliente)</small></div>` : ''}
       <div class="tr-itens" id="cd-itens">${c.itens.map((it) => `
         <div class="tr-item" data-linha="${it.id}">
           ${U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao }, 'p4-item-foto')}
@@ -115,13 +115,15 @@ Telas.condicional = (() => {
       corpo.querySelector('#cond-total').innerHTML = n
         ? `<small>Ela ficou com</small><b>${brl(v)}</b><span>${n} peça(s) vão para o caixa · o resto volta para o estoque</span>`
         : '<small>Ela ficou com</small><b>nada</b><span>Todas as peças voltam para o estoque.</span>';
+      corpo.querySelector('#fechar').innerHTML = n
+        ? `${Icone('check')} Fechar e levar ${n} peça(s) ao caixa`
+        : `${Icone('check')} Fechar: tudo voltou`;
     };
-    // Conferência pela bipagem: cada peça bipada "voltou"; o que não voltou fica como compra da cliente.
+    // Conferência pela bipagem: cada peça bipada "voltou"; o que não for bipado fica com a cliente
+    // (sem bipar nada, ela fica com tudo).
     const voltou = new Map(c.itens.map((it) => [it.id, 0]));
-    let conferindo = false;
     const nomeItem = (it) => [it.nome, it.tamanho, it.cor].filter(Boolean).join(' ');
     const desenharConferencia = () => {
-      if (!conferindo) return;
       const levou = c.itens.reduce((a, it) => a + it.quantidade, 0);
       const voltaram = [...voltou.values()].reduce((a, n) => a + n, 0);
       const faltam = c.itens.filter((it) => voltou.get(it.id) < it.quantidade);
@@ -133,9 +135,12 @@ Telas.condicional = (() => {
         corpo.querySelector(`[data-voltou="${it.id}"]`).textContent = `voltou ${v}`;
       }
       corpo.querySelector('#cd-conf').className = `cd-conf-status ${faltam.length ? 'falta' : 'ok'}`;
-      corpo.querySelector('#cd-conf').innerHTML = faltam.length
+      corpo.querySelector('#cd-conf').innerHTML = !voltaram
+        ? `<b>Nenhuma peça bipada ainda:</b> por enquanto ela fica com todas as ${levou}. Bipe as que ela trouxe de volta.`
+        : faltam.length
         ? `<b>Voltaram ${voltaram} de ${levou} peça(s).</b> Faltando: ${faltam.map((it) => `${esc(nomeItem(it))}${it.quantidade - voltou.get(it.id) > 1 ? ` (${it.quantidade - voltou.get(it.id)})` : ''}`).join(', ')}`
         : `${Icone('check')} <b>Voltaram todas as ${levou} peça(s).</b> Nada vai para o caixa.`;
+      if (faltam.length && voltaram) corpo.querySelector('#cd-conf').insertAdjacentHTML('beforeend', ' <small>(ficam com a cliente)</small>');
     };
     const aplicarConferencia = () => {
       for (const it of c.itens) corpo.querySelector(`input[data-id="${it.id}"]`).value = it.quantidade - voltou.get(it.id);
@@ -158,7 +163,6 @@ Telas.condicional = (() => {
         U.som('erro');
         return aviso(`${nomeItem(it)}: ela só levou ${it.quantidade} e já voltaram ${voltou.get(it.id)}.`, 'alerta');
       }
-      conferindo = true;
       voltou.set(it.id, voltou.get(it.id) + qtd);
       U.som('ok');
       aplicarConferencia();
@@ -172,9 +176,11 @@ Telas.condicional = (() => {
       const inp = corpo.querySelector(`input[data-id="${id}"]`);
       const it = c.itens.find((x) => x.id === Number(id));
       inp.value = Math.max(0, Math.min(it.quantidade, (Number(inp.value) || 0) + (b.dataset.mais ? 1 : -1)));
+      voltou.set(it.id, it.quantidade - Number(inp.value)); // ajuste à mão também conta na conferência
       total();
+      desenharConferencia();
     });
-    total();
+    aplicarConferencia();
     corpo.querySelector('#cancelar').onclick = async () => {
       if (!(await U.confirmar('Cancelar condicional', 'Todas as peças voltam para o estoque. Confirmar?', { ok: 'Cancelar condicional', perigo: true }))) return;
       try {
@@ -185,19 +191,6 @@ Telas.condicional = (() => {
     };
     corpo.querySelector('#fechar').onclick = U.umaVez(corpo.querySelector('#fechar'), async () => {
       const itens = [...corpo.querySelectorAll('[data-id]')].map((i) => ({ id: Number(i.dataset.id), ficou: Math.max(0, Number(i.value) || 0) }));
-      // Conferindo pela bipagem e faltou peça: confirma antes de cobrar.
-      // (Pede um segundo clique no próprio botão, sem fechar esta janela e perder a conferência.)
-      const botao = corpo.querySelector('#fechar');
-      if (conferindo) {
-        const faltam = c.itens.filter((it) => voltou.get(it.id) < it.quantidade).reduce((a, it) => a + it.quantidade - voltou.get(it.id), 0);
-        const chave = [...voltou.values()].join(',');
-        if (faltam && botao.dataset.confirmado !== chave) {
-          botao.dataset.confirmado = chave;
-          botao.innerHTML = `${Icone('alerta')} ${faltam} peça(s) não voltaram — clique de novo para cobrar`;
-          aviso(`${faltam} peça(s) não foram bipadas: vão para o caixa como compra da cliente. Se ela ainda vai devolver, deixe a condicional aberta.`, 'alerta');
-          return;
-        }
-      }
       if (itens.some((x) => x.ficou > 0) && !(await Telas.pdv.podeSubstituirVenda())) return;
       try {
         const r = await api(`/api/condicionais/${c.id}/fechar`, { metodo: 'POST', corpo: { itens } });

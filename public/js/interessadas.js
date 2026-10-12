@@ -66,6 +66,9 @@ const Interessadas = (() => {
       if (!a) return;
       const c = r.clientes[Number(a.dataset.avisar)];
       a.href = link(c);
+      // Abre direto no aplicativo / na mesma aba do WhatsApp Web (como as outras mensagens).
+      ev.preventDefault();
+      Zap.abrirConversa(telefone(c.telefone), texto.value.replace(/\{nome\}/g, c.nome.split(' ')[0]));
       const linha = a.closest('.ci-cliente');
       setTimeout(() => {
         linha.classList.add('avisada');

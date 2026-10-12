@@ -21,6 +21,7 @@ Telas.inicio = (() => {
       api('/api/painel'), api('/api/backup/status').catch(() => null), api('/api/condicionais').catch(() => []),
       api('/api/atualizacao').catch(() => null), api('/api/espera/resumo').catch(() => null), api('/api/reservas').catch(() => []),
     ]);
+    const cob = await api('/api/crediario/cobrar').catch(() => null);
     const resVencidas = res.filter((x) => x.prazo < U.hoje());
     const condAtrasadas = conds.filter((c) => c.prazo < U.hoje());
     const semBackup = bk && (bk.horas_desde_ultimo == null || bk.horas_desde_ultimo > 72);
@@ -39,6 +40,8 @@ Telas.inicio = (() => {
       ${at && at.disponivel ? `<div class="pdv-alerta ok painel-alerta at-aviso"><i data-icone="nuvem"></i>
         <span>Nova versão <b>${esc(at.disponivel.versao)}</b> do sistema disponível (você está na ${esc(at.versao_atual)}).</span>
         <button class="btn btn-peq btn-primario" id="at-agora">Atualizar agora</button> <a href="#/config?aba=atualizacao">detalhes</a></div>` : ''}
+      ${cob && cob.pendentes ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="whatsapp"></i> Hoje tem <b>&nbsp;${cob.pendentes} cliente(s)&nbsp;</b> para cobrar no crediário.
+        <a class="link" href="#/crediario?aba=cobrar">Cobrar agora →</a></div>` : ''}
       ${esp && esp.chegaram ? `<div class="pdv-alerta ok painel-alerta"><i data-icone="sino"></i> Chegaram ${esp.chegaram} peça(s) da lista de espera
         (${esp.nomes.map(esc).join(', ')}${esp.chegaram > 3 ? '…' : ''}). <a href="#/espera">Avisar as clientes →</a></div>` : ''}
       ${resVencidas.length ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="reserva"></i> ${resVencidas.length} reserva(s) passaram do prazo de retirada:

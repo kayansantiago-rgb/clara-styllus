@@ -67,6 +67,21 @@ const Zap = (() => {
     return t;
   }
 
+  /**
+   * Abre a conversa direto: no aplicativo do WhatsApp do computador (sem a página intermediária do
+   * wa.me) ou no WhatsApp Web, sempre na mesma aba (não abre uma aba nova a cada mensagem).
+   */
+  const destino = () => (U.local.ler('zap_destino', 'app') === 'web' ? 'web' : 'app');
+  function abrirConversa(numero, texto) {
+    const t = encodeURIComponent(texto);
+    if (destino() === 'web') {
+      const janela = window.open(`https://web.whatsapp.com/send?phone=${numero}&text=${t}`, 'clara-whatsapp');
+      if (janela) janela.focus();
+    } else {
+      location.href = `whatsapp://send?phone=${numero}&text=${t}`;
+    }
+  }
+
   // ---------------------------------------------------------- editor
   let caixa = null;
   function editor(link) {
@@ -90,9 +105,14 @@ const Zap = (() => {
         <textarea id="zap-texto" rows="6">${esc(texto)}</textarea>
         ${chave && admin ? `<label class="check zap-padrao"><input type="checkbox" id="zap-salvar"> Usar este texto como padrão nas próximas mensagens
           <small>(nome, valores e datas trocam sozinhos)</small></label>` : ''}
+        <div class="zap-destino"><span>Abrir no</span>
+          <div class="segmentos" id="zap-destino">
+            <button type="button" class="segmento ${destino() === 'app' ? 'sel' : ''}" data-destino="app" title="WhatsApp instalado neste computador">Aplicativo do WhatsApp</button>
+            <button type="button" class="segmento ${destino() === 'web' ? 'sel' : ''}" data-destino="web" title="Abre sempre na mesma aba do WhatsApp Web">WhatsApp Web</button>
+          </div></div>
         <div class="acoes">
           <button type="button" class="btn" data-zap-fechar>Cancelar</button>
-          <button type="button" class="btn cl-btn-zap" id="zap-enviar">${Icone('whatsapp')} Abrir no WhatsApp</button>
+          <button type="button" class="btn cl-btn-zap" id="zap-enviar">${Icone('whatsapp')} Enviar pelo WhatsApp</button>
         </div>
       </div>`;
     const area = caixa.querySelector('#zap-texto');
@@ -101,6 +121,12 @@ const Zap = (() => {
     const fechar = () => { caixa.hidden = true; caixa.innerHTML = ''; };
     caixa.onclick = (ev) => { if (ev.target === caixa || ev.target.closest('[data-zap-fechar]')) fechar(); };
     caixa.onkeydown = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } };
+    caixa.querySelector('#zap-destino').onclick = (ev) => {
+      const b = ev.target.closest('[data-destino]');
+      if (!b) return;
+      U.local.gravar('zap_destino', b.dataset.destino);
+      caixa.querySelectorAll('[data-destino]').forEach((x) => x.classList.toggle('sel', x === b));
+    };
     caixa.querySelector('#zap-enviar').onclick = async () => {
       const final = area.value.trim();
       if (!final) return aviso('Escreva a mensagem.', 'alerta');
@@ -113,7 +139,9 @@ const Zap = (() => {
           aviso('Texto guardado como padrão.');
         } catch (e) { U.erro(e); }
       }
-      window.open(`https://wa.me/${numero}?text=${encodeURIComponent(final)}`, '_blank', 'noopener');
+      abrirConversa(numero, final);
+      // Quem chamou pode registrar (ex.: cobrança do crediário).
+      link.dispatchEvent(new CustomEvent('zap-enviado', { bubbles: true, detail: { texto: final } }));
       fechar();
     };
   }
@@ -127,5 +155,5 @@ const Zap = (() => {
   });
   recarregar();
 
-  return { MODELOS, attrs, modelo, preencher, paraModelo, recarregar };
+  return { MODELOS, attrs, modelo, preencher, paraModelo, recarregar, abrirConversa };
 })();

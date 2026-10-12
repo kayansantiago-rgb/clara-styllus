@@ -796,6 +796,7 @@ function criarApi(db, opcoes = {}) {
     return transacao(db, () => {
       db.prepare('DELETE FROM espera WHERE cliente_id = ?').run(c.id);
       db.prepare('DELETE FROM cliente_fotos WHERE cliente_id = ?').run(c.id);
+      db.prepare('DELETE FROM crediario_cobrancas WHERE cliente_id = ?').run(c.id);
       if (!historico) {
         db.prepare('DELETE FROM clientes WHERE id = ?').run(c.id);
         return { ok: true, apagado: true, nome: c.nome };
@@ -1767,7 +1768,7 @@ function criarApi(db, opcoes = {}) {
   const MOVIMENTO = ['venda_pagamentos', 'venda_itens', 'vendas', 'caixa_movimentos', 'crediario_recebimento_parcelas',
     'crediario_recebimentos', 'crediario_parcelas', 'troca_itens', 'trocas', 'vales', 'condicional_itens', 'condicionais',
     'reserva_sinais', 'reserva_itens', 'reservas', 'espera', 'despesas', 'estoque_movimentos', 'inventario_leituras',
-    'inventario_itens', 'inventarios', 'caixas', 'auditoria'];
+    'inventario_itens', 'inventarios', 'caixas', 'auditoria', 'crediario_cobrancas'];
   const CADASTROS = ['produto_fotos', 'produtos', 'cliente_fotos', 'clientes'];
   const tentativasZerar = { falhas: 0, ate: 0 };
 

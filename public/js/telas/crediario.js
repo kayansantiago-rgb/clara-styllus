@@ -19,6 +19,7 @@ Telas.crediario = (() => {
 
   async function abrir(el) {
     raiz = el;
+    if (/[?&]aba=cobrar/.test(location.hash)) situacao = 'cobrar';
     raiz.innerHTML = `
       <div class="cabecalho-tela">
         <div><h1>Crediário</h1><p class="subtitulo">Quem está devendo, parcelas, recebimentos e cobrança.</p></div>
@@ -30,6 +31,7 @@ Telas.crediario = (() => {
       <div class="vd-barra-filtros">
         <div class="segmentos" id="situacao">
           <button class="segmento ${situacao === 'abertos' ? 'sel' : ''}" data-sit="abertos">Em aberto</button>
+          <button class="segmento ${situacao === 'cobrar' ? 'sel' : ''}" data-sit="cobrar">${Icone('whatsapp')} Cobrar hoje <span class="cr-n" id="cr-n-cobrar"></span></button>
           <button class="segmento ${situacao === 'quitados' ? 'sel' : ''}" data-sit="quitados">${Icone('check')} Quitados</button>
         </div>
         <div class="busca-ico pr-busca">${Icone('busca')}<input id="q" type="search" placeholder="Nome, CPF ou telefone" autofocus autocomplete="off"></div>
@@ -47,7 +49,21 @@ Telas.crediario = (() => {
       carregar();
     };
     raiz.querySelector('#lancar').onclick = () => escolherClienteParaDebito();
+    // Cobrança em fila: depois de mandar no WhatsApp, registra e passa para a próxima.
+    raiz.querySelector('#lista').addEventListener('zap-enviado', async (ev) => {
+      const linha = ev.target.closest('[data-cobrar]');
+      if (!linha) return;
+      try { await api('/api/crediario/cobrancas', { metodo: 'POST', corpo: { cliente_id: Number(linha.dataset.cobrar) } }); } catch (e) { return erro(e); }
+      linha.classList.add('cobrada');
+      linha.querySelector('.cb-quando').innerHTML = `${Icone('check')} cobrada agora`;
+      const prox = [...raiz.querySelectorAll('.cb-linha:not(.cobrada) [data-zap]')][0];
+      if (prox) prox.focus();
+      atualizarContagemCobrar();
+    });
     raiz.querySelector('#lista').onclick = (ev) => {
+      if (ev.target.closest('[data-zap]')) return; // o WhatsApp cuida
+      const cb = ev.target.closest('[data-cobrar]');
+      if (cb) return detalhe(Number(cb.dataset.cobrar));
       const tr = ev.target.closest('[data-i]');
       if (!tr) return;
       const c = lista[Number(tr.dataset.i)];
@@ -57,8 +73,63 @@ Telas.crediario = (() => {
     await carregar();
   }
 
+  async function atualizarContagemCobrar() {
+    try {
+      const r = await api('/api/crediario/cobrar');
+      const el = raiz && raiz.querySelector('#cr-n-cobrar');
+      if (el) el.textContent = r.pendentes || '';
+    } catch { /* sem contagem */ }
+  }
+
+  /** Fila de cobrança do dia: um botão de WhatsApp por cliente, na ordem. */
+  async function carregarCobrar() {
+    let r;
+    try { r = await api('/api/crediario/cobrar'); } catch (e) { return erro(e); }
+    if (!raiz) return;
+    raiz.querySelector('#cr-n-cobrar').textContent = r.pendentes || '';
+    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+    const quando = (c) => {
+      if (c.cobrada_hoje) return `${Icone('check')} cobrada hoje`;
+      if (!c.ultima_cobranca) return 'ainda não cobrada';
+      const dias = Math.round((Date.parse(U.hoje()) - Date.parse(c.ultima_cobranca.slice(0, 10))) / 864e5);
+      return `última cobrança há ${dias} dia(s)`;
+    };
+    raiz.querySelector('#lista').innerHTML = (r.clientes.length ? `
+      <p class="dica cb-dica">${r.pendentes ? `<b>${r.pendentes} cliente(s) para cobrar.</b> Clique em <b>Cobrar</b>: o WhatsApp abre com a mensagem pronta; depois de mandar, a próxima já fica selecionada.` : `${Icone('check')} Todo mundo já foi cobrado hoje.`}
+        ${r.dias_antes ? ` Inclui quem vence nos próximos ${r.dias_antes} dia(s).` : ''}</p>` : '') +
+      (r.clientes.map((c) => {
+        const atrasada = c.vencido > 0;
+        const chave = atrasada ? 'crediario' : 'parcela_hoje';
+        const vars = atrasada
+          ? { nome: c.nome, saldo: brl(c.saldo), vencido: `, sendo ${brl(c.vencido)} vencido` }
+          : { nome: c.nome, valor: brl(c.a_vencer) };
+        const zap = Zap.attrs(c.telefone, chave, vars);
+        return `<div class="cr-linha cb-linha ${atrasada ? 'cr-vermelho' : 'cr-amarelo'} ${c.cobrada_hoje ? 'cobrada' : ''}" data-cobrar="${c.id}">
+          <span class="avatar">${esc(iniciais(c.nome))}</span>
+          <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc(c.telefone || 'sem telefone')}</small></div>
+          <div>${atrasada ? selo({ cor: 'vermelho', txt: `atrasada ${c.dias_atraso} dia${c.dias_atraso === 1 ? '' : 's'}` })
+    : selo({ cor: 'amarelo', txt: c.proximo_vencimento === U.hoje() ? 'vence hoje' : `vence ${dataBr(c.proximo_vencimento)}` })}</div>
+          <div class="cr-num r"><small>${atrasada ? 'Vencido' : 'A vencer'}</small><b class="${atrasada ? 'txt-perigo' : ''}">${brl(atrasada ? c.vencido : c.a_vencer)}</b><small>deve ${brl(c.saldo)} no total</small></div>
+          <small class="cb-quando">${quando(c)}</small>
+          ${zap ? `<a class="btn cl-btn-zap" ${zap}>${Icone('whatsapp')} Cobrar</a>` : '<small class="cb-sem">sem WhatsApp no cadastro</small>'}
+        </div>`;
+      }).join('') || `<div class="vd-vazio">${Ilustracao.svg('caderno', 150)}<b>Ninguém para cobrar hoje</b><br><small>Aparece aqui quem tem parcela vencida ou vencendo hoje.</small></div>`);
+  }
+
   async function carregar() {
     if (!raiz) return;
+    const cobrar = situacao === 'cobrar';
+    raiz.querySelector('#q').closest('.busca-ico').hidden = cobrar;
+    if (cobrar) {
+      raiz.querySelector('#atraso').closest('label').hidden = true;
+      raiz.querySelector('.semaforo-legenda').hidden = true;
+      try {
+        const resumo = await api('/api/crediario/resumo');
+        desenharResumo(resumo);
+      } catch { /* segue */ }
+      return carregarCobrar();
+    }
+    atualizarContagemCobrar();
     const q = raiz.querySelector('#q').value;
     const atraso = raiz.querySelector('#atraso').checked ? '&atraso=1' : '';
     raiz.querySelector('#atraso').closest('label').hidden = situacao === 'quitados';
@@ -71,11 +142,20 @@ Telas.crediario = (() => {
       ]);
     } catch (e) { return erro(e); }
     if (!raiz) return;
+    desenharResumo(resumo);
+    lista = lista || [];
+    renderLista();
+  }
+
+  function desenharResumo(resumo) {
     raiz.querySelector('#resumo').innerHTML = `
       <div class="vd-kpi destaque"><span>${Icone('caderno')} Total a receber</span><b>${brl(resumo.a_receber)}</b><small>${resumo.clientes} cliente(s) devendo</small></div>
       <div class="vd-kpi"><span>${Icone('alerta')} Vencido</span><b class="${resumo.vencido ? 'txt-perigo' : ''}">${brl(resumo.vencido)}</b><small>${resumo.clientes_atraso} cliente(s) em atraso</small></div>
       <div class="vd-kpi"><span>${Icone('dinheiro')} Recebido hoje</span><b>${brl(resumo.recebido)}</b><small>parcelas pagas hoje</small></div>
       <div class="vd-kpi"><span>${Icone('clientes')} Clientes devendo</span><b>${resumo.clientes}</b><small>com saldo em aberto</small></div>`;
+  }
+
+  function renderLista() {
     const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
     if (situacao === 'quitados') {
       raiz.querySelector('#lista').innerHTML = lista.map((c, i) => `
@@ -137,6 +217,7 @@ Telas.crediario = (() => {
         ${d.saldo.aberto && Zap.attrs(tel, 'crediario', { nome: d.cliente.nome, saldo: brl(d.saldo.aberto), vencido: d.saldo.vencido ? `, sendo ${brl(d.saldo.vencido)} vencido` : '' })
     ? `<a class="btn cl-btn-zap" ${Zap.attrs(tel, 'crediario', { nome: d.cliente.nome, saldo: brl(d.saldo.aberto), vencido: d.saldo.vencido ? `, sendo ${brl(d.saldo.vencido)} vencido` : '' })}>${Icone('whatsapp')} Cobrar no WhatsApp</a>` : ''}
       </div>
+      ${(d.cobrancas || []).length ? `<p class="dica cr-cobrancas">${Icone('whatsapp')} Cobrada pelo WhatsApp: ${d.cobrancas.slice(0, 5).map((x) => `${dataBr(x.criado_em.slice(0, 10))}${x.usuario ? ` (${esc(x.usuario.split(' ')[0])})` : ''}`).join(' · ')}</p>` : ''}
       <div class="cr-det">
         <div><h4>Parcelas em aberto</h4>
           <div class="cr-linha-tempo" id="parc">${abertas.map(linhaParcela).join('') || '<div class="vazio">Nenhuma parcela em aberto.</div>'}</div>
@@ -155,6 +236,13 @@ Telas.crediario = (() => {
     { largura: '900px' });
 
     corpo.querySelector('#receber').onclick = () => receber(clienteId);
+    // (No próprio botão: o corpo da janela é reaproveitado pelas outras janelas.)
+    const cobrar = corpo.querySelector('a[data-zap="crediario"]');
+    if (cobrar) {
+      cobrar.addEventListener('zap-enviado', () => {
+        api('/api/crediario/cobrancas', { metodo: 'POST', corpo: { cliente_id: clienteId } }).catch(() => {});
+      });
+    }
     corpo.querySelector('#debito').onclick = () => lancarDebito(d.cliente);
     corpo.querySelector('#recs').onclick = async (ev) => {
       const imp = ev.target.closest('[data-recibo]');

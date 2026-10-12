@@ -155,6 +155,42 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
     resumoGeral(texto(query.get('de'), 10), texto(query.get('ate'), 10)));
 
   /** Crediários já quitados: clientes que compraram no crediário e não devem mais nada. */
+  /**
+   * Fila de cobrança: quem tem parcela vencida, vencendo hoje (ou nos próximos N dias, em
+   * Configurações), com a última cobrança feita — para cobrar todo mundo no WhatsApp em sequência.
+   */
+  rota('GET', '/api/crediario/cobrar', () => {
+    const h = hoje();
+    const dias = Math.max(0, Math.min(15, Number(config().cobranca_dias_antes) || 0));
+    const limite = new Date(Date.now() + dias * 864e5).toLocaleDateString('sv-SE');
+    const lista = planos(db.prepare(
+      `SELECT c.id, c.nome, c.telefone,
+         SUM(p.valor - p.valor_pago) AS saldo,
+         COALESCE(SUM(CASE WHEN p.vencimento < ? THEN p.valor - p.valor_pago END), 0) AS vencido,
+         COALESCE(SUM(CASE WHEN p.vencimento >= ? AND p.vencimento <= ? THEN p.valor - p.valor_pago END), 0) AS a_vencer,
+         MIN(CASE WHEN p.vencimento >= ? THEN p.vencimento END) AS proximo_vencimento,
+         CAST(julianday(?) - julianday(MIN(CASE WHEN p.vencimento < ? THEN p.vencimento END)) AS INTEGER) AS dias_atraso,
+         (SELECT MAX(criado_em) FROM crediario_cobrancas cc WHERE cc.cliente_id = c.id) AS ultima_cobranca
+       FROM crediario_parcelas p JOIN clientes c ON c.id = p.cliente_id
+       WHERE p.status = 'aberta' AND c.excluido_em IS NULL
+       GROUP BY c.id
+       HAVING vencido > 0 OR a_vencer > 0`
+    ).all(h, h, limite, h, h, h));
+    for (const c of lista) c.cobrada_hoje = !!(c.ultima_cobranca && c.ultima_cobranca.slice(0, 10) === h);
+    // Primeiro quem ainda não foi cobrada hoje; depois os mais atrasados.
+    lista.sort((a, b) => a.cobrada_hoje - b.cobrada_hoje || (b.dias_atraso || 0) - (a.dias_atraso || 0) || b.vencido - a.vencido);
+    return { dias_antes: dias, clientes: lista, pendentes: lista.filter((c) => !c.cobrada_hoje).length };
+  });
+
+  rota('POST', '/api/crediario/cobrancas', ({ corpo, usuario }) => {
+    const clienteId = inteiro(corpo.cliente_id, 'cliente', { min: 1 });
+    if (!db.prepare('SELECT 1 FROM clientes WHERE id = ?').get(clienteId)) throw erro(404, 'Cliente não encontrada.');
+    const vencido = db.prepare(`SELECT COALESCE(SUM(valor - valor_pago), 0) AS v FROM crediario_parcelas
+      WHERE cliente_id = ? AND status = 'aberta' AND vencimento < ?`).get(clienteId, hoje()).v;
+    const r = db.prepare('INSERT INTO crediario_cobrancas (cliente_id, usuario, vencido) VALUES (?,?,?)').run(clienteId, usuario.nome, vencido);
+    return { ok: true, id: Number(r.lastInsertRowid) };
+  });
+
   rota('GET', '/api/crediario/quitados', ({ query }) => {
     const q = texto(query.get('q'));
     const args = [];
@@ -228,6 +264,7 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
           .prepare('SELECT * FROM crediario_recebimentos WHERE cliente_id = ? ORDER BY id DESC LIMIT 100')
           .all(cliente.id)
       ),
+      cobrancas: planos(db.prepare('SELECT * FROM crediario_cobrancas WHERE cliente_id = ? ORDER BY id DESC LIMIT 10').all(cliente.id)),
     };
   });
 

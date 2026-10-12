@@ -75,12 +75,17 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
-- **Condicional conferida pela bipagem**: ao fechar, bipe as peças que a cliente trouxe; o sistema marca o que voltou
-  (verde), o que falta (amarelo), avisa peça errada ou bipada a mais, e o que não voltou vai para o caixa (com aviso
-  antes de cobrar).
+- **Condicional conferida pela bipagem**: ao fechar, bipe as peças que a cliente trouxe; o que não for bipado fica com
+  ela (sem bipar nada, fica com tudo). O sistema marca o que voltou (verde), o que ficou (amarelo), avisa peça errada
+  ou bipada a mais, e o botão mostra quantas peças vão para o caixa.
 - **Mensagens do WhatsApp editáveis**: todo botão de WhatsApp (cobrança do crediário, parcela do dia, condicional,
   reserva, lista de espera, aniversário) abre a mensagem para editar antes de mandar; a administradora pode guardar o
   texto como padrão. Os modelos ficam em Configurações → Loja, com {nome}, {loja}, {saldo}… que trocam sozinhos.
+- **Cobrança em fila** (Crediário → Cobrar hoje): lista de quem tem parcela vencida ou vencendo hoje (ou nos próximos
+  dias, em Configurações → Crediário), a mais atrasada primeiro. **Cobrar** abre a mensagem pronta; depois de mandar,
+  fica registrada ("cobrada hoje", histórico na ficha) e a próxima cliente já fica selecionada. Aviso no Início.
+- **WhatsApp direto**: as mensagens abrem no **aplicativo do WhatsApp** do computador ou no **WhatsApp Web** sempre na
+  mesma aba (escolha na janela da mensagem; fica guardado), sem a página intermediária do wa.me.
 - **Começar do zero** (Configurações → Backup, administradora): zera o sistema com a senha da administradora e
   digitando ZERAR. Três opções: **só o movimento** (vendas, caixa, crediário, trocas, condicionais, reservas, despesas e
   histórico; mantém produtos com o estoque atual, clientes, vendedores e configurações), **tudo da loja** (também

@@ -2302,3 +2302,18 @@ img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro
 .cfg-msg code { font-size: 11px; background: var(--rosa-claro); color: var(--rosa-escuro); border-radius: 5px; padding: 0 4px; }
 .cfg-msg textarea { font-size: 13.5px; }
 .cfg-msg-padrao { align-self: flex-end; font-size: 12px; }
+.zap-destino { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--suave); }
+.zap-destino .segmento { font-size: 13px; }
+
+/* Cobrança em fila */
+.cr-n:not(:empty) { margin-left: 4px; background: var(--perigo); color: #fff; border-radius: 99px; font-size: 11px; padding: 1px 7px; font-weight: 700; }
+.cb-dica { margin: 0 0 10px; }
+.cb-linha { grid-template-columns: 44px minmax(180px, 1.4fr) 170px 160px 170px auto; }
+.cb-linha.cobrada { opacity: .6; }
+.cb-linha.cobrada .cb-quando { color: #1d6e4a; font-weight: 600; }
+.cb-quando { font-size: 12.5px; color: var(--suave); display: flex; align-items: center; gap: 4px; }
+.cb-quando .i { width: 14px; height: 14px; }
+.cb-sem { color: var(--suave); font-size: 12px; text-align: right; }
+.cb-linha .cl-btn-zap:focus-visible { outline: 3px solid #1d9c55; outline-offset: 2px; }
+.cr-cobrancas { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
+.cr-cobrancas .i { width: 15px; height: 15px; color: #1d9c55; }

@@ -392,6 +392,7 @@ Telas.config = (() => {
           <div class="grade-form tres">
             ${campo('crediario_max_parcelas', 'Máximo de parcelas', 'type="number" min="1" max="24"')}
             ${campo('crediario_dias_primeira', '1º vencimento (dias após a compra)', 'type="number" min="1" max="120"')}
+            ${campo('cobranca_dias_antes', 'Cobrança em fila: avisar também quem vence nos próximos (dias)', 'type="number" min="0" max="15"')}
             <label>Limite padrão por cliente (R$) <small>vazio = sem limite</small>
               <input name="crediario_limite_padrao" data-dinheiro inputmode="decimal" value="${c.crediario_limite_padrao ? U.num(c.crediario_limite_padrao) : ''}"></label>
             ${check('crediario_bloquear_atraso', 'Não vender fiado para quem tem parcela atrasada')}
