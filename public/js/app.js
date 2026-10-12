@@ -127,9 +127,11 @@
           </div></label>
         <label>Senha ${campoSenha('senha', 'required placeholder="Sua senha"')}</label>
         <button class="btn btn-primario btn-grande">Entrar</button>
+        <button type="button" class="link login-esqueci" id="esqueci">Esqueci minha senha</button>
         <div class="login-rodape"><span class="ponto ok"></span> Funciona sem internet · os dados ficam neste computador</div>
       </form>`);
     (ultimo ? form.senha : form.login).focus();
+    form.querySelector('#esqueci').onclick = () => esqueciSenha(form);
     form.onsubmit = async (ev) => {
       ev.preventDefault();
       const caixaErro = form.querySelector('#login-erro');
@@ -147,6 +149,64 @@
         form.classList.add('tremer');
         form.senha.focus();
       }
+    };
+  }
+
+  /**
+   * Esqueci a senha: vendedora pede à administradora; a administradora gera um código que fica num
+   * arquivo dentro do computador da loja (atalho no menu Iniciar) e troca a senha com ele.
+   */
+  function esqueciSenha(formLogin) {
+    const corpo = U.abrirModal('Esqueci minha senha', `
+      <div class="esq">
+        <div class="esq-caso">
+          <span class="esq-ico">${Icone('clientes')}</span>
+          <div><b>É vendedora?</b><small>Peça para a administradora: <b>Vendedores → Editar → Nova senha</b>.</small></div>
+        </div>
+        <div class="esq-caso">
+          <span class="esq-ico">${Icone('chave')}</span>
+          <div><b>É a administradora?</b>
+            <small>Faça no computador da loja:</small>
+            <ol>
+              <li>Clique em <b>Gerar código</b>.</li>
+              <li>No menu Iniciar do Windows, abra <b>Clara Styllus → Código para redefinir a senha</b>
+                (ou o arquivo <code>REDEFINIR-SENHA.txt</code> na pasta de dados).</li>
+              <li>Digite o código aqui embaixo e escolha a senha nova.</li>
+            </ol>
+          </div>
+        </div>
+        <button type="button" class="btn btn-claro" id="esq-gerar">${Icone('chave')} Gerar código</button>
+        <form class="form esq-form" id="esq-form" hidden>
+          <p class="esq-ok" id="esq-ok"></p>
+          <label>Usuário<input name="login" required value="${esc(formLogin.login.value)}" autocapitalize="off"></label>
+          <label>Código (6 números)<input name="codigo" required inputmode="numeric" maxlength="6" pattern="\\d{6}" placeholder="000000" class="esq-codigo"></label>
+          <label>Nova senha ${campoSenha('nova_senha', 'minlength="4" required placeholder="Mínimo 4 caracteres"')}</label>
+          <label>Repita a nova senha ${campoSenha('nova_senha2', 'minlength="4" required')}</label>
+          <div class="acoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Trocar a senha</button></div>
+        </form>
+      </div>`, { largura: '540px' });
+    ligarOlhos(corpo);
+    const f = corpo.querySelector('#esq-form');
+    corpo.querySelector('#esq-gerar').onclick = U.umaVez(corpo.querySelector('#esq-gerar'), async () => {
+      try {
+        const r = await api('/api/senha/codigo', { metodo: 'POST' });
+        f.hidden = false;
+        corpo.querySelector('#esq-ok').innerHTML = `${Icone('check')} Código gerado. Ele vale ${r.validade_min} minutos e está no arquivo <code>${esc(r.arquivo)}</code>.`;
+        corpo.querySelector('#esq-gerar').innerHTML = `${Icone('atualizar')} Gerar outro código`;
+        (f.login.value ? f.codigo : f.login).focus();
+      } catch (e) { erro(e); }
+    });
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const d = U.dadosForm(f);
+      if (d.nova_senha !== d.nova_senha2) return aviso('As senhas não conferem.', 'erro');
+      try {
+        const r = await api('/api/senha/redefinir', { metodo: 'POST', corpo: { login: d.login, codigo: d.codigo, nova_senha: d.nova_senha } });
+        U.fecharModal();
+        aviso(`Senha de ${r.nome} trocada. Entre com a senha nova.`);
+        formLogin.login.value = r.login;
+        formLogin.senha.focus();
+      } catch (e) { erro(e); }
     };
   }
 

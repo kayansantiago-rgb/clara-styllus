@@ -2191,3 +2191,20 @@ img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro
 .dp-tabela th, .dp-tabela td { padding-left: 8px; padding-right: 8px; }
 .dp-tabela .dsp-desc { min-width: 110px; }
 .dp-tabela td:last-child { white-space: nowrap; width: 1%; }
+
+/* Esqueci minha senha */
+.login-esqueci { align-self: center; font-size: 13.5px; margin-top: -4px; }
+.esq { display: flex; flex-direction: column; gap: 12px; }
+.esq-caso { display: flex; gap: 12px; align-items: flex-start; background: var(--fundo); border-radius: 14px; padding: 12px 14px; }
+.esq-caso > div { display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.esq-caso small { color: var(--suave); font-size: 13px; line-height: 1.45; }
+.esq-caso ol { margin: 4px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--texto); }
+.esq-caso code { font-size: 12px; }
+.esq-ico { width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--rosa); display: grid; place-items: center; flex: none; }
+.esq-form { border-top: 1px solid var(--borda); padding-top: 12px; }
+.esq-ok { margin: 0; font-size: 13px; color: #1d6e4a; background: #e9f7ef; border-radius: 10px; padding: 8px 10px; display: flex; gap: 6px; align-items: flex-start; }
+.esq-ok code { word-break: break-all; }
+.esq-codigo { font-size: 22px; letter-spacing: 6px; font-variant-numeric: tabular-nums; text-align: center; }
+.esq .acoes { display: flex; justify-content: flex-end; gap: 8px; }
+.esq-ok { display: block; }
+.esq-ok .i { width: 15px; height: 15px; vertical-align: -3px; margin-right: 4px; }

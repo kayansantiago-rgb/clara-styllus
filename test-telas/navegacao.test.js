@@ -70,3 +70,34 @@ test('menu recolhível lembra a escolha', { skip: pular, timeout: 60000 }, async
     await sis.fechar();
   }
 });
+
+test('esqueci minha senha: gera o código no computador e troca a senha pela tela de entrada', { skip: pular, timeout: 60000 }, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    await p.evaluate(() => U.api('/api/logout', { metodo: 'POST' }));
+    await p.goto(sis.url);
+    await p.waitForSelector('#f-login');
+    await p.click('#esqueci');
+    await p.waitForSelector('#esq-gerar');
+    await p.click('#esq-gerar');
+    await p.waitForSelector('#esq-form:not([hidden])');
+    const arquivo = require('node:path').join(sis.pasta, 'REDEFINIR-SENHA.txt');
+    const codigo = /Código: (\d{6})/.exec(require('node:fs').readFileSync(arquivo, 'utf8'))[1];
+    assert.match(await p.textContent('#esq-ok'), /REDEFINIR-SENHA\.txt/);
+    if (process.env.PRINTS) await p.locator('.modal').screenshot({ path: `${process.env.PRINTS}/esqueci-senha.png` });
+    await p.fill('#esq-form [name=login]', 'clara');
+    await p.fill('#esq-form [name=codigo]', codigo);
+    await p.fill('#esq-form [name=nova_senha]', 'flor2026');
+    await p.fill('#esq-form [name=nova_senha2]', 'flor2026');
+    await p.click('#esq-form .btn-primario');
+    await p.waitForTimeout(600);
+    assert.equal(await p.inputValue('#f-login [name=login]'), 'clara');
+    await p.fill('#f-login [name=senha]', 'flor2026');
+    await p.click('#f-login button.btn-primario');
+    await p.waitForSelector('.menu nav a[data-rota=inicio]', { state: 'attached' });
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

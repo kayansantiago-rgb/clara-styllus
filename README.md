@@ -75,6 +75,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Esqueci minha senha** (tela de entrada): vendedora pede à administradora (Vendedores → Editar → Nova senha).
+  A administradora clica em **Gerar código**; o código de 6 números é gravado em
+  `C:\ProgramData\ClaraStyllus\REDEFINIR-SENHA.txt` (atalho **Clara Styllus → Código para redefinir a senha** no
+  menu Iniciar). Vale 15 minutos, uma vez só, e 5 erros cancelam. Fica registrado no Histórico.
 - **Despesas** (menu Gestão, administradora): aba para lançar tudo o que a loja gasta — compras de mercadoria,
   funcionárias (salário, vale, comissão), aluguel, contas, impostos, embalagens… com categoria em botões, para quem foi
   pago (com os nomes já usados para escolher), forma de pagamento, observação e repetição mensal. Pago em dinheiro da

@@ -177,6 +177,8 @@ Section "Instalar"
     CreateShortCut "$DESKTOP\${APP} - Caixa.lnk" "$Navegador" "--app=${URL}/#/pdv --start-fullscreen" "$INSTDIR\icone.ico" 0
   ${EndIf}
   CreateShortCut "$SMPROGRAMS\${APP}\Pasta de dados e backups.lnk" "$WINDIR\explorer.exe" '"$Dados"'
+  ; Esqueci a senha: o sistema grava o código neste arquivo (só quem está no computador consegue ler).
+  CreateShortCut "$SMPROGRAMS\${APP}\Código para redefinir a senha.lnk" "$WINDIR\notepad.exe" '"$Dados\REDEFINIR-SENHA.txt"'
   CreateShortCut "$SMPROGRAMS\${APP}\Desinstalar.lnk" "$INSTDIR\Desinstalar.exe"
 
   ; Painel "Aplicativos instalados"

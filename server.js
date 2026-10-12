@@ -205,7 +205,7 @@ if (require.main === module) {
   // (outro computador como caixa); HOST=127.0.0.1 desliga o acesso pela rede.
   const host = process.env.HOST || '0.0.0.0';
   const redeLiberada = process.env.REDE_LIBERADA === '1';
-  criarServidor(db, { pastaBackup, pastaAtualizacoes, agendarBackup: true, redeLiberada }).listen(porta, host, () => {
+  criarServidor(db, { pastaBackup, pastaAtualizacoes, pastaDados: path.join(path.dirname(arquivoBanco), '..'), agendarBackup: true, redeLiberada }).listen(porta, host, () => {
     console.log('');
     console.log('  Clara Styllus PDV rodando!');
     console.log(`  Abra no navegador: http://localhost:${porta}`);

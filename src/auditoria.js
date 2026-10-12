@@ -164,6 +164,7 @@ function instalarAuditoria({ db, rota, texto, planos, config, buscarVenda, busca
     'POST /api/inventarios/:id/finalizar': { depois: (c, r) => ({ tipo: 'estoque', acao: 'Finalizou inventário', descricao: `Nº ${r.id} · ${r.ajustados} produto(s) ajustado(s) · falta ${brl(r.valor_falta)} · sobra ${brl(r.valor_sobra)}`, importante: r.valor_falta > 0 }) },
     'POST /api/inventarios/:id/cancelar': { depois: (c, r) => ({ tipo: 'estoque', acao: 'Cancelou inventário', descricao: `Nº ${r.id}` }) },
     'POST /api/despesas': { depois: (c) => ({ tipo: 'despesa', acao: 'Lançou despesa', descricao: `${c.corpo.descricao} · ${brl(c.corpo.valor)}`, valor: Number(c.corpo.valor) }) },
+    'POST /api/senha/redefinir': { depois: (c, r) => ({ tipo: 'acesso', acao: 'Redefiniu a senha pelo código do computador', descricao: `${r.nome} (${r.login})`, importante: true }) },
     'PUT /api/despesas/:id': { depois: (c, r) => ({ tipo: 'despesa', acao: 'Editou despesa', descricao: `${r.descricao} · ${brl(r.valor)}` }) },
     'DELETE /api/despesas/:id': {
       antes: (c) => db.prepare('SELECT descricao, valor FROM despesas WHERE id = ?').get(c.params.id),

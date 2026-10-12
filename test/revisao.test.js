@@ -263,3 +263,34 @@ test('endereço do QR Code: o Wi-Fi de verdade vem antes do VirtualBox (192.168.
   const ip = await ipDaRotaPrincipal();
   assert.ok(ip === null || /^\d+\.\d+\.\d+\.\d+$/.test(ip));
 });
+
+test('esqueci a senha: código no arquivo do computador troca a senha (uma vez, com limite de erros)', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const { chamar, sair, pastaBackup } = novaApi();
+  chamar('POST', '/api/usuarios', { nome: 'Bia', login: 'bia', senha: '1234', perfil: 'vendedor' });
+  sair();
+  // Sem código gerado: não troca.
+  assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'clara', codigo: '000000', nova_senha: 'nova1' }).status, 410);
+  const r = chamar('POST', '/api/senha/codigo').corpo;
+  assert.equal(r.arquivo, path.join(path.resolve(pastaBackup, '..'), 'REDEFINIR-SENHA.txt'));
+  const texto = fs.readFileSync(r.arquivo, 'utf8');
+  const codigo = /Código: (\d{6})/.exec(texto)[1];
+  // Código errado conta; usuário que não existe avisa.
+  const errado = codigo === '111111' ? '222222' : '111111';
+  assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'clara', codigo: errado, nova_senha: 'nova1' }).status, 400);
+  assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'ninguem', codigo, nova_senha: 'nova1' }).status, 404);
+  const ok = chamar('POST', '/api/senha/redefinir', { login: 'clara', codigo, nova_senha: 'nova1' }).corpo;
+  assert.equal(ok.nome, 'Clara');
+  assert.equal(fs.existsSync(r.arquivo), false, 'o arquivo some depois de usar');
+  assert.equal(chamar('POST', '/api/login', { login: 'clara', senha: '1234' }).status, 401);
+  assert.equal(chamar('POST', '/api/login', { login: 'clara', senha: 'nova1' }).status, 200);
+  sair();
+  // O mesmo código não serve de novo.
+  assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'bia', codigo, nova_senha: 'xxxx' }).status, 410);
+  // 5 erros invalidam o código.
+  chamar('POST', '/api/senha/codigo');
+  for (let i = 0; i < 4; i++) assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'bia', codigo: 'abc', nova_senha: 'xxxx' }).status, 400);
+  assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'bia', codigo: 'abc', nova_senha: 'xxxx' }).status, 429);
+  assert.equal(chamar('POST', '/api/senha/redefinir', { login: 'bia', codigo: 'abc', nova_senha: 'xxxx' }).status, 410);
+});

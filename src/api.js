@@ -198,6 +198,61 @@ function criarApi(db, opcoes = {}) {
     return abrirSessao(ctx, u);
   }, 'publico');
 
+  /*
+   * Esqueci a senha (sem internet): o sistema grava um código de 6 números num arquivo dentro do
+   * computador da loja (C:\ProgramData\ClaraStyllus\REDEFINIR-SENHA.txt, atalho no menu Iniciar).
+   * Só quem está no computador consegue ler o código — o celular e a rede não chegam ao arquivo.
+   */
+  const pastaCodigo = opcoes.pastaDados || path.resolve(opcoes.pastaBackup || require('node:os').tmpdir(), '..');
+  const arquivoCodigo = path.join(pastaCodigo, 'REDEFINIR-SENHA.txt');
+  let codigoSenha = null; // { codigo, ate, erros }
+  const apagarArquivoCodigo = () => { try { fs.unlinkSync(arquivoCodigo); } catch { /* já não existe */ } };
+  rota('POST', '/api/senha/codigo', () => {
+    const codigo = String(require('node:crypto').randomInt(0, 1e6)).padStart(6, '0');
+    codigoSenha = { codigo, ate: Date.now() + 15 * 60e3, erros: 0 };
+    const hora = new Date(codigoSenha.ate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    try {
+      fs.mkdirSync(pastaCodigo, { recursive: true });
+      fs.writeFileSync(arquivoCodigo, '\ufeff' + [
+        'Clara Styllus PDV - redefinir senha',
+        '',
+        `Código: ${codigo}`,
+        '',
+        `Vale até as ${hora} e só uma vez. Digite na tela "Esqueci minha senha".`,
+        'Se não foi você que pediu, ignore: sem o código ninguém troca a senha.',
+        '',
+      ].join('\r\n'), 'utf8');
+    } catch (e) {
+      codigoSenha = null;
+      throw erro(500, `Não consegui gravar o código (${e.message}).`);
+    }
+    return { ok: true, arquivo: arquivoCodigo, validade_min: 15 };
+  }, 'publico');
+
+  rota('POST', '/api/senha/redefinir', ({ corpo }) => {
+    const c = codigoSenha;
+    if (!c || c.ate < Date.now()) { codigoSenha = null; apagarArquivoCodigo(); throw erro(410, 'O código venceu. Gere outro.'); }
+    const digitado = String(corpo.codigo || '').replace(/\D/g, '').padStart(6, '0').slice(-6);
+    const crypto = require('node:crypto');
+    if (!crypto.timingSafeEqual(Buffer.from(digitado), Buffer.from(c.codigo))) {
+      c.erros++;
+      if (c.erros >= 5) { codigoSenha = null; apagarArquivoCodigo(); throw erro(429, 'Código errado muitas vezes. Gere um código novo.'); }
+      throw erro(400, 'Código errado. Confira no arquivo do computador.');
+    }
+    const login = texto(corpo.login, 40);
+    const u = login && db.prepare('SELECT * FROM usuarios WHERE login = ?').get(login);
+    if (!u) throw erro(404, 'Usuário não encontrado. Confira como ele está escrito.');
+    const { senha_hash: hash } = lerUsuario({ senha: corpo.nova_senha }, false);
+    transacao(db, () => {
+      db.prepare('UPDATE usuarios SET senha_hash = ? WHERE id = ?').run(hash, u.id);
+      db.prepare('DELETE FROM sessoes WHERE usuario_id = ?').run(u.id);
+    });
+    tentativas.delete(String(u.login).toLowerCase());
+    codigoSenha = null;
+    apagarArquivoCodigo();
+    return { ok: true, login: u.login, nome: u.nome };
+  }, 'publico');
+
   rota('POST', '/api/logout', (ctx) => {
     if (ctx.token) db.prepare('DELETE FROM sessoes WHERE token = ?').run(ctx.token);
     ctx.definirSessao(null);
