@@ -72,6 +72,7 @@ Telas.pdv = (() => {
               <a href="#/espera">${Icone('sino')} Lista de espera</a>
               <a href="#/etiquetas">${Icone('etiqueta')} Etiquetas</a>
               <a href="#/caixa">${Icone('carteira')} Caixa</a>
+              <a href="#/despesas" data-admin>${Icone('dinheiro')} Despesas</a>
               <a href="#/relatorios" data-admin>${Icone('grafico')} Relatórios</a>
               <a href="#/config" data-admin>${Icone('ajustes')} Configurações</a>
             </div>

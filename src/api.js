@@ -1273,6 +1273,24 @@ function criarApi(db, opcoes = {}) {
   const condicional = instalarCondicional({ db, rota, erro, inteiro, texto, plano, planos, transacao, config });
 
   // -------------------------------------------------------------- despesas
+  const FORMAS_DESPESA = ['dinheiro', 'pix', 'cartao', 'boleto', 'transferencia', 'outro'];
+  /** Compra de mercadoria não entra no lucro real: o custo das peças vendidas já entra lá. */
+  const CATEGORIA_MERCADORIA = 'Compras de mercadoria';
+  const lerDespesa = (corpo) => {
+    const descricao = texto(corpo.descricao, 200);
+    if (!descricao) throw erro(400, 'Informe a descrição da despesa.');
+    const valor = inteiro(corpo.valor, 'valor', { min: 1 });
+    const data = texto(corpo.data, 10) || new Date().toLocaleDateString('sv-SE');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw erro(400, 'Data inválida.');
+    const forma = FORMAS_DESPESA.includes(corpo.forma) ? corpo.forma : null;
+    return {
+      descricao, valor, data, forma,
+      categoria: texto(corpo.categoria, 60) || null,
+      favorecido: texto(corpo.favorecido, 120) || null,
+      observacao: texto(corpo.observacao, 500) || null,
+    };
+  };
+
   rota('GET', '/api/despesas', ({ query }) => {
     const hoje = new Date().toLocaleDateString('sv-SE');
     const de = texto(query.get('de'), 10) || hoje.slice(0, 8) + '01';
@@ -1280,29 +1298,113 @@ function criarApi(db, opcoes = {}) {
     return planos(db.prepare('SELECT * FROM despesas WHERE data BETWEEN ? AND ? ORDER BY data DESC, id DESC').all(de, ate));
   }, 'admin');
 
+  /** Nomes já usados em "para quem" (funcionárias, fornecedores), para escolher sem digitar de novo. */
+  rota('GET', '/api/despesas/favorecidos', () => db.prepare(
+    `SELECT favorecido, COUNT(*) AS n FROM despesas WHERE favorecido IS NOT NULL AND favorecido <> ''
+     GROUP BY lower(favorecido) ORDER BY n DESC, favorecido LIMIT 60`
+  ).all().map((r) => r.favorecido), 'admin');
+
   rota('POST', '/api/despesas', ({ corpo, usuario }) => {
-    const descricao = texto(corpo.descricao, 200);
-    if (!descricao) throw erro(400, 'Informe a descrição da despesa.');
-    const valor = inteiro(corpo.valor, 'valor', { min: 1 });
-    const data = texto(corpo.data, 10) || new Date().toLocaleDateString('sv-SE');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw erro(400, 'Data inválida.');
+    const d = lerDespesa(corpo);
     const repetir = Math.min(24, Math.max(1, inteiro(corpo.repetir, 'repetir', { min: 1, padrao: 1 })));
+    // Pago com o dinheiro da gaveta: sai do caixa aberto como sangria (uma vez só).
+    const doCaixa = !!corpo.do_caixa;
+    let caixa = null;
+    if (doCaixa) {
+      if (repetir > 1) throw erro(400, 'Despesa que se repete todo mês não pode sair da gaveta de uma vez.');
+      caixa = caixaAberto();
+      if (!caixa) throw erro(409, 'Não tem caixa aberto para tirar o dinheiro da gaveta.');
+    }
+    // Sangria que já saiu do caixa e agora vira despesa (relatório → "Lançar como despesa").
+    let sangriaExistente = null;
+    if (!doCaixa && corpo.sangria_id) {
+      sangriaExistente = db.prepare(`SELECT * FROM caixa_movimentos WHERE id = ? AND tipo = 'sangria'`).get(corpo.sangria_id);
+      if (!sangriaExistente) throw erro(404, 'Sangria não encontrada.');
+      if (db.prepare('SELECT 1 FROM despesas WHERE sangria_id = ?').get(sangriaExistente.id)) throw erro(409, 'Esta sangria já foi lançada como despesa.');
+      if (repetir > 1) throw erro(400, 'Sangria não pode ser repetida todo mês.');
+    }
     return transacao(db, () => {
-      const [a, m, d] = data.split('-').map(Number);
+      const [a, m, dia] = d.data.split('-').map(Number);
+      let sangriaId = sangriaExistente ? sangriaExistente.id : null;
+      if (caixa) {
+        sangriaId = Number(db.prepare('INSERT INTO caixa_movimentos (caixa_id, tipo, valor, motivo) VALUES (?,?,?,?)')
+          .run(caixa.id, 'sangria', d.valor, `Despesa: ${d.descricao}`.slice(0, 200)).lastInsertRowid);
+      }
       for (let i = 0; i < repetir; i++) {
         // Repetição mensal (ex.: aluguel), mantendo o dia ou o último dia do mês.
         const ult = new Date(a, m - 1 + i + 1, 0).getDate();
-        const dt = new Date(a, m - 1 + i, Math.min(d, ult)).toLocaleDateString('sv-SE');
-        db.prepare('INSERT INTO despesas (descricao, categoria, valor, data, usuario) VALUES (?,?,?,?,?)')
-          .run(descricao, texto(corpo.categoria, 60), valor, dt, usuario.nome);
+        const dt = new Date(a, m - 1 + i, Math.min(dia, ult)).toLocaleDateString('sv-SE');
+        db.prepare(`INSERT INTO despesas (descricao, categoria, valor, data, usuario, forma, favorecido, observacao, sangria_id)
+          VALUES (?,?,?,?,?,?,?,?,?)`)
+          .run(d.descricao, d.categoria, d.valor, dt, usuario.nome, sangriaId ? 'dinheiro' : d.forma, d.favorecido, d.observacao, sangriaId);
       }
-      return { ok: true, lancadas: repetir };
+      return { ok: true, lancadas: repetir, do_caixa: !!caixa };
     });
   }, 'admin');
 
+  rota('PUT', '/api/despesas/:id', ({ params, corpo }) => {
+    const atual = db.prepare('SELECT * FROM despesas WHERE id = ?').get(params.id);
+    if (!atual) throw erro(404, 'Despesa não encontrada.');
+    const d = lerDespesa(corpo);
+    if (atual.sangria_id && d.valor !== atual.valor) {
+      throw erro(409, 'Esta despesa saiu da gaveta do caixa: para mudar o valor, apague e lance de novo.');
+    }
+    db.prepare(`UPDATE despesas SET descricao = ?, categoria = ?, valor = ?, data = ?, forma = ?, favorecido = ?, observacao = ? WHERE id = ?`)
+      .run(d.descricao, d.categoria, d.valor, d.data, atual.sangria_id ? 'dinheiro' : d.forma, d.favorecido, d.observacao, params.id);
+    return plano(db.prepare('SELECT * FROM despesas WHERE id = ?').get(params.id));
+  }, 'admin');
+
+  /** Para onde foi o dinheiro: despesas do período por categoria, mês a mês, e as sangrias do caixa. */
+  rota('GET', '/api/relatorios/despesas', ({ query }) => {
+    const hoje = new Date().toLocaleDateString('sv-SE');
+    const de = texto(query.get('de'), 10) || hoje.slice(0, 8) + '01';
+    const ate = texto(query.get('ate'), 10) || hoje;
+    const lancamentos = planos(db.prepare('SELECT * FROM despesas WHERE data BETWEEN ? AND ? ORDER BY data DESC, id DESC').all(de, ate));
+    const total = lancamentos.reduce((a, d) => a + d.valor, 0);
+    const porCategoria = planos(db.prepare(
+      `SELECT COALESCE(NULLIF(categoria, ''), 'Outras') AS categoria, SUM(valor) AS valor, COUNT(*) AS qtd FROM despesas
+       WHERE data BETWEEN ? AND ? GROUP BY 1 ORDER BY valor DESC`
+    ).all(de, ate));
+    // Mesmo tamanho de período, logo antes, para comparar.
+    const dias = Math.round((new Date(ate + 'T12:00') - new Date(de + 'T12:00')) / 864e5) + 1;
+    const desloca = (d, n) => { const x = new Date(d + 'T12:00'); x.setDate(x.getDate() + n); return x.toLocaleDateString('sv-SE'); };
+    const anterior = db.prepare('SELECT COALESCE(SUM(valor),0) AS v FROM despesas WHERE data BETWEEN ? AND ?').get(desloca(de, -dias), desloca(de, -1)).v;
+    // Últimos 6 meses até o fim do período.
+    const fim = new Date(ate + 'T12:00');
+    const meses = [];
+    for (let i = 5; i >= 0; i--) {
+      const ini = new Date(fim.getFullYear(), fim.getMonth() - i, 1);
+      const ult = new Date(fim.getFullYear(), fim.getMonth() - i + 1, 0);
+      const v = db.prepare('SELECT COALESCE(SUM(valor),0) AS v FROM despesas WHERE data BETWEEN ? AND ?')
+        .get(ini.toLocaleDateString('sv-SE'), ult.toLocaleDateString('sv-SE')).v;
+      meses.push({ mes: ini.toLocaleDateString('sv-SE').slice(0, 7), valor: v });
+    }
+    const sangrias = planos(db.prepare(
+      `SELECT m.id, m.valor, m.motivo, m.criado_em, c.id AS caixa_id, c.operador FROM caixa_movimentos m JOIN caixas c ON c.id = m.caixa_id
+       WHERE m.tipo = 'sangria' AND date(m.criado_em) BETWEEN ? AND ?
+         AND NOT EXISTS (SELECT 1 FROM despesas d WHERE d.sangria_id = m.id) ORDER BY m.criado_em DESC`
+    ).all(de, ate));
+    return { de, ate, total, anterior, por_categoria: porCategoria, meses, lancamentos, sangrias };
+  }, 'admin');
+
   rota('DELETE', '/api/despesas/:id', ({ params }) => {
-    db.prepare('DELETE FROM despesas WHERE id = ?').run(params.id);
-    return { ok: true };
+    const d = db.prepare('SELECT * FROM despesas WHERE id = ?').get(params.id);
+    if (!d) return { ok: true };
+    return transacao(db, () => {
+      db.prepare('DELETE FROM despesas WHERE id = ?').run(params.id);
+      // Saiu da gaveta e o caixa ainda está aberto: o dinheiro volta (a sangria some). Caixa fechado não muda.
+      let devolvido = false;
+      if (d.sangria_id) {
+        const aberto = caixaAberto();
+        const s = db.prepare('SELECT * FROM caixa_movimentos WHERE id = ?').get(d.sangria_id);
+        // Só a sangria criada por esta despesa ("Despesa: …"); sangria antiga que virou despesa fica.
+        if (s && aberto && s.caixa_id === aberto.id && String(s.motivo || '').startsWith('Despesa: ')) {
+          db.prepare('DELETE FROM caixa_movimentos WHERE id = ?').run(s.id);
+          devolvido = true;
+        }
+      }
+      return { ok: true, devolvido_ao_caixa: devolvido };
+    });
   }, 'admin');
 
   // ------------------------------------------------------------ relatórios
@@ -1433,7 +1535,8 @@ function criarApi(db, opcoes = {}) {
         )
         .all(de, ate)
     );
-    const despesas = despesasPorCategoria.reduce((a, d) => a + d.valor, 0);
+    const despesas = despesasPorCategoria.filter((d) => d.categoria !== CATEGORIA_MERCADORIA).reduce((a, d) => a + d.valor, 0);
+    totais.compras_mercadoria = despesasPorCategoria.find((d) => d.categoria === CATEGORIA_MERCADORIA)?.valor || 0;
     totais.trocas = tr.valor;
     totais.custo_trocas = tr.custo;
     totais.despesas = despesas;

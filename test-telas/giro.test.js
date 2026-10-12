@@ -247,3 +247,122 @@ test('foto da cliente pelo celular: QR Code no cadastro, aparece na lista e na f
     assert.deepEqual(sis.erros, []);
   } finally { await sis.fechar(); }
 });
+
+test('relatório: despesas da loja (categorias, lançamentos, sangria vira despesa) e campos sem sugestões', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    await dadosBasicos(sis);
+    const hoje = new Date().toLocaleDateString('sv-SE');
+    await sis.pagina.evaluate(async (h) => {
+      const D = (c) => U.api('/api/despesas', { metodo: 'POST', corpo: { data: h, ...c } });
+      await D({ descricao: 'Aluguel de outubro', categoria: 'Aluguel', valor: 150000 });
+      await D({ descricao: 'Conta de luz', categoria: 'Energia', valor: 32000 });
+      await D({ descricao: 'Sacolas', categoria: 'Embalagens', valor: 8000 });
+      await U.api('/api/caixa/movimento', { metodo: 'POST', corpo: { tipo: 'sangria', valor: 5000, motivo: 'Pagou o motoboy' } });
+    }, hoje);
+    await sis.ir('relatorios');
+    await p.waitForSelector('#desp-resumo .dp-cat');
+    assert.match(await p.textContent('#desp-resumo .dp-kpis'), /1\.900,00[\s\S]*Aluguel de outubro/);
+    assert.equal(await p.locator('#desp-lista .dp-tabela').first().locator('tbody tr').count(), 3);
+    await print(sis, 'despesas-resumo', p.locator('#desp-resumo'));
+    // Filtra por categoria.
+    await p.click('.dp-cat[data-cat="Energia"]');
+    await p.waitForTimeout(400);
+    assert.equal(await p.locator('#desp-lista .dp-tabela').first().locator('tbody tr').count(), 1);
+    assert.match(await p.textContent('#desp-lista h3'), /Energia/);
+    await p.click('#dp-todas');
+    await p.waitForTimeout(400);
+    await print(sis, 'despesas-lista', p.locator('#desp-lista'));
+    // Sangria vira despesa (já preenchida), com categoria escolhida na lista.
+    await p.click('[data-sangria="0"]');
+    await p.waitForSelector('#modal-corpo form [name=descricao]');
+    assert.equal(await p.inputValue('#modal-corpo [name=descricao]'), 'Pagou o motoboy');
+    assert.equal(await p.inputValue('#modal-corpo [name=valor]'), '50,00');
+    await p.click('#modal-corpo [data-c="__outra"]');
+    await p.fill('#modal-corpo [name=categoria_outra]', 'Entregas');
+    // Nenhum campo com sugestão do navegador.
+    assert.equal(await p.getAttribute('#modal-corpo [name=descricao]', 'autocomplete'), 'off');
+    assert.equal(await p.getAttribute('#modal-corpo [name=descricao]', 'spellcheck'), 'false');
+    await p.click('#modal-corpo .btn-primario');
+    await p.waitForTimeout(800);
+    const motoboy = sis.db.prepare(`SELECT categoria, sangria_id, forma FROM despesas WHERE descricao = 'Pagou o motoboy'`).get();
+    assert.equal(motoboy.categoria, 'Entregas');
+    assert.ok(motoboy.sangria_id, 'ligada à sangria');
+    assert.equal(motoboy.forma, 'dinheiro');
+    // A sangria já lançada sai da lista (e o caixa não perde o dinheiro de novo).
+    assert.equal(await p.locator('[data-sangria]').count(), 0);
+    assert.equal(sis.db.prepare(`SELECT COUNT(*) AS n FROM caixa_movimentos WHERE tipo = 'sangria'`).get().n, 1);
+    await sis.ir('pdv');
+    assert.equal(await p.getAttribute('#busca', 'autocomplete'), 'off');
+    assert.deepEqual(sis.erros, []);
+  } finally { await sis.fechar(); }
+});
+
+test('aba Despesas: lança compra e salário, tira da gaveta, filtra, edita e apaga devolvendo ao caixa', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const p = sis.pagina;
+    await dadosBasicos(sis); // caixa aberto com R$ 100,00
+    await sis.ir('despesas');
+    await p.waitForSelector('#nova');
+    // Salário pago com dinheiro da gaveta.
+    await p.click('#nova');
+    await p.waitForSelector('#dsp-cats');
+    await p.click('#dsp-cats [data-c="Funcionários"]');
+    assert.match(await p.textContent('#dsp-cat-dica'), /Salário, comissão/);
+    await p.fill('#modal-corpo [name=descricao]', 'Vale da Bia');
+    await p.fill('#modal-corpo [name=valor]', '50,00');
+    await p.fill('#modal-corpo [name=favorecido]', 'Bia');
+    await p.click('#dsp-forma [data-forma=dinheiro]');
+    await p.check('#modal-corpo [name=do_caixa]');
+    await print(sis, 'despesa-form', p.locator('.modal'));
+    await p.click('#modal-corpo .acoes .btn-primario');
+    await p.waitForTimeout(700);
+    let cx = await sis.api('/api/caixa/atual');
+    assert.equal(cx.dinheiro_esperado, 10000 - 5000);
+    // Compra de mercadoria por PIX.
+    await p.click('#nova');
+    await p.waitForSelector('#dsp-cats');
+    await p.click('#dsp-cats [data-c="Compras de mercadoria"]');
+    await p.fill('#modal-corpo [name=descricao]', 'Coleção verão');
+    await p.fill('#modal-corpo [name=valor]', '1.500,00');
+    await p.click('#dsp-fav [data-f="Bia"]').catch(() => {});
+    await p.fill('#modal-corpo [name=favorecido]', 'Fornecedor Moda SP');
+    await p.click('#dsp-forma [data-forma=pix]');
+    assert.equal(await p.isVisible('#dsp-gaveta'), false);
+    await p.click('#modal-corpo .acoes .btn-primario');
+    await p.waitForTimeout(700);
+    assert.match(await p.textContent('.dsp-kpis'), /1\.550,00[\s\S]*1\.500,00[\s\S]*50,00[\s\S]*50,00/);
+    await print(sis, 'despesas-aba', p.locator('#conteudo'));
+    // Filtra por categoria e pela busca.
+    await p.click('.dp-cat[data-cat="Funcionários"]');
+    assert.equal(await p.locator('.dp-tabela tbody tr').count(), 1);
+    await p.click('#todas');
+    await p.fill('#q', 'moda sp');
+    await p.waitForTimeout(300);
+    assert.equal(await p.locator('.dp-tabela tbody tr').count(), 1);
+    await p.fill('#q', '');
+    await p.waitForTimeout(300);
+    // Edita a compra.
+    const compra = sis.db.prepare(`SELECT id FROM despesas WHERE descricao = 'Coleção verão'`).get();
+    await p.click(`[data-editar="${compra.id}"]`);
+    await p.waitForSelector('#modal-corpo [name=descricao]');
+    await p.fill('#modal-corpo [name=descricao]', 'Coleção verão 2027');
+    await p.click('#modal-corpo .acoes .btn-primario');
+    await p.waitForTimeout(600);
+    assert.equal(sis.db.prepare('SELECT descricao FROM despesas WHERE id = ?').get(compra.id).descricao, 'Coleção verão 2027');
+    // Compra de mercadoria não entra no lucro real.
+    const rel = await sis.api('/api/relatorios');
+    assert.equal(rel.totais.despesas, 5000);
+    assert.equal(rel.totais.compras_mercadoria, 150000);
+    // Apagar o vale: o dinheiro volta para a gaveta (caixa ainda aberto).
+    const vale = sis.db.prepare(`SELECT id FROM despesas WHERE descricao = 'Vale da Bia'`).get();
+    await p.click(`[data-apagar="${vale.id}"]`);
+    await p.click('#modal-corpo .btn-perigo, #modal-corpo .btn-primario');
+    await p.waitForTimeout(700);
+    cx = await sis.api('/api/caixa/atual');
+    assert.equal(cx.dinheiro_esperado, 10000);
+    assert.deepEqual(sis.erros, []);
+  } finally { await sis.fechar(); }
+});

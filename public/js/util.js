@@ -305,6 +305,28 @@ const U = (() => {
   }
   const pctTxt = (n) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
 
+  // ------------------------------------------------ sem sugestões do navegador
+  // Nenhum campo do sistema mostra a lista de palavras/números digitados antes, nem corretor
+  // ortográfico. As listas próprias do sistema (ex.: tamanhos e cores na grade) continuam.
+  const SEM_TIPO = /^(checkbox|radio|file|hidden|range|color|submit|button|password)$/;
+  function semSugestoes(el) {
+    if (!el || el.nodeType !== 1) return;
+    const campos = el.matches('input, textarea, form') ? [el] : [];
+    campos.push(...el.querySelectorAll('input, textarea, form'));
+    for (const c of campos) {
+      if (c.tagName === 'INPUT' && SEM_TIPO.test(c.type)) continue;
+      if (c.getAttribute('autocomplete') !== 'off') c.setAttribute('autocomplete', 'off');
+      if (c.tagName !== 'FORM') {
+        c.setAttribute('spellcheck', 'false');
+        c.setAttribute('autocorrect', 'off');
+      }
+    }
+  }
+  semSugestoes(document.body);
+  new MutationObserver((mudancas) => {
+    for (const m of mudancas) for (const n of m.addedNodes) semSugestoes(n);
+  }).observe(document.body, { childList: true, subtree: true });
+
   // -------------------------------------------------------------- fotos
   const fotoUrl = (p) => (p && p.foto_versao ? `/api/produtos/${p.id}/foto?v=${p.foto_versao}` : null);
 

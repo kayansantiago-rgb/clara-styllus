@@ -490,6 +490,10 @@ function migrar(db) {
     tipo TEXT NOT NULL,
     dados BLOB NOT NULL
   )`);
+  // Despesas: forma de pagamento, para quem foi pago, observação e a sangria (quando saiu da gaveta).
+  for (const [col, tipo] of [['forma', 'TEXT'], ['favorecido', 'TEXT'], ['observacao', 'TEXT'], ['sangria_id', 'INTEGER']]) {
+    if (!colunas('despesas').includes(col)) db.exec(`ALTER TABLE despesas ADD COLUMN ${col} ${tipo}`);
+  }
   // Foto da cliente (tirada no computador ou pelo celular).
   if (!colunas('clientes').includes('foto_versao')) {
     db.exec('ALTER TABLE clientes ADD COLUMN foto_versao INTEGER');

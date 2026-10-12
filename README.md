@@ -75,6 +75,15 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Despesas** (menu Gestão, administradora): aba para lançar tudo o que a loja gasta — compras de mercadoria,
+  funcionárias (salário, vale, comissão), aluguel, contas, impostos, embalagens… com categoria em botões, para quem foi
+  pago (com os nomes já usados para escolher), forma de pagamento, observação e repetição mensal. Pago em dinheiro da
+  gaveta? Marque "tirei da gaveta" e sai do caixa como sangria (apagar a despesa com o caixa aberto devolve). Mostra o
+  total, para onde foi o dinheiro por categoria, os últimos 6 meses, busca e edição. Compras de mercadoria aparecem no
+  total gasto, mas não entram no lucro real (o custo das peças vendidas já entra).
+- **Relatórios → Despesas da loja**: resumo por categoria, comparação com o período anterior, % das vendas e as
+  sangrias do caixa, que podem virar despesa com um clique.
+- **Sem sugestões do navegador**: nenhum campo mostra a lista de palavras/números digitados antes nem corretor.
 - **Desconto com botões prontos**: no F7 (venda toda) e no "desconto" de cada peça aparecem 5%, 10%, 15% e 20%, já
   mostrando quanto sai e quanto fica; teclas 1, 2, 3, 4 escolhem. Dá para digitar outro valor (em % ou R$). Os botões
   mudam em Configurações → Vendas, e os acima do desconto máximo ficam desligados.

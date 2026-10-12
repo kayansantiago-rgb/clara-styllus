@@ -127,3 +127,57 @@ test('foto da cliente: grava, entrega, troca e some ao excluir o cadastro', () =
   chamar('DELETE', `/api/clientes/${ana.id}`);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM cliente_fotos').get().n, 0);
 });
+
+test('relatório de despesas: por categoria, comparação, 6 meses e sangrias do caixa', () => {
+  const { chamar, db } = preparar();
+  const hoje = new Date().toLocaleDateString('sv-SE');
+  chamar('POST', '/api/despesas', { descricao: 'Aluguel', categoria: 'Aluguel', valor: 150000, data: hoje });
+  chamar('POST', '/api/despesas', { descricao: 'Luz', categoria: 'Energia', valor: 32000, data: hoje });
+  chamar('POST', '/api/despesas', { descricao: 'Sacolas', categoria: '', valor: 8000, data: hoje });
+  chamar('POST', '/api/caixa/movimento', { tipo: 'sangria', valor: 5000, motivo: 'Pagou o motoboy' });
+  const r = chamar('GET', `/api/relatorios/despesas?de=${hoje}&ate=${hoje}`).corpo;
+  assert.equal(r.total, 190000);
+  assert.deepEqual(r.por_categoria.map((c) => [c.categoria, c.valor, c.qtd]), [['Aluguel', 150000, 1], ['Energia', 32000, 1], ['Outras', 8000, 1]]);
+  assert.equal(r.lancamentos.length, 3);
+  assert.equal(r.lancamentos[0].usuario, 'Clara');
+  assert.equal(r.meses.length, 6);
+  assert.equal(r.meses[5].valor, 190000);
+  assert.equal(r.sangrias.length, 1);
+  assert.equal(r.sangrias[0].motivo, 'Pagou o motoboy');
+  // Período anterior (ontem) para comparar.
+  db.prepare(`UPDATE despesas SET data = date(data, '-1 day') WHERE descricao = 'Luz'`).run();
+  const r2 = chamar('GET', `/api/relatorios/despesas?de=${hoje}&ate=${hoje}`).corpo;
+  assert.equal(r2.anterior, 32000);
+  assert.equal(r2.total, 158000);
+});
+
+test('despesas: tirar da gaveta, sangria vira despesa, editar e apagar devolvendo ao caixa', () => {
+  const { chamar } = preparar();
+  const esperado = () => chamar('GET', '/api/caixa/atual').corpo.dinheiro_esperado;
+  assert.equal(esperado(), 0);
+  chamar('POST', '/api/caixa/movimento', { tipo: 'suprimento', valor: 20000 });
+  const r = chamar('POST', '/api/despesas', { descricao: 'Vale', categoria: 'Funcionários', valor: 5000, forma: 'pix', do_caixa: true, favorecido: 'Bia' }).corpo;
+  assert.equal(r.do_caixa, true);
+  assert.equal(esperado(), 15000);
+  const d = chamar('GET', '/api/despesas').corpo[0];
+  assert.equal(d.forma, 'dinheiro');
+  assert.ok(d.sangria_id);
+  assert.equal(chamar('POST', '/api/despesas', { descricao: 'Aluguel', valor: 1000, do_caixa: true, repetir: 3 }).status, 400);
+  // Não muda o valor de quem saiu da gaveta; o resto muda.
+  assert.equal(chamar('PUT', `/api/despesas/${d.id}`, { descricao: 'Vale', valor: 9999 }).status, 409);
+  assert.equal(chamar('PUT', `/api/despesas/${d.id}`, { descricao: 'Vale da Bia', valor: 5000, categoria: 'Funcionários', favorecido: 'Bia' }).corpo.descricao, 'Vale da Bia');
+  // Sangria antiga vira despesa (sem tirar de novo); uma vez só.
+  chamar('POST', '/api/caixa/movimento', { tipo: 'sangria', valor: 3000, motivo: 'Motoboy' });
+  const sg = chamar('GET', '/api/relatorios/despesas').corpo.sangrias;
+  assert.deepEqual(sg.map((x) => x.motivo), ['Motoboy']); // a do vale não aparece
+  chamar('POST', '/api/despesas', { descricao: 'Motoboy', valor: 3000, sangria_id: sg[0].id });
+  assert.equal(chamar('POST', '/api/despesas', { descricao: 'Motoboy', valor: 3000, sangria_id: sg[0].id }).status, 409);
+  assert.equal(esperado(), 12000);
+  assert.equal(chamar('GET', '/api/relatorios/despesas').corpo.sangrias.length, 0);
+  assert.deepEqual(chamar('GET', '/api/despesas/favorecidos').corpo, ['Bia']);
+  // Apagar: o vale volta para a gaveta; o motoboy (sangria antiga) não.
+  const todas = chamar('GET', '/api/despesas').corpo;
+  assert.equal(chamar('DELETE', `/api/despesas/${todas.find((x) => x.descricao === 'Vale da Bia').id}`).corpo.devolvido_ao_caixa, true);
+  assert.equal(chamar('DELETE', `/api/despesas/${todas.find((x) => x.descricao === 'Motoboy').id}`).corpo.devolvido_ao_caixa, false);
+  assert.equal(esperado(), 17000);
+});

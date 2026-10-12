@@ -76,6 +76,13 @@ Telas.relatorios = (() => {
     return out;
   }
 
+  /** Igual à variação, mas para gasto: subir é ruim (vermelho), cair é bom (verde). */
+  function variacaoGasto(atual, antes) {
+    if (!antes) return atual ? '<span class="var desce">novo</span>' : '';
+    const pct = Math.round(((atual - antes) / antes) * 100);
+    return `<span class="var ${pct > 0 ? 'desce' : 'sobe'}">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct)}%</span>`;
+  }
+
   function variacao(atual, antes) {
     if (!antes) return atual ? '<span class="var sobe">novo</span>' : '';
     const pct = Math.round(((atual - antes) / antes) * 100);
@@ -170,15 +177,13 @@ Telas.relatorios = (() => {
           ${t.sinais_retidos ? `<div class="linha"><span>(+) Sinais de reserva que ficaram com a loja</span><span class="txt-ok">+ ${brl(t.sinais_retidos)}</span></div>` : ''}
           <div class="linha"><span>(−) Taxas das maquininhas</span><span class="txt-perigo">− ${brl(t.taxas)}</span></div>
           <div class="linha"><span>(−) Despesas da loja</span><span class="txt-perigo">− ${brl(t.despesas)}</span></div>
+          ${t.compras_mercadoria ? `<p class="dica">As compras de mercadoria (${brl(t.compras_mercadoria)}) não entram aqui: o custo das peças vendidas já está na conta.</p>` : ''}
           <div class="linha total"><span>= Lucro real</span><b class="${t.lucro_real < 0 ? 'txt-perigo' : 'txt-ok'}">${brl(t.lucro_real)}</b></div>
           ${t.faturamento ? `<p class="dica">Margem real: <b>${((t.lucro_real / t.faturamento) * 100).toFixed(1).replace('.', ',')}%</b> das vendas.</p>` : ''}
         </div>
-        <div class="cartao">
-          <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('recibo')} Despesas</h3><button class="btn btn-peq btn-primario" id="nova-despesa">${Icone('mais')} Lançar despesa</button></div>
-          ${r.despesas_por_categoria.map((d) => `<div class="linha"><span>${esc(d.categoria)}</span><span>${brl(d.valor)}</span></div>`).join('') || '<div class="vazio">Nenhuma despesa lançada no período.</div>'}
-          <details id="det-despesas"><summary>Ver lançamentos</summary><div id="lista-despesas">Carregando…</div></details>
-        </div>
+        <div class="cartao" id="desp-resumo"><h3 class="titulo-ico">${Icone('recibo')} Despesas da loja</h3><div class="vazio">Carregando…</div></div>
       </div>
+      <div class="cartao" id="desp-lista"></div>
       <div class="cartao">
         <h3 class="titulo-ico">${Icone('cartao')} Maquininhas: quanto realmente cai na conta</h3>
         ${r.taxas.linhas.length ? `
@@ -217,7 +222,7 @@ Telas.relatorios = (() => {
       </div>
       <div class="cartao" id="abc"><h3 class="titulo-ico">${Icone('grafico')} Curva ABC</h3><div class="vazio">Carregando…</div></div>
       <div class="cartao" id="paradas"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3><div class="vazio">Carregando…</div></div>`;
-    ligarDespesas();
+    ligarDespesas(t.faturamento);
     carregarAbc();
     carregarParadas();
   }
@@ -294,49 +299,78 @@ Telas.relatorios = (() => {
     el.querySelector('#pp-dias').onchange = (ev) => { diasParado = Number(ev.target.value); carregarParadas(); };
   }
 
-  /** Liga os botões de despesas depois que o relatório é desenhado. */
-  function ligarDespesas() {
+  const MESES_CURTOS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const dataBr = (d) => String(d || '').slice(0, 10).split('-').reverse().join('/');
+  let filtroCategoria = '';
+
+  /** Despesas: para onde foi o dinheiro (por categoria, mês a mês), lançamentos e sangrias do caixa. */
+  async function ligarDespesas(faturamento) {
     const de = raiz.querySelector('#de').value;
     const ate = raiz.querySelector('#ate').value;
-    const lista = raiz.querySelector('#lista-despesas');
-    raiz.querySelector('#det-despesas').addEventListener('toggle', async (ev) => {
-      if (!ev.target.open) return;
-      try {
-        const ds = await api(`/api/despesas?de=${de}&ate=${ate}`);
-        lista.innerHTML = ds.map((d) => `<div class="linha"><span>${d.data.split('-').reverse().join('/')} · ${esc(d.descricao)}
-          <small>${esc(d.categoria || '')}</small></span><span>${brl(d.valor)} <button class="mini perigo" data-del="${d.id}" title="Apagar">×</button></span></div>`).join('')
-          || '<div class="vazio">Nenhuma.</div>';
-      } catch (e) { erro(e); }
-    });
-    lista.onclick = async (ev) => {
+    let r;
+    try { r = await api(`/api/relatorios/despesas?de=${de}&ate=${ate}`); } catch (e) { return erro(e); }
+    const resumo = raiz && raiz.querySelector('#desp-resumo');
+    const listaEl = raiz && raiz.querySelector('#desp-lista');
+    if (!resumo || !listaEl) return;
+    if (filtroCategoria && !r.por_categoria.some((c) => c.categoria === filtroCategoria)) filtroCategoria = '';
+    const maior = r.lancamentos.reduce((m, d) => (!m || d.valor > m.valor ? d : m), null);
+    resumo.innerHTML = `
+      <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('recibo')} Despesas da loja</h3>
+        <span class="nowrap"><a class="btn btn-peq" href="#/despesas">Abrir Despesas</a>
+        <button class="btn btn-peq btn-primario" id="nova-despesa">${Icone('mais')} Lançar despesa</button></span></div>
+      <div class="dp-kpis">
+        <div><small>Total gasto</small><b>${brl(r.total)}</b><small>${variacaoGasto(r.total, r.anterior)} vs. ${brl(r.anterior)} antes</small></div>
+        <div><small>Das vendas</small><b>${faturamento ? `${((r.total / faturamento) * 100).toFixed(1).replace('.', ',')}%` : '—'}</b><small>de cada R$ 100 vendidos</small></div>
+        <div><small>Maior gasto</small><b>${maior ? brl(maior.valor) : '—'}</b><small>${maior ? esc(maior.descricao) : 'nenhum lançamento'}</small></div>
+      </div>
+      ${r.por_categoria.length ? `<p class="dica">Clique numa categoria para ver só os lançamentos dela.</p>
+      <div class="dp-cats">${r.por_categoria.map((c) => `
+        <button type="button" class="dp-cat ${filtroCategoria === c.categoria ? 'sel' : ''}" data-cat="${esc(c.categoria)}">
+          <span class="dp-cat-txt"><b>${esc(c.categoria)}</b><small>${c.qtd} lançamento(s)</small></span>
+          <span class="dp-cat-valor"><b>${brl(c.valor)}</b><small>${r.total ? Math.round((c.valor / r.total) * 100) : 0}%</small></span>
+          <span class="dp-cat-barra"><i style="width:${r.total ? (c.valor / r.por_categoria[0].valor) * 100 : 0}%"></i></span>
+        </button>`).join('')}</div>` : '<div class="vazio">Nenhuma despesa lançada no período. Use <b>Lançar despesa</b> para aluguel, luz, embalagens…</div>'}
+      ${r.meses.some((m) => m.valor) ? `<h4 class="dp-sub">Últimos 6 meses</h4>
+        ${Graficos.colunas(r.meses.map((m) => ({ rotulo: MESES_CURTOS[Number(m.mes.slice(5)) - 1], valor: m.valor, dica: `${MESES_CURTOS[Number(m.mes.slice(5)) - 1]}/${m.mes.slice(0, 4)}: ${brl(m.valor)}`, destaque: m.mes === ate.slice(0, 7) })), { altura: 120 })}` : ''}`;
+    const lanc = r.lancamentos.filter((d) => !filtroCategoria || (d.categoria || 'Outras') === filtroCategoria);
+    listaEl.innerHTML = `
+      <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('prancheta')} Lançamentos de despesas${filtroCategoria ? ` · ${esc(filtroCategoria)}` : ''}</h3>
+        ${filtroCategoria ? '<button class="btn btn-peq" id="dp-todas">Ver todas</button>' : ''}</div>
+      ${lanc.length ? `<table class="tabela dp-tabela">
+        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Lançado por</th><th class="r">Valor</th><th></th></tr></thead>
+        <tbody>${lanc.map((d) => `<tr><td>${dataBr(d.data)}</td><td>${esc(d.descricao)}</td>
+          <td><span class="dp-chip">${esc(d.categoria || 'Outras')}</span></td><td><small>${esc(d.usuario || '—')}</small></td>
+          <td class="r"><b>${brl(d.valor)}</b></td><td class="r"><button class="btn-ico" data-del="${d.id}" title="Apagar lançamento">${Icone('lixeira')}</button></td></tr>`).join('')}</tbody>
+        <tfoot><tr><th colspan="4">Total${filtroCategoria ? ` em ${esc(filtroCategoria)}` : ''}</th><th class="r">${brl(lanc.reduce((a, d) => a + d.valor, 0))}</th><th></th></tr></tfoot>
+      </table>` : '<div class="vazio">Nenhum lançamento no período.</div>'}
+      ${r.sangrias.length ? `
+      <h4 class="dp-sub">Retiradas do caixa (sangrias) no período</h4>
+      <p class="dica">Dinheiro que saiu da gaveta. Não entra no lucro como despesa; se alguma foi para pagar conta da loja, clique em <b>Lançar como despesa</b>.</p>
+      <table class="tabela dp-tabela">
+        <thead><tr><th>Data</th><th>Motivo</th><th>Caixa</th><th class="r">Valor</th><th></th></tr></thead>
+        <tbody>${r.sangrias.map((m, i) => `<tr><td>${U.dataHora(m.criado_em)}</td><td>${esc(m.motivo || '—')}</td>
+          <td><small>nº ${m.caixa_id}${m.operador ? ` · ${esc(m.operador)}` : ''}</small></td><td class="r">${brl(m.valor)}</td>
+          <td class="r"><button class="btn btn-peq" data-sangria="${i}">Lançar como despesa</button></td></tr>`).join('')}</tbody>
+      </table>` : ''}`;
+
+    resumo.querySelector('#nova-despesa').onclick = () => Telas.despesas.formulario(null, carregar);
+    resumo.onclick = (ev) => {
+      const b = ev.target.closest('[data-cat]');
+      if (!b) return;
+      filtroCategoria = filtroCategoria === b.dataset.cat ? '' : b.dataset.cat;
+      ligarDespesas(faturamento);
+    };
+    listaEl.onclick = async (ev) => {
+      if (ev.target.closest('#dp-todas')) { filtroCategoria = ''; ligarDespesas(faturamento); return; }
+      const s = ev.target.closest('[data-sangria]');
+      if (s) {
+        const m = r.sangrias[Number(s.dataset.sangria)];
+        Telas.despesas.formulario(null, carregar, { descricao: m.motivo || 'Sangria do caixa', valor: m.valor, data: m.criado_em.slice(0, 10), forma: 'dinheiro', sangria_id: m.id });
+        return;
+      }
       const b = ev.target.closest('[data-del]');
       if (!b || !(await U.confirmar('Apagar despesa', 'Apagar este lançamento?', { ok: 'Apagar', perigo: true }))) return;
       try { await api(`/api/despesas/${b.dataset.del}`, { metodo: 'DELETE' }); carregar(); } catch (e) { erro(e); }
-    };
-    raiz.querySelector('#nova-despesa').onclick = () => {
-      const corpo = U.abrirModal('Lançar despesa', `
-        <form class="form grade-form">
-          <label class="col2">Descrição<input name="descricao" required autofocus placeholder="Ex.: Aluguel, luz, internet, embalagens"></label>
-          <label>Categoria<input name="categoria" list="cat-despesas" placeholder="Ex.: Aluguel">
-            <datalist id="cat-despesas">${['Aluguel', 'Energia', 'Água', 'Internet/telefone', 'Funcionários', 'Contador', 'Embalagens', 'Marketing', 'Impostos', 'Outras']
-    .map((c) => `<option value="${c}">`).join('')}</datalist></label>
-          <label>Valor (R$)<input name="valor" inputmode="decimal" required></label>
-          <label>Data<input type="date" name="data" value="${U.hoje()}" required></label>
-          <label>Repetir todo mês por<select name="repetir">${[1, 2, 3, 6, 12].map((n) => `<option value="${n}">${n === 1 ? 'não repetir' : `${n} meses`}</option>`).join('')}</select></label>
-          <div class="acoes col2"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn btn-primario">Lançar</button></div>
-        </form>`, { largura: '560px' });
-      corpo.querySelector('form').onsubmit = async (ev) => {
-        ev.preventDefault();
-        const d = U.dadosForm(ev.target);
-        const valor = U.paraCentavos(d.valor);
-        if (!(valor > 0)) return U.aviso('Valor inválido.', 'erro');
-        try {
-          const r = await api('/api/despesas', { metodo: 'POST', corpo: { ...d, valor, repetir: Number(d.repetir) } });
-          U.fecharModal();
-          U.aviso(r.lancadas > 1 ? `${r.lancadas} despesas lançadas (uma por mês).` : 'Despesa lançada.');
-          carregar();
-        } catch (e) { erro(e); }
-      };
     };
   }
 

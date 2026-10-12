@@ -2118,3 +2118,36 @@ img.avatar.cl-foto { object-fit: cover; padding: 0; background: var(--rosa-claro
 .dsc-btn[disabled] { opacity: .4; cursor: not-allowed; }
 .dsc-outro { border-top: 1px solid var(--borda); padding-top: 12px; }
 .pdv-desc small { font-weight: 500; opacity: .8; }
+
+/* Despesas no relatório */
+.dp-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 4px 0 12px; }
+.dp-kpis > div { background: var(--fundo); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dp-kpis small { color: var(--suave); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dp-kpis b { font-size: 19px; }
+.dp-cats { display: flex; flex-direction: column; gap: 6px; }
+.dp-cat { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; text-align: left; font: inherit; color: var(--texto);
+  background: #fff; border: 1px solid var(--borda); border-radius: 12px; padding: 8px 12px; cursor: pointer; }
+.dp-cat:hover { border-color: var(--rosa-borda); background: #fdf7fa; }
+.dp-cat.sel { border-color: var(--rosa); background: var(--rosa-claro); }
+.dp-cat-txt, .dp-cat-valor { display: flex; flex-direction: column; }
+.dp-cat-valor { align-items: flex-end; }
+.dp-cat small { color: var(--suave); font-size: 12px; }
+.dp-cat-barra { grid-column: 1 / -1; height: 6px; background: var(--fundo); border-radius: 99px; overflow: hidden; }
+.dp-cat-barra i { display: block; height: 100%; background: var(--rosa); border-radius: 99px; }
+.dp-sub { margin: 16px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--suave); }
+.dp-chip { font-size: 12px; background: var(--rosa-claro); color: var(--rosa-escuro); border-radius: 99px; padding: 2px 9px; white-space: nowrap; }
+.dp-tabela td { vertical-align: middle; }
+@media (max-width: 900px) { .dp-kpis { grid-template-columns: 1fr; } }
+
+/* Aba Despesas */
+.dsp-busca { flex: 1; min-width: 220px; max-width: 360px; }
+.dsp-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dsp-grade { display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; gap: 16px; align-items: start; }
+.dsp-desc { font-weight: 600; }
+.dsp-form { display: flex; flex-direction: column; gap: 12px; }
+.dsp-cats-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.dsp-fav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
+.dsp-forma { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--suave); }
+.dsp-forma .segmentos { flex-wrap: wrap; }
+.dsp-form .acoes { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 1100px) { .dsp-grade { grid-template-columns: 1fr; } .dsp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
