@@ -75,6 +75,9 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Fotos das peças**: aparecem no cadastro, na busca e no "último item" da tela de venda. Dá para **tirar a foto
   pelo celular**: no cadastro, clique em "Pelo celular", aponte a câmera para o QR Code e tire a foto (o celular
   precisa estar no mesmo Wi-Fi da loja; ele só acessa a página da foto, nunca o sistema).
+- **Desconto com botões prontos**: no F7 (venda toda) e no "desconto" de cada peça aparecem 5%, 10%, 15% e 20%, já
+  mostrando quanto sai e quanto fica; teclas 1, 2, 3, 4 escolhem. Dá para digitar outro valor (em % ou R$). Os botões
+  mudam em Configurações → Vendas, e os acima do desconto máximo ficam desligados.
 - **Foto da cliente**: no cadastro da cliente, escolha a foto no computador ou tire pelo celular (QR Code, igual à foto do
   produto). Aparece na lista e na ficha. Ao excluir o cadastro, a foto é apagada.
 - **Cadastro em grade sem "esgotados" falsos**: só são criadas as combinações de tamanho × cor que têm quantidade (a

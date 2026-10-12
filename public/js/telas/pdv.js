@@ -297,7 +297,7 @@ Telas.pdv = (() => {
           </div>
           <div class="p4-item-preco">${liq ? `<s>${num(p.preco_anterior)}</s>` : ''}<span>${num(p.preco_venda)}</span><small>cada</small></div>
           <span class="qtd-ctrl p4-qtd"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>
-          <button class="pdv-desc ${it.desconto ? 'tem' : ''}" data-acao="desc" title="Desconto nesta peça">${it.desconto ? `−${num(it.desconto)}` : `${Icone('etiqueta')} desconto`}</button>
+          <button class="pdv-desc ${it.desconto ? 'tem' : ''}" data-acao="desc" title="Desconto nesta peça">${it.desconto ? `−${num(it.desconto)}${it.descontoTxt && it.descontoTxt.endsWith('%') ? ` <small>(${esc(it.descontoTxt)})</small>` : ''}` : `${Icone('etiqueta')} desconto`}</button>
           <b class="p4-item-total">${num(totalItem(it))}</b>
           <button class="p4-remover" data-acao="remover" title="Tirar da venda">${Icone('lixeira')}</button>
         </div>`;
@@ -395,10 +395,56 @@ Telas.pdv = (() => {
   }
 
   /** Desconto na venda inteira: "10%" ou "15,00". */
+  /**
+   * Janela de desconto: botões prontos (5%, 10%, 15%, 20%…, em Configurações) que já mostram quanto fica,
+   * ou digitar outro valor em % ou R$. Devolve o texto ("10%", "15,00", "" para tirar) ou null se voltou.
+   */
+  async function janelaDesconto(titulo, base, atual) {
+    const cfg = await U.config();
+    const max = Number(cfg.desconto_maximo_pct || 100);
+    const presets = [...new Set(String(cfg.desconto_presets || '5,10,15,20').split(/[;,\s]+/)
+      .map((x) => Number(String(x).replace('%', ''))).filter((n) => n > 0 && n <= 100))].sort((a, b) => a - b).slice(0, 8);
+    atual = String(atual || '').trim();
+    const ehPreset = (p) => atual.replace(',', '.') === `${p}%`;
+    // O foco começa nos botões (teclas 1, 2, 3…): no marcado, senão no primeiro liberado.
+    const focoPct = (presets.find((p) => ehPreset(p) && p <= max) ?? presets.find((p) => p <= max));
+    return new Promise((resolve) => {
+      let resposta = null;
+      const corpo = abrirModal(titulo, `
+        <div class="dsc">
+          <p class="dsc-base">Valor sem desconto: <b>${brl(base)}</b></p>
+          <div class="dsc-botoes">${presets.map((p, i) => {
+    const v = Math.round((base * p) / 100);
+    const bloq = p > max;
+    return `<button type="button" class="dsc-btn ${ehPreset(p) ? 'sel' : ''}" data-pct="${p}" ${p === focoPct ? 'autofocus' : ''} ${bloq ? `disabled title="Acima do desconto máximo (${max}%)"` : ''}>
+              <kbd>${i + 1}</kbd><b>${String(p).replace('.', ',')}%</b><small>− ${brl(v)}</small><span>fica ${brl(base - v)}</span></button>`;
+  }).join('')}</div>
+          <form class="form dsc-outro">
+            <label>Outro desconto <small>em % (ex.: 12%) ou em reais (ex.: 15,00)</small>
+              <input name="v" value="${esc(atual && !presets.some(ehPreset) ? atual : '')}" autocomplete="off"></label>
+            <div class="acoes">
+              ${atual ? '<button type="button" class="btn btn-fantasma btn-perigo-claro" id="dsc-tirar">Tirar desconto</button>' : ''}
+              <button type="button" class="btn" data-fechar>Voltar</button><button class="btn btn-primario">Aplicar</button>
+            </div>
+          </form>
+        </div>`, { aoFechar: () => resolve(resposta), largura: '520px' });
+      const escolher = (b) => { if (!b || b.disabled) return; resposta = `${b.dataset.pct}%`; fecharModal(); };
+      corpo.querySelector('.dsc-botoes').onclick = (ev) => escolher(ev.target.closest('[data-pct]'));
+      // Teclas 1, 2, 3… escolhem o botão (fora do campo de digitar).
+      corpo.querySelector('.dsc').onkeydown = (ev) => {
+        if (ev.target.matches('input') || !/^[1-9]$/.test(ev.key)) return;
+        ev.preventDefault();
+        escolher(corpo.querySelectorAll('[data-pct]')[Number(ev.key) - 1]);
+      };
+      const tirar = corpo.querySelector('#dsc-tirar');
+      if (tirar) tirar.onclick = () => { resposta = ''; fecharModal(); };
+      corpo.querySelector('form').onsubmit = (ev) => { ev.preventDefault(); resposta = ev.target.v.value.trim(); fecharModal(); };
+    });
+  }
+
   async function pedirDesconto() {
     const t = totais();
-    const v = await U.perguntar('Desconto na venda', `Digite em % (ex.: 10%) ou em reais (ex.: 15,00). Subtotal: ${brl(t.subtotal)}. Deixe vazio para tirar.`,
-      { valor: carrinho.desconto || '', obrigatorio: false });
+    const v = await janelaDesconto('Desconto na venda', t.subtotal, carrinho.desconto);
     if (v === null) return;
     const d = lerDesconto(v, t.subtotal);
     if (Number.isNaN(d) || d < 0) return aviso('Desconto inválido. Use 10% ou 15,00.', 'erro');
@@ -615,14 +661,15 @@ Telas.pdv = (() => {
     }
     if (btn.dataset.acao === 'remover') carrinho.itens.splice(i, 1);
     if (btn.dataset.acao === 'desc') {
-      const v = await U.perguntar('Desconto no item', `${it.produto.nome} — ${brl(brutoItem(it))}. Ex.: 10% ou 20,00`,
-        { valor: it.desconto ? num(it.desconto) : '', obrigatorio: false });
+      const v = await janelaDesconto(`Desconto: ${it.produto.nome}`, brutoItem(it), it.descontoTxt || (it.desconto ? num(it.desconto) : ''));
       if (v !== null) {
         const d = lerDesconto(v, brutoItem(it));
         if (Number.isNaN(d) || d < 0 || d > brutoItem(it)) aviso('Desconto inválido.', 'erro');
-        else it.desconto = d;
+        else { it.desconto = d; it.descontoTxt = String(v).trim(); }
       }
     }
+    // Desconto em % acompanha a quantidade.
+    if (it && it.descontoTxt && it.descontoTxt.endsWith('%')) it.desconto = lerDesconto(it.descontoTxt, brutoItem(it)) || 0;
     if (it && it.desconto > brutoItem(it)) it.desconto = brutoItem(it);
     salvar();
     if (!raiz) return;

@@ -197,6 +197,7 @@ const CONFIG_PADRAO = {
   etiqueta_mostrar_preco: '1',
   estoque_negativo: '0',
   desconto_maximo_pct: '30',
+  desconto_presets: '5, 10, 15, 20', // botões prontos na janela de desconto (%)
   impressao_automatica: '1',
   // Impressão direta (sem o diálogo do navegador)
   impressao_cupom_modo: 'direta',

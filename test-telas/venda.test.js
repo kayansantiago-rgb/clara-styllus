@@ -169,3 +169,46 @@ test('modo direto: escolhe a forma e Enter confirma; no dinheiro mostra o troco 
     await sis.fechar();
   }
 });
+
+test('desconto com botões prontos: 5/10/15/20%, tecla de atalho, por peça e respeitando o máximo', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    const p = sis.pagina;
+    await sis.ir('pdv');
+    await bipar(sis, d.vestido.codigo); // 259,90
+    await p.keyboard.press('F7');
+    await p.waitForSelector('.dsc-btn');
+    assert.deepEqual(await p.$$eval('.dsc-btn b', (xs) => xs.map((x) => x.textContent)), ['5%', '10%', '15%', '20%']);
+    assert.match(await p.textContent('.dsc-btn[data-pct="10"]'), /− R\$\s?25,99[\s\S]*fica R\$\s?233,91/);
+    if (process.env.PRINTS) await p.locator('.modal').screenshot({ path: `${process.env.PRINTS}/desconto.png` });
+    await p.keyboard.press('3'); // 15%
+    await p.waitForTimeout(300);
+    assert.match(await p.textContent('.p4-pagar'), /220,91/);
+    // Abrindo de novo, o 15% aparece marcado; "Tirar desconto" volta ao normal.
+    await p.keyboard.press('F7');
+    await p.waitForSelector('.dsc-btn.sel[data-pct="15"]');
+    await p.click('#dsc-tirar');
+    await p.waitForTimeout(300);
+    assert.match(await p.textContent('.p4-pagar'), /259,90/);
+    // Desconto na peça em %: acompanha a quantidade.
+    await p.click('[data-acao=desc]');
+    await p.waitForSelector('.dsc-btn');
+    await p.click('.dsc-btn[data-pct="20"]');
+    await p.waitForTimeout(300);
+    assert.match(await p.textContent('[data-acao=desc]'), /51,98[\s\S]*20%/);
+    await p.click('[data-acao=mais]');
+    await p.waitForTimeout(300);
+    assert.match(await p.textContent('[data-acao=desc]'), /103,96/);
+    // Acima do desconto máximo (Configurações): botão desligado.
+    await sis.api('/api/config', { metodo: 'PUT', corpo: { desconto_maximo_pct: '15', desconto_presets: '5, 10, 15, 20, 30' } });
+    await p.evaluate(() => U.config(true));
+    await p.keyboard.press('F7');
+    await p.waitForSelector('.dsc-btn');
+    assert.equal(await p.locator('.dsc-btn').count(), 5);
+    assert.equal(await p.locator('.dsc-btn[disabled]').count(), 2);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
