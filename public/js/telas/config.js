@@ -127,6 +127,12 @@ Telas.config = (() => {
       img.src = url;
       ev.target.value = '';
     };
+    raiz.querySelector('#logo-loja').onclick = () => {
+      const img = new Image();
+      img.onload = () => { imagem = img; converter(); };
+      img.onerror = () => aviso('Não consegui abrir a logo da loja.', 'erro');
+      img.src = '/img/logo-cupom.png';
+    };
     tom.oninput = U.debounce(() => { if (imagem) converter(); }, 80);
     raiz.querySelector('#logo-tirar').onclick = () => {
       imagem = null;
@@ -270,6 +276,7 @@ Telas.config = (() => {
               <div class="cfg-logo-caixa" id="logo-caixa"></div>
               <div class="cfg-logo-acoes">
                 <label class="btn">${Icone('camera')} Escolher imagem<input type="file" id="logo-arq" accept="image/*" hidden></label>
+                <button type="button" class="btn btn-peq" id="logo-loja">${Icone('estrela')} Usar a logo da loja</button>
                 <label class="cfg-tom">Tom <input type="range" id="logo-tom" min="60" max="230" value="150"></label>
                 <button type="button" class="btn btn-peq" id="logo-tirar">${Icone('lixeira')} Tirar logo</button>
               </div>

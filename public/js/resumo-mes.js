@@ -68,7 +68,7 @@ const ResumoMes = (() => {
     await Promise.all([
       document.fonts.load('600 80px "Playfair Display"'), document.fonts.load('700 40px Inter'), document.fonts.load('500 30px Inter'),
     ]).catch(() => {});
-    const logo = await carregarImg(d.cfg.cupom_logo_img);
+    const logo = await carregarImg('/img/logo.png');
     cv.width = W;
     cv.height = H;
     const ctx = cv.getContext('2d');
@@ -77,9 +77,9 @@ const ResumoMes = (() => {
 
     // Fundo: degradê ameixa → rosa, com círculos suaves.
     const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#2c1621');
-    g.addColorStop(0.55, '#6e2f4b');
-    g.addColorStop(1, '#b45d81');
+    g.addColorStop(0, '#29191d');
+    g.addColorStop(0.55, '#653843');
+    g.addColorStop(1, '#a86979');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     for (const [x, y, r, a] of [[940, 140, 260, 0.08], [80, 1180, 320, 0.07], [1000, 1000, 140, 0.06], [140, 260, 90, 0.05]]) {
@@ -89,18 +89,15 @@ const ResumoMes = (() => {
       ctx.fill();
     }
 
-    // Cabeçalho: logo (em selo branco) ou nome da loja.
-    let y = 96;
+    // Cabeçalho: logo dourada da loja (ou o nome, se não carregar).
+    let y = 70;
     const nomeLoja = d.cfg.loja_nome || 'Clara Styllus';
     if (logo) {
-      const fator = Math.min(300 / logo.width, 110 / logo.height);
+      const fator = Math.min(320 / logo.width, 160 / logo.height);
       const lw = logo.width * fator;
       const lh = logo.height * fator;
-      ctx.fillStyle = '#fff';
-      arredondado(ctx, (W - lw) / 2 - 34, y - 22, lw + 68, lh + 44, 26);
-      ctx.fill();
       ctx.drawImage(logo, (W - lw) / 2, y, lw, lh);
-      y += lh + 80;
+      y += lh + 70;
     } else {
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
@@ -191,11 +188,11 @@ const ResumoMes = (() => {
       ctx.fillStyle = '#fff';
       arredondado(ctx, 64, y, W - 128, 124, 26);
       ctx.fill();
-      ctx.fillStyle = '#f6e3ec';
+      ctx.fillStyle = '#f3e6e9';
       ctx.beginPath();
       ctx.arc(64 + 66, y + 62, 38, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#a14d6f';
+      ctx.fillStyle = '#955968';
       ctx.textAlign = 'center';
       ctx.font = `700 38px ${SANS}`;
       ctx.fillText(ico, 64 + 66, y + 76);
@@ -203,11 +200,11 @@ const ResumoMes = (() => {
       ctx.fillStyle = '#8a7d84';
       ctx.font = `500 24px ${SANS}`;
       ctx.fillText(rot, 64 + 128, y + 48);
-      ctx.fillStyle = '#2b2027';
+      ctx.fillStyle = '#292224';
       ctx.font = `700 36px ${SANS}`;
       ctx.fillText(caber(ctx, nome, 520), 64 + 128, y + 92);
       ctx.textAlign = 'right';
-      ctx.fillStyle = '#a14d6f';
+      ctx.fillStyle = '#955968';
       ctx.font = `600 26px ${SANS}`;
       ctx.fillText(sub, W - 64 - 32, y + 92);
       y += 146;

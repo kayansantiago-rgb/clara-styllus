@@ -9,7 +9,7 @@ Telas.relatorios = (() => {
   }
 
   const PERIODOS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['mes', 'Este mês'], ['passado', 'Mês passado'], ['outro', 'Escolher datas']];
-  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#e87ba4', vale: '#008300', outro: '#4a3aa7' };
+  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#d98a9e', vale: '#008300', outro: '#4a3aa7' };
   const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const SEMANA_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
   const SEMANA_ORDEM = [1, 2, 3, 4, 5, 6, 0];

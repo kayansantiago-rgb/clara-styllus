@@ -5,6 +5,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Identidade da loja**: a logo dourada (monograma CS com a borboleta) na tela de entrada, no menu, no
+  ícone dos atalhos e da aba, no Resumo do mês e no catálogo do Instagram; cores do sistema no ameixa e
+  dourado da marca. Em Configurações → Cupom, o botão **Usar a logo da loja** coloca a logo no cupom.
+
 - **Assistente de boas-vindas**: na primeira vez, o administrador passa por 5 passos (dados da loja,
   impressoras com teste, vendedoras, markup e meta) e o sistema já fica pronto para vender.
 - **Histórico de ações** (administrador): quem cancelou ou excluiu venda, deu desconto, mexeu no estoque

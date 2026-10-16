@@ -59,7 +59,7 @@ const Animacoes = (() => {
     document.body.appendChild(cv);
     const ctx = cv.getContext('2d');
     ctx.scale(dpr, dpr);
-    const cores = ['#a14d6f', '#d07ca0', '#f3c5d8', '#e9c46a', '#f6dd9b', '#ffffff', '#7c3554'];
+    const cores = ['#955968', '#c48897', '#edcbd4', '#e9c46a', '#f6dd9b', '#ffffff', '#723f4c'];
     const pecas = Array.from({ length: quantidade }, (_, i) => ({
       x: W / 2 + (Math.random() - 0.5) * W * 0.3,
       y: H * 0.35 + (Math.random() - 0.5) * 60,

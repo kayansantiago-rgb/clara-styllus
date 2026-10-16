@@ -71,7 +71,7 @@ const Graficos = (() => {
    * Mapa de calor: linhas × colunas, cor de um só tom (claro = pouco, escuro = muito).
    * celulas: Map("linha|coluna" → { valor, dica }).
    */
-  const TONS = ['#f6e6ed', '#e7bccf', '#d18cab', '#b05a7e', '#7a3352'];
+  const TONS = ['#f4e8eb', '#e1c2ca', '#c796a2', '#a46676', '#703d4a'];
   function calor(linhas, colunas, celulas, { formato = U.brl } = {}) {
     const valores = [...celulas.values()].map((c) => c.valor).filter((v) => v > 0);
     if (!valores.length) return '<div class="g-vazio">Sem vendas no período.</div>';

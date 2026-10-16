@@ -91,9 +91,9 @@
     conteudo.innerHTML = `
       <div class="login-tela">
         <section class="login-arte">
-          <span class="marca-logo">CS</span>
+          <span class="login-selo">Ponto de venda</span>
           <div class="login-arte-meio">
-            <h1>${esc(s.loja_nome || 'Clara Styllus')}</h1>
+            <img class="login-logo" src="/img/logo.png" alt="${esc(s.loja_nome || 'Clara Styllus')}">
             <p>Ponto de venda da loja: vendas, estoque, crediário e caixa no mesmo lugar.</p>
           </div>
           <div class="login-relogio" id="login-relogio"></div>

@@ -23,7 +23,7 @@ Telas['boas-vindas'] = (() => {
     raiz.innerHTML = `
       <div class="bv">
         <aside class="bv-lado">
-          <div class="bv-marca"><span class="marca-logo">CS</span><div><b>Boas-vindas!</b><small>Vamos deixar a loja pronta em poucos minutos.</small></div></div>
+          <div class="bv-marca"><span class="marca-logo"><img src="/img/cs.png" alt="CS"></span><div><b>Boas-vindas!</b><small>Vamos deixar a loja pronta em poucos minutos.</small></div></div>
           <ol class="bv-passos">${PASSOS.map((p, i) => `
             <li class="${i === passo ? 'atual' : i < passo ? 'feito' : ''}" data-ir="${i}">
               <span class="bv-num">${i < passo ? Icone('check') : i + 1}</span>

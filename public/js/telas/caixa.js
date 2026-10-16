@@ -77,7 +77,7 @@ Telas.caixa = (() => {
   }
 
   // -------------------------------------------------------------- painel
-  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#e87ba4', vale: '#008300', outro: '#4a3aa7' };
+  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#d98a9e', vale: '#008300', outro: '#4a3aa7' };
 
   function painel(r) {
     const troco = r.vendas.troco;
@@ -170,7 +170,7 @@ Telas.caixa = (() => {
     const sangrias = r.movimentos.filter((m) => m.tipo === 'sangria');
     const fora = [
       ...r.formas.filter((f) => !din(f)).map((f) => [rotulo(f.forma), f.valor, COR_FORMA[f.forma] || '#4a3aa7']),
-      ...(r.recebimentos_crediario || []).filter((f) => !din(f)).map((f) => [`Crediário recebido · ${U.FORMAS[f.forma] || f.forma}`, f.valor, '#e87ba4']),
+      ...(r.recebimentos_crediario || []).filter((f) => !din(f)).map((f) => [`Crediário recebido · ${U.FORMAS[f.forma] || f.forma}`, f.valor, '#d98a9e']),
       ...(r.sinais_reserva || []).filter((f) => !din(f)).map((f) => [`Sinal de reserva · ${U.FORMAS[f.forma] || f.forma}`, f.valor, '#4a3aa7']),
     ];
     const linha = (rot, valor, extra = '') => `<div class="linha ${extra}"><span>${rot}</span><span>${valor}</span></div>`;

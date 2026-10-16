@@ -7,7 +7,7 @@ const TirarFundo = (() => {
   const LADO = 320; // entrada do modelo
   const SAIDA = [900, 1200]; // foto final, 3 × 4
   const FUNDOS = {
-    rosa: { nome: 'Rosa da loja', cores: ['#fbf4f7', '#f1dde6'] },
+    rosa: { nome: 'Rosa da loja', cores: ['#faf5f6', '#eee0e3'] },
     branco: { nome: 'Branco', cores: ['#ffffff', '#ffffff'] },
     creme: { nome: 'Creme', cores: ['#faf6f0', '#efe5d8'] },
   };
@@ -193,7 +193,7 @@ const TirarFundo = (() => {
     const sctx = sombra.getContext('2d');
     sctx.drawImage(recorte, 0, 0);
     sctx.globalCompositeOperation = 'source-in';
-    sctx.fillStyle = estilo === 'rosa' ? '#5a2840' : '#3a3030';
+    sctx.fillStyle = estilo === 'rosa' ? '#532f38' : '#3a3030';
     sctx.fillRect(0, 0, sombra.width, sombra.height);
     ctx.save();
     ctx.globalAlpha = 0.16;

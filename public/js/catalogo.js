@@ -3,6 +3,7 @@
  * com foto, nome, tamanhos disponíveis, preço (De/Por) e o "3x de" sem juros.
  */
 const Catalogo = (() => {
+  const LOGO = '/img/logo.png'; // logo dourada da loja (fundo transparente)
   const { esc, brl, erro, abrirModal, aviso } = U;
   const FORMATOS = { story: [1080, 1920, 'Stories / status (1080 × 1920)'], post: [1080, 1350, 'Post do feed (1080 × 1350)'] };
   const SERIF = '"Playfair Display", Georgia, serif';
@@ -93,9 +94,9 @@ const Catalogo = (() => {
       const ih = img.height * f;
       ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
     } else {
-      ctx.fillStyle = '#f3dde7';
+      ctx.fillStyle = '#f0e0e4';
       ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#c58ea6';
+      ctx.fillStyle = '#bd96a0';
       ctx.textAlign = 'center';
       ctx.font = `600 ${Math.round(w / 9)}px ${SERIF}`;
       ctx.fillText('foto em breve', x + w / 2, y + h / 2);
@@ -105,11 +106,11 @@ const Catalogo = (() => {
 
   function fundo(ctx, W, H) {
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#fbf4f7');
-    g.addColorStop(1, '#f3e1e9');
+    g.addColorStop(0, '#faf5f6');
+    g.addColorStop(1, '#f0e4e7');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(161,77,111,.06)';
+    ctx.fillStyle = 'rgba(149,89,104,.06)';
     for (const [x, y, r] of [[W - 60, 120, 220], [40, H - 140, 260]]) {
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -124,7 +125,7 @@ const Catalogo = (() => {
       ctx.drawImage(logo, (W - logo.width * f) / 2, y, logo.width * f, logo.height * f);
       return logo.height * f;
     }
-    ctx.fillStyle = '#5a2840';
+    ctx.fillStyle = '#532f38';
     ctx.textAlign = 'center';
     ctx.font = `600 ${Math.round(alturaMax * 0.62)}px ${SERIF}`;
     ctx.fillText(cfg.loja_nome || 'Clara Styllus', W / 2, y + alturaMax * 0.72);
@@ -135,7 +136,7 @@ const Catalogo = (() => {
     const contato = [cfg.loja_instagram, cfg.loja_telefone && `WhatsApp ${cfg.loja_telefone}`].filter(Boolean).join('   ·   ');
     if (!contato) return;
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#8a5a70';
+    ctx.fillStyle = '#836169';
     ctx.font = `600 30px ${SANS}`;
     ctx.fillText(caber(ctx, contato, W - 120), W / 2, H - 56);
   }
@@ -159,13 +160,13 @@ const Catalogo = (() => {
       ctx.stroke();
       h += 46 * escala;
     }
-    ctx.fillStyle = '#7a3352';
+    ctx.fillStyle = '#703d4a';
     ctx.font = `800 ${Math.round(84 * escala)}px ${SANS}`;
     ctx.fillText(`${m.varia ? 'a partir de ' : m.de ? 'por ' : ''}${brl(m.preco)}`, x, y + h + 80 * escala);
     h += 96 * escala;
     const n = parcelasSemJuros(cfg);
     if (n) {
-      ctx.fillStyle = '#5a2840';
+      ctx.fillStyle = '#532f38';
       ctx.font = `600 ${Math.round(36 * escala)}px ${SANS}`;
       ctx.fillText(`ou ${n}x de ${brl(Math.ceil(m.preco / n))} sem juros`, x, y + h + 40 * escala);
       h += 54 * escala;
@@ -189,10 +190,10 @@ const Catalogo = (() => {
       ctx.fillStyle = '#fff';
       arredondado(ctx, x, y, larg[i], alt, alt / 2);
       ctx.fill();
-      ctx.strokeStyle = '#e7bccf';
+      ctx.strokeStyle = '#e1c2ca';
       ctx.lineWidth = 2;
       ctx.stroke();
-      ctx.fillStyle = '#7a3352';
+      ctx.fillStyle = '#703d4a';
       ctx.textAlign = 'center';
       ctx.fillText(t, x + larg[i] / 2, y + alt * 0.68);
       x += larg[i] + vao;
@@ -203,7 +204,7 @@ const Catalogo = (() => {
   /** Uma peça por imagem. */
   async function desenharUma(cv, m, cfg, formato) {
     const [W, H] = FORMATOS[formato];
-    const [img, logo] = await Promise.all([carregarImg(m.foto), carregarImg(cfg.cupom_logo_img)]);
+    const [img, logo] = await Promise.all([carregarImg(m.foto), carregarImg(LOGO)]);
     cv.width = W;
     cv.height = H;
     const ctx = cv.getContext('2d');
@@ -216,7 +217,7 @@ const Catalogo = (() => {
     foto(ctx, img, 70, y, W - 140, fh, 40);
     if (m.de) {
       const pct = Math.round((1 - m.preco / m.de) * 100);
-      ctx.fillStyle = '#7a3352';
+      ctx.fillStyle = '#703d4a';
       arredondado(ctx, W - 70 - 230, y + 30, 200, 76, 38);
       ctx.fill();
       ctx.fillStyle = '#fff';
@@ -225,7 +226,7 @@ const Catalogo = (() => {
       ctx.fillText(`−${pct}%`, W - 70 - 130, y + 82);
     }
     y += fh + (story ? 80 : 60);
-    ctx.fillStyle = '#2b2027';
+    ctx.fillStyle = '#292224';
     ctx.textAlign = 'center';
     ctx.font = `600 ${story ? 66 : 58}px ${SERIF}`;
     ctx.fillText(caber(ctx, m.nome, W - 140), W / 2, y + 20);
@@ -244,7 +245,7 @@ const Catalogo = (() => {
   /** Quatro peças por imagem (grade 2 × 2). */
   async function desenharGrade(cv, lista, cfg, formato, titulo) {
     const [W, H] = FORMATOS[formato];
-    const [imgs, logo] = await Promise.all([Promise.all(lista.map((m) => carregarImg(m.foto))), carregarImg(cfg.cupom_logo_img)]);
+    const [imgs, logo] = await Promise.all([Promise.all(lista.map((m) => carregarImg(m.foto))), carregarImg(LOGO)]);
     cv.width = W;
     cv.height = H;
     const ctx = cv.getContext('2d');
@@ -253,7 +254,7 @@ const Catalogo = (() => {
     let y = story ? 110 : 44;
     y += cabecalho(ctx, W, y, cfg, logo, story ? 100 : 70) + (story ? 30 : 18);
     if (titulo) {
-      ctx.fillStyle = '#7a3352';
+      ctx.fillStyle = '#703d4a';
       ctx.textAlign = 'center';
       ctx.font = `600 ${story ? 54 : 44}px ${SERIF}`;
       ctx.fillText(caber(ctx, titulo, W - 140), W / 2, y + (story ? 48 : 38));
@@ -276,19 +277,19 @@ const Catalogo = (() => {
       ctx.fill();
       const txt = story ? 210 : 170;
       foto(ctx, imgs[i], x + 14, cy + 14, cw - 28, ch - txt - 14, 22);
-      ctx.fillStyle = '#2b2027';
+      ctx.fillStyle = '#292224';
       ctx.textAlign = 'center';
       ctx.font = `600 ${story ? 34 : 30}px ${SANS}`;
       ctx.fillText(caber(ctx, m.nome, cw - 40), x + cw / 2, cy + ch - txt + 50);
       ctx.fillStyle = '#8a7d84';
       ctx.font = `500 ${story ? 25 : 22}px ${SANS}`;
       ctx.fillText(caber(ctx, m.tamanhos.length ? `Tam ${m.tamanhos.join(' · ')}` : m.cores.join(' · '), cw - 40), x + cw / 2, cy + ch - txt + (story ? 90 : 84));
-      ctx.fillStyle = '#7a3352';
+      ctx.fillStyle = '#703d4a';
       ctx.font = `800 ${story ? 48 : 42}px ${SANS}`;
       const valor = `${m.varia ? 'a partir de ' : ''}${brl(m.preco)}`;
       ctx.fillText(caber(ctx, valor, cw - 40), x + cw / 2, cy + ch - (story ? 50 : 34));
       if (m.de) {
-        ctx.fillStyle = '#7a3352';
+        ctx.fillStyle = '#703d4a';
         arredondado(ctx, x + cw - 150, cy + 30, 120, 52, 26);
         ctx.fill();
         ctx.fillStyle = '#fff';
@@ -298,7 +299,7 @@ const Catalogo = (() => {
     });
     const n = parcelasSemJuros(cfg);
     if (n) {
-      ctx.fillStyle = '#5a2840';
+      ctx.fillStyle = '#532f38';
       ctx.textAlign = 'center';
       ctx.font = `600 28px ${SANS}`;
       ctx.fillText(`Parcele em até ${n}x sem juros`, W / 2, H - (cfg.loja_instagram || cfg.loja_telefone ? (story ? 120 : 100) : 20));
