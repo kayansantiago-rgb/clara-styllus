@@ -339,7 +339,8 @@ Telas.config = (() => {
             ${campo('etiqueta_espaco_mm', 'Espaço entre colunas (mm)', 'type="number" min="0" max="20" step="0.5"')}
             ${campo('etiqueta_margem_mm', 'Margem interna (mm)', 'type="number" min="0" max="10" step="0.5"')}
             ${campo('etiqueta_gap_mm', 'Espaço entre etiquetas no rolo (mm)', 'type="number" min="0" max="20" step="0.5"')}
-            ${check('etiqueta_mostrar_loja', 'Mostrar nome da loja')}
+            ${check('etiqueta_mostrar_loja', 'Mostrar a loja na etiqueta')}
+            ${check('etiqueta_logo', 'Usar a logo da loja (em vez do nome escrito)')}
             ${check('etiqueta_mostrar_preco', 'Mostrar preço')}
             <div class="acoes acoes-esq col2"><button type="button" class="btn" data-teste="etiqueta">${Icone('etiqueta')} Imprimir etiqueta de teste</button></div>
           </div>

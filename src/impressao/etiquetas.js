@@ -10,6 +10,7 @@
  */
 
 const { semAcento } = require('./escpos');
+const Logo = require('./logo-etiqueta-bits');
 
 const ean13Valido = (c) => {
   if (!/^\d{13}$/.test(c)) return false;
@@ -55,7 +56,11 @@ function conteudo(p, cfg, m) {
   // Modelos: padrão (loja, nome, detalhes, preço), preço em destaque e simples (sem o nome da loja).
   const modelo = cfg.etiqueta_modelo || 'padrao';
   const destaque = modelo === 'preco';
-  if (cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples') linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: (destaque ? 0.08 : 0.1) * h });
+  if (cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples') {
+    // Logo da loja no lugar do nome (ou o nome escrito, se a logo estiver desligada).
+    if (cfg.etiqueta_logo === '1') linhas.push({ logo: true, alt: (destaque ? 0.13 : modelo === 'parcelado' ? 0.15 : 0.17) * h });
+    else linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: (destaque ? 0.08 : 0.1) * h });
+  }
   linhas.push({ texto: p.nome, alt: (destaque ? 0.09 : 0.11) * h });
   if (det) linhas.push({ texto: det, alt: (destaque ? 0.075 : 0.085) * h });
   if (cfg.etiqueta_mostrar_preco === '1' && modelo === 'parcelado' && parcelasEtiqueta(cfg) >= 2) {
@@ -79,11 +84,18 @@ function conteudo(p, cfg, m) {
   }
   // Quebras de linha e caracteres de controle viram espaço: na linguagem da impressora, uma quebra de
   // linha no nome da peça viraria um comando (ex.: imprimir centenas de etiquetas).
-  return linhas.map((l) => ({
+  return linhas.map((l) => (l.logo ? { ...l, alt: Math.max(16, Math.round(l.alt)) } : {
     ...l,
     texto: semAcento(String(l.texto).replace(/[\x00-\x1f\x7f]+/g, ' ')).toUpperCase(),
     alt: Math.max(12, Math.round(l.alt)),
   }));
+}
+
+/** Coloca a logo centralizada na linha; devolve [comando, altura usada]. */
+function linhaLogo(l, x0, y, m, util, linguagem) {
+  const b = Logo.bitmap(l.alt, util);
+  const x = x0 + m.margem + Math.max(0, Math.round((util - b.largura) / 2));
+  return [Logo[linguagem](b, x, y), b.altura];
 }
 
 function barras(codigo, larguraUtil) {
@@ -106,6 +118,7 @@ function zpl(lista, cfg) {
       const util = m.largura - 2 * m.margem;
       let y = m.margem;
       for (const l of conteudo(p, cfg, m)) {
+        if (l.logo) { const [c, a] = linhaLogo(l, x0, y, m, util, 'zpl'); z += c; y += a + 4; continue; }
         // Fonte A0 tem ~0,8 da largura por caractere: diminui (ou corta) para caber em uma linha.
         let alt = l.alt;
         while (alt > 14 && l.texto.length * alt * 0.75 * 0.8 > util) alt--;
@@ -165,6 +178,7 @@ function epl(lista, cfg) {
       const util = m.largura - 2 * m.margem;
       let y = m.margem;
       for (const l of conteudo(p, cfg, m)) {
+        if (l.logo) { const [c, a] = linhaLogo(l, x0, y, m, util, 'epl'); b += c; y += a + 4; continue; }
         const f = fonteEpl(l.alt, l.texto, util);
         const max = Math.floor(util / f.w);
         const t = l.texto.slice(0, max);
@@ -219,6 +233,7 @@ function tspl(lista, cfg) {
       const util = m.largura - 2 * m.margem;
       let y = m.margem;
       for (const l of conteudo(p, cfg, m)) {
+        if (l.logo) { const [c, a] = linhaLogo(l, x0, y, m, util, 'tspl'); t += c; y += a + 4; continue; }
         const f = fonteTspl(l.alt, l.texto, util);
         const tx = l.texto.slice(0, Math.floor(util / f.w));
         const x = x0 + m.margem + Math.max(0, Math.round((util - tx.length * f.w) / 2));

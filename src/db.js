@@ -194,6 +194,7 @@ const CONFIG_PADRAO = {
   etiqueta_colunas: '1',
   etiqueta_margem_mm: '2',
   etiqueta_mostrar_loja: '1',
+  etiqueta_logo: '1', // logo da loja no lugar do nome escrito
   etiqueta_mostrar_preco: '1',
   estoque_negativo: '0',
   desconto_maximo_pct: '30',

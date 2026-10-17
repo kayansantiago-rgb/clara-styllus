@@ -16,11 +16,12 @@ const Impressao = (() => {
     doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head>
       <body>${corpo}</body></html>`);
     doc.close();
-    // Pequena espera para o navegador montar o layout antes de imprimir.
-    setTimeout(() => {
+    // Espera as imagens (logo) carregarem e o navegador montar o layout antes de imprimir.
+    const imgs = [...doc.images].map((i) => (i.complete ? null : new Promise((ok) => { i.onload = ok; i.onerror = ok; })));
+    Promise.race([Promise.all(imgs), new Promise((ok) => setTimeout(ok, 3000))]).then(() => setTimeout(() => {
       frame.contentWindow.focus();
       frame.contentWindow.print();
-    }, 150);
+    }, 150));
   }
 
   // ---------------------------------------------------------------- cupom
@@ -195,7 +196,9 @@ const Impressao = (() => {
       .filter(Boolean).join(' · ');
     const modelo = cfg.etiqueta_modelo || 'padrao';
     return `<div class="etq modelo-${esc(modelo)}">
-      ${cfg.etiqueta_mostrar_loja === '1' && modelo !== 'simples' ? `<div class="loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>` : ''}
+      ${cfg.etiqueta_mostrar_loja !== '1' || modelo === 'simples' ? ''
+    : cfg.etiqueta_logo === '1' ? `<div class="loja-logo"><img src="${location.origin}/img/logo-etiqueta.png" alt="${esc(cfg.loja_nome || 'Clara Styllus')}"></div>`
+      : `<div class="loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>`}
       <div class="nome">${esc(p.nome)}</div>
       ${detalhes ? `<div class="det">${esc(detalhes)}</div>` : ''}
       ${cfg.etiqueta_mostrar_preco !== '1' ? ''
@@ -228,6 +231,8 @@ const Impressao = (() => {
       .etq { width: ${w}mm; height: ${h}mm; padding: ${m}mm; overflow: hidden;
              display: flex; flex-direction: column; align-items: center; text-align: center; }
       .loja { font-family: Georgia, serif; font-size: ${Math.max(6, h * 0.22)}pt; font-weight: bold; line-height: 1.1; }
+      .loja-logo { height: ${(h * (cfg.etiqueta_modelo === 'preco' ? 0.13 : cfg.etiqueta_modelo === 'parcelado' ? 0.15 : 0.17)).toFixed(2)}mm; flex-shrink: 0; margin-bottom: .4mm; }
+      .loja-logo img { height: 100%; width: auto; max-width: 100%; display: block; }
       .nome { font-size: ${Math.max(6, h * 0.2)}pt; font-weight: bold; line-height: 1.1;
               max-height: 2.2em; overflow: hidden; width: 100%; }
       .det { font-size: ${Math.max(5, h * 0.17)}pt; line-height: 1.15; }

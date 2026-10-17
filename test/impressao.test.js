@@ -72,6 +72,24 @@ test('TSPL: tamanho do rolo em mm, EAN-13, Code128 e uma PRINT por linha', () =>
   assert.match(t, /TEXT \d+,\d+,"\d",0,1,1,"R\$ 89,90"/);
 });
 
+test('etiqueta com a logo da loja: imagem no lugar do nome, nas três linguagens', () => {
+  const cfg = { ...cfgEtq, etiqueta_colunas: '1', etiqueta_logo: '1' };
+  const t = tspl([prod], cfg).toString('latin1');
+  const m = t.match(/BITMAP (\d+),(\d+),(\d+),(\d+),0,/);
+  assert.ok(m, 'TSPL sem BITMAP');
+  const [, x, , larg, alt] = m.map(Number);
+  assert.ok(alt >= 30 && alt <= 40 && x + larg * 8 <= 320, `logo fora da etiqueta: ${m[0]}`);
+  // O bitmap tem exatamente largura x altura bytes e o próximo comando começa logo depois.
+  const fim = t.indexOf(m[0]) + m[0].length + larg * alt;
+  assert.match(t.slice(fim, fim + 7), /^\r\nTEXT /);
+  assert.doesNotMatch(t, /"CLARA STYLLUS"/);
+  assert.match(zpl([prod], cfg).toString('latin1'), /\^GFA,\d+,\d+,\d+,[0-9A-F]+\^FS/);
+  assert.match(epl([prod], cfg).toString('latin1'), /\nGW\d+,\d+,\d+,\d+,/);
+  // Desligada (ou modelo simples): volta o nome escrito / nada.
+  assert.match(tspl([prod], { ...cfg, etiqueta_logo: '0' }).toString('latin1'), /"CLARA STYLLUS"/);
+  assert.doesNotMatch(tspl([prod], { ...cfg, etiqueta_modelo: 'simples' }).toString('latin1'), /BITMAP/);
+});
+
 test('EPL: Code128 para código que não é EAN', () => {
   const e = epl([{ ...prod, codigo: 'ABC-123' }], { ...cfgEtq, etiqueta_colunas: '1' }).toString('latin1');
   assert.match(e, /q320/);
