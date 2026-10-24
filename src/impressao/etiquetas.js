@@ -243,11 +243,16 @@ function tspl(lista, cfg) {
       }
       const codigo = semAcento(String(p.codigo).replace(/[\x00-\x1f\x7f]+/g, ''));
       const bar = barras(codigo, util);
-      const alt = Math.max(20, m.altura - m.margem - y - 26);
+      // O número embaixo das barras é escrito pelo sistema (fonte pequena, 20 pontos): o da própria
+      // impressora é grande e saía cortado no fim da etiqueta de 30 mm.
+      const fn = FONTES_TSPL[1];
+      const alt = Math.max(20, m.altura - m.margem - y - 4 - fn.h - 2);
       const x = x0 + Math.max(m.margem, Math.round((m.largura - bar.largura) / 2));
       t += bar.ean
-        ? `BARCODE ${x},${y + 2},"EAN13",${alt},1,0,${bar.modulo},${bar.modulo},"${codigo.slice(0, 12)}"\r\n`
-        : `BARCODE ${x},${y + 2},"128",${alt},1,0,${bar.modulo},${bar.modulo},"${limpa(codigo)}"\r\n`;
+        ? `BARCODE ${x},${y + 2},"EAN13",${alt},0,0,${bar.modulo},${bar.modulo},"${codigo.slice(0, 12)}"\r\n`
+        : `BARCODE ${x},${y + 2},"128",${alt},0,0,${bar.modulo},${bar.modulo},"${limpa(codigo)}"\r\n`;
+      const num = limpa(codigo).slice(0, Math.floor(util / fn.w));
+      t += `TEXT ${x0 + m.margem + Math.max(0, Math.round((util - num.length * fn.w) / 2))},${y + 2 + alt + 2},"${fn.n}",0,1,1,"${num}"\r\n`;
     });
     t += 'PRINT 1,1\r\n';
   }

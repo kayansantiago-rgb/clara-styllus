@@ -67,8 +67,11 @@ test('TSPL: tamanho do rolo em mm, EAN-13, Code128 e uma PRINT por linha', () =>
   assert.match(t, /^SIZE 82 mm,30 mm\r\nGAP 3 mm,0 mm\r\n/); // 2 x 40 mm + 2 de espaço
   assert.equal((t.match(/^CLS\r$/gm) || []).length, 2);
   assert.equal((t.match(/^PRINT 1,1\r$/gm) || []).length, 2);
-  assert.match(t, /BARCODE \d+,\d+,"EAN13",\d+,1,0,\d,\d,"200000000001"/);
-  assert.match(t, /BARCODE \d+,\d+,"128",\d+,1,0,\d,\d,"ABC-123"/);
+  assert.match(t, /BARCODE \d+,\d+,"EAN13",\d+,0,0,\d,\d,"200000000001"/);
+  assert.match(t, /BARCODE \d+,\d+,"128",\d+,0,0,\d,\d,"ABC-123"/);
+  // Número embaixo das barras escrito em fonte pequena, dentro da etiqueta (240 pontos de altura).
+  for (const [, y] of t.matchAll(/TEXT \d+,(\d+),"2",0,1,1,"(?:2000000000015|ABC-123)"/g)) assert.ok(Number(y) + 20 <= 240 - 12, `número cortado: y=${y}`);
+  assert.match(t, /"2000000000015"/);
   assert.match(t, /TEXT \d+,\d+,"\d",0,1,1,"R\$ 89,90"/);
 });
 
