@@ -261,13 +261,24 @@ function agrupar(lista, colunas) {
   return linhas;
 }
 
+// Marcas que só entendem TSPL: se ficou em ZPL (o padrão), a impressora ignora tudo calada.
+const SO_TSPL = /knup|xprinter|gprinter|\btsc\b|hprt|idprt|beeprt|jadens|munbyn|rongta|etiquetadeira|etiquetadora/i;
+
+/** Linguagem que vai de fato para a impressora (corrige ZPL numa impressora que só fala TSPL). */
+function linguagem(cfg) {
+  const modo = cfg.impressao_etiqueta_modo || 'zpl';
+  if (modo === 'zpl' && SO_TSPL.test(cfg.impressora_etiqueta || '')) return 'tspl';
+  return modo;
+}
+
 /** lista: [{ produto, quantidade }] -> buffer pronto para a impressora */
 function gerarEtiquetas(itens, cfg) {
   const lista = itens.flatMap(({ produto, quantidade }) => Array(Math.max(0, quantidade)).fill(produto));
   if (!lista.length) return null;
-  if (cfg.impressao_etiqueta_modo === 'epl') return epl(lista, cfg);
-  if (cfg.impressao_etiqueta_modo === 'tspl') return tspl(lista, cfg);
+  const l = linguagem(cfg);
+  if (l === 'epl') return epl(lista, cfg);
+  if (l === 'tspl') return tspl(lista, cfg);
   return zpl(lista, cfg);
 }
 
-module.exports = { valorParcela, parcelasEtiqueta, gerarEtiquetas, zpl, epl, tspl, medidas };
+module.exports = { linguagem, SO_TSPL, valorParcela, parcelasEtiqueta, gerarEtiquetas, zpl, epl, tspl, medidas };

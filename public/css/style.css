@@ -1631,7 +1631,7 @@ body.modo-pdv .menu { display: none; }
 .et-qtd { width: 58px; min-height: 38px; text-align: center; font-size: 17px; font-weight: 700; border: 0; padding: 4px; background: transparent; }
 .et-qtd:focus { box-shadow: none; }
 .et-imprimir { min-height: 58px; font-size: 17px; border-radius: 16px; }
-.et-previa { background: repeating-linear-gradient(45deg, #f3eff0, #f3eff0 10px, #f7f4f5 10px, #f7f4f5 20px); border-radius: 14px; padding: 26px; min-height: 200px; display: flex; align-items: center; justify-content: center; }
+.et-previa { overflow: hidden; background: repeating-linear-gradient(45deg, #f3eff0, #f3eff0 10px, #f7f4f5 10px, #f7f4f5 20px); border-radius: 14px; padding: 26px; min-height: 200px; display: flex; align-items: center; justify-content: center; }
 .et-previa .previa-folha { zoom: 2.6; border-radius: 1mm; }
 .et-modelos { display: flex; flex-direction: column; gap: 6px; }
 .et-modelo { font: inherit; text-align: left; display: flex; flex-direction: column; border: 1.5px solid var(--borda); background: #fff; border-radius: 12px; padding: 9px 12px; cursor: pointer; color: var(--texto); }

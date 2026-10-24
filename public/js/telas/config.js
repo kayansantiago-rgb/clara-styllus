@@ -322,11 +322,11 @@ Telas.config = (() => {
         </div>
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('etiqueta')} Impressora de etiquetas</h3>
-          <p class="dica"><b>TSPL</b>: etiquetadoras genéricas, TSC, Gprinter, Xprinter. <b>ZPL</b>: Zebra, Elgin L42 Pro, Argox.
+          <p class="dica"><b>TSPL</b>: Knup, etiquetadoras genéricas, TSC, Gprinter, Xprinter. <b>ZPL</b>: Zebra, Elgin L42 Pro, Argox.
             <b>EPL</b>: Zebra LP/TLP antigas, Elgin L42 e Argox em modo PPLB. <b>Navegador</b>: etiquetas em folha A4.
             O modelo da etiqueta (preço grande, simples…) é escolhido na tela <a href="#/etiquetas">Etiquetas</a>.</p>
           <div class="grade-form tres">
-            ${sel('impressao_etiqueta_modo', 'Linguagem', [['zpl', 'ZPL'], ['epl', 'EPL / PPLB'], ['tspl', 'TSPL (genéricas, TSC, Gprinter, Xprinter)'], ['navegador', 'Folha A4 pelo navegador']])}
+            ${sel('impressao_etiqueta_modo', 'Linguagem', [['zpl', 'ZPL'], ['epl', 'EPL / PPLB'], ['tspl', 'TSPL (Knup, TSC, Gprinter, Xprinter, genéricas)'], ['navegador', 'Folha A4 pelo navegador']])}
             <label class="col2">Impressora
               <span class="campo-com-botao">
                 <select name="impressora_etiqueta" data-impressoras>${opcaoAtual(c.impressora_etiqueta)}</select>
@@ -510,6 +510,21 @@ Telas.config = (() => {
       b.onclick = () => U.som(b.dataset.som, true, form.elements.som_volume.value);
     });
     raiz.querySelectorAll('[data-atualizar-imp]').forEach((b) => { b.onclick = () => carregarImpressoras(raiz, true); });
+    // Etiquetadoras como a Knup só entendem TSPL: escolheu uma delas, a linguagem já vai junto.
+    const impEtq = form.elements.impressora_etiqueta;
+    const lingEtq = form.elements.impressao_etiqueta_modo;
+    const SO_TSPL = /knup|xprinter|gprinter|\btsc\b|hprt|idprt|beeprt|jadens|munbyn|rongta|etiquetadeira|etiquetadora/i;
+    if (impEtq && lingEtq) {
+      const conferirTspl = () => {
+        if (SO_TSPL.test(impEtq.value) && lingEtq.value !== 'tspl' && lingEtq.value !== 'navegador') {
+          lingEtq.value = 'tspl';
+          lingEtq.dispatchEvent(new Event('change', { bubbles: true }));
+          aviso('Essa etiquetadora usa a linguagem TSPL: já troquei para você. Clique em Salvar configurações.', 'alerta');
+        }
+      };
+      impEtq.addEventListener('change', conferirTspl);
+      conferirTspl(); // já estava salva em ZPL (o padrão)
+    }
     raiz.querySelectorAll('[data-teste]').forEach((b) => {
       b.onclick = async () => {
         try {

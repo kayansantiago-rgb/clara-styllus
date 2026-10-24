@@ -40,7 +40,7 @@ Telas.etiquetas = (() => {
             <p class="dica">${esc(cfg.etiqueta_largura_mm)} × ${esc(cfg.etiqueta_altura_mm)} mm ·
               ${cfg.impressao_etiqueta_modo === 'navegador'
     ? (cfg.etiqueta_colunas === '1' ? 'rolo, pelo navegador' : `folha A4 com ${esc(cfg.etiqueta_colunas)} colunas`)
-    : `${esc(cfg.etiqueta_colunas)} coluna(s) · ${cfg.impressao_etiqueta_modo.toUpperCase()}${cfg.impressora_etiqueta ? ' · ' + esc(cfg.impressora_etiqueta) : ' · <b class="txt-perigo">escolha a impressora em Configurações</b>'}`}</p>
+    : `${esc(cfg.etiqueta_colunas)} coluna(s) · ${(cfg.impressao_etiqueta_modo === 'zpl' && /knup|xprinter|gprinter|\btsc\b|hprt|idprt|beeprt|jadens|munbyn|rongta|etiquetadeira|etiquetadora/i.test(cfg.impressora_etiqueta || '') ? 'tspl' : cfg.impressao_etiqueta_modo).toUpperCase()}${cfg.impressora_etiqueta ? ' · ' + esc(cfg.impressora_etiqueta) : ' · <b class="txt-perigo">escolha a impressora em Configurações</b>'}`}</p>
             <div class="so-admin">
               <h4>Modelo da etiqueta</h4>
               <div class="et-modelos" id="modelos">
@@ -145,11 +145,25 @@ Telas.etiquetas = (() => {
     const exemplo = f[0]?.produto || { nome: 'Vestido Midi Canelado', tamanho: 'M', cor: 'Preto', referencia: '1020', preco_venda: 15990, codigo: '2000000000015' };
     const previa = raiz.querySelector('#previa');
     previa.innerHTML = `<div class="previa-folha" style="width:${cfg.etiqueta_largura_mm}mm;height:${cfg.etiqueta_altura_mm}mm"></div>`;
+    ajustarPrevia(cfg);
     // Isola o CSS da etiqueta num shadow root para não afetar a página.
     const sombra = previa.firstElementChild.attachShadow({ mode: 'open' });
     sombra.innerHTML = `<style>${Impressao.cssEtiquetas({ ...cfg, etiqueta_colunas: '2' }).replace(/@page[^}]*}/g, '')}
       .etq { outline: none; background: #fff; }</style>${Impressao.htmlEtiqueta(exemplo, cfg)}`;
   }
+
+  /** Aumenta a prévia o quanto cabe no quadro (etiqueta de 40, 50, 60 mm… nunca passa da borda). */
+  function ajustarPrevia(cfg) {
+    const previa = raiz && raiz.querySelector('#previa');
+    const folha = previa && previa.firstElementChild;
+    if (!folha) return;
+    const px = 96 / 25.4;
+    const w = (Number(cfg.etiqueta_largura_mm) || 40) * px;
+    const h = (Number(cfg.etiqueta_altura_mm) || 30) * px;
+    const livre = previa.clientWidth - 52;
+    folha.style.zoom = Math.max(0.5, Math.min(2.6, livre / w, 300 / h)).toFixed(3);
+  }
+  window.addEventListener('resize', U.debounce(async () => { if (raiz) ajustarPrevia(await U.config()); }, 150));
 
   function atualizarBotao() {
     const total = fila().reduce((a, x) => a + x.quantidade, 0);

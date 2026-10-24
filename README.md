@@ -9,7 +9,8 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   ícone dos atalhos e da aba, no Resumo do mês e no catálogo do Instagram; cores do sistema no ameixa e
   dourado da marca. Em Configurações → Cupom, o botão **Usar a logo da loja** coloca a logo no cupom. A etiqueta
   sai com a logo (monograma e nome) no lugar do nome escrito, em ZPL, EPL, TSPL e pelo navegador (dá para
-  desligar em Configurações → Impressoras).
+  desligar em Configurações → Impressoras). Etiquetadoras que só falam TSPL (Knup, Xprinter, Gprinter, TSC…)
+  recebem TSPL mesmo se a linguagem ficou no padrão ZPL.
 
 - **Assistente de boas-vindas**: na primeira vez, o administrador passa por 5 passos (dados da loja,
   impressoras com teste, vendedoras, markup e meta) e o sistema já fica pronto para vender.

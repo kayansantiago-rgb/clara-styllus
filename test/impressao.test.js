@@ -150,3 +150,12 @@ test('etiqueta modelo parcelado: "3X DE" com a parcela arredondada para cima', (
   }
   assert.match(t([p], { ...cfg, etiqueta_parcelas: '5' }).toString('latin1'), /5X DE R\$ 51,98/);
 });
+
+test('etiquetadora Knup em ZPL (o padrão) recebe TSPL, senão ela ignora a impressão', () => {
+  const { gerarEtiquetas, linguagem } = require('../src/impressao/etiquetas');
+  const cfg = { ...cfgEtq, etiqueta_colunas: '1', impressao_etiqueta_modo: 'zpl', impressora_etiqueta: 'ETIQUETADEIRA KNUP' };
+  assert.equal(linguagem(cfg), 'tspl');
+  assert.match(gerarEtiquetas([{ produto: prod, quantidade: 1 }], cfg).toString('latin1'), /^SIZE 40 mm,30 mm/);
+  assert.equal(linguagem({ ...cfg, impressora_etiqueta: 'ZDesigner GC420t' }), 'zpl');
+  assert.equal(linguagem({ ...cfg, impressao_etiqueta_modo: 'epl' }), 'epl');
+});

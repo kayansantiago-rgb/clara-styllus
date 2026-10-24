@@ -93,7 +93,7 @@ Telas['boas-vindas'] = (() => {
         <div class="bv-bloco">
           <h4>${Icone('etiqueta')} Impressora de etiquetas</h4>
           <label>Impressora<select name="impressora_etiqueta" data-impressoras><option value="${esc(cfg.impressora_etiqueta)}">${esc(cfg.impressora_etiqueta || 'Procurando…')}</option></select></label>
-          <label>Linguagem<select name="impressao_etiqueta_modo">${op('impressao_etiqueta_modo', 'zpl', 'ZPL (Zebra, Elgin L42 Pro)')}${op('impressao_etiqueta_modo', 'epl', 'EPL / PPLB (Argox)')}${op('impressao_etiqueta_modo', 'tspl', 'TSPL (genéricas, TSC, Xprinter)')}${op('impressao_etiqueta_modo', 'navegador', 'Folha A4 (impressora comum)')}</select></label>
+          <label>Linguagem<select name="impressao_etiqueta_modo">${op('impressao_etiqueta_modo', 'zpl', 'ZPL (Zebra, Elgin L42 Pro)')}${op('impressao_etiqueta_modo', 'epl', 'EPL / PPLB (Argox)')}${op('impressao_etiqueta_modo', 'tspl', 'TSPL (Knup, TSC, Xprinter, genéricas)')}${op('impressao_etiqueta_modo', 'navegador', 'Folha A4 (impressora comum)')}</select></label>
           <div class="grade-form">${campo('etiqueta_largura_mm', 'Largura (mm)', 'type="number" min="15" max="120"')}${campo('etiqueta_altura_mm', 'Altura (mm)', 'type="number" min="10" max="120"')}</div>
           <button type="button" class="btn" data-teste="etiqueta">${Icone('etiqueta')} Imprimir teste</button>
         </div>
