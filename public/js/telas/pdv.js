@@ -294,7 +294,7 @@ Telas.pdv = (() => {
           ${U.miniatura(p, 'p4-item-foto')}
           <div class="p4-item-txt">
             <b title="${esc(p.nome)}">${esc(p.nome)}</b>
-            <span class="p4-tags">${p.tamanho ? `<span class="p4-tag">Tam ${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${esc(p.cor)}</span>` : ''}<small>${esc(p.codigo)}</small></span>
+            <span class="p4-tags">${p.tamanho ? `<span class="p4-tag">Tam ${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${esc(p.cor)}</span>` : ''}${tagEstoque(p)}<small>${esc(p.codigo)}</small></span>
           </div>
           <div class="p4-item-preco">${liq ? `<s>${num(p.preco_anterior)}</s>` : ''}<span>${num(p.preco_venda)}</span><small>cada</small></div>
           <span class="qtd-ctrl p4-qtd"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>
@@ -347,20 +347,6 @@ Telas.pdv = (() => {
       alertas.push(['perigo', `<i data-icone="caderno"></i> ${esc(carrinho.cliente.nome)} tem <b>${brl(saldoCliente.vencido)}</b> vencido no crediário.
         <button class="link" data-receber-cred>receber agora</button>`]);
     }
-    const porProduto = new Map();
-    for (const it of carrinho.itens) {
-      const x = porProduto.get(it.produto.id) || { p: it.produto, qtd: 0 };
-      x.qtd += it.quantidade;
-      porProduto.set(it.produto.id, x);
-    }
-    for (const { p, qtd } of porProduto.values()) {
-      if (p.servico) continue; // serviço não tem estoque
-      const nome = esc([p.nome, p.tamanho, p.cor].filter(Boolean).join(' '));
-      if (qtd > p.estoque) alertas.push(['perigo', `<i data-icone="caixa"></i> <b>${nome}</b>: o sistema só tem ${p.estoque} em estoque. Confira a etiqueta.
-        <button class="link" data-espera="${p.id}">anotar na lista de espera</button>`]);
-      // Aviso de repor é para quem compra mercadoria (administradora); no caixa só atrapalha.
-      else if (U.sessao.ehAdmin() && p.estoque - qtd <= p.estoque_minimo) alertas.push(['alerta', `<i data-icone="caixa"></i> <b>${nome}</b>: ${p.estoque - qtd === 0 ? 'é a última peça' : `restam só ${p.estoque - qtd}`}. Hora de repor.`]);
-    }
     const pendente = local.ler('pdv_vale_pendente', null);
     if (pendente) alertas.push(['ok', `<i data-icone="vale"></i> ${/^RS/i.test(pendente.codigo) ? 'Sinal da reserva' : 'Vale-troca'} <b>${esc(pendente.codigo)}</b> (${brl(pendente.saldo)}) vai entrar no pagamento desta venda. <button class="link" id="tirar-vale">não usar</button>`]);
     const aberto = caixa ? new Date(caixa.aberto_em.replace(' ', 'T')) : null;
@@ -372,12 +358,25 @@ Telas.pdv = (() => {
     if (tirar) tirar.onclick = () => { local.gravar('pdv_vale_pendente', null); desenharAlertas(); };
     const rc = el.querySelector('[data-receber-cred]');
     if (rc) rc.onclick = () => receberCrediario();
-    el.querySelectorAll('[data-espera]').forEach((b) => {
-      b.onclick = () => {
-        const it = carrinho.itens.find((x) => x.produto.id === Number(b.dataset.espera));
-        if (it) Telas.espera.anotar({ produto: it.produto, cliente: carrinho.cliente });
-      };
-    });
+  }
+
+  /**
+   * Estoque da peça como etiqueta discreta no próprio item (no lugar das faixas de aviso):
+   * "sem estoque" quando o sistema tem menos do que está sendo vendido (clicar anota na lista de
+   * espera) e, só para a administradora, "última peça" / "restam N" quando chega no mínimo.
+   */
+  function tagEstoque(p) {
+    if (p.servico) return '';
+    const qtd = carrinho.itens.filter((x) => x.produto.id === p.id).reduce((a, x) => a + x.quantidade, 0);
+    if (qtd > p.estoque) {
+      return `<button type="button" class="p4-estq zero" data-espera="${p.id}"
+        title="O sistema tem ${p.estoque} em estoque. Confira a etiqueta. Clique para anotar na lista de espera.">sem estoque</button>`;
+    }
+    const resta = p.estoque - qtd;
+    if (U.sessao.ehAdmin() && resta <= p.estoque_minimo) {
+      return `<span class="p4-estq pouco" title="Hora de repor">${resta === 0 ? 'última peça' : `restam ${resta}`}</span>`;
+    }
+    return '';
   }
 
   function desenharTotais() {
@@ -651,6 +650,12 @@ Telas.pdv = (() => {
 
   // -------------------------------------------------------------- itens
   async function cliqueItem(ev) {
+    const esp = ev.target.closest('[data-espera]');
+    if (esp) {
+      const it = carrinho.itens.find((x) => x.produto.id === Number(esp.dataset.espera));
+      if (it) Telas.espera.anotar({ produto: it.produto, cliente: carrinho.cliente });
+      return;
+    }
     const btn = ev.target.closest('[data-acao]');
     if (!btn) return;
     const i = Number(btn.closest('[data-i]').dataset.i);

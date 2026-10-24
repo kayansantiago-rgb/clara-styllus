@@ -2342,3 +2342,9 @@ button, a, input, select, textarea, label { touch-action: manipulation; }
 .login-logo { width: min(440px, 82%); height: auto; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); margin-bottom: 22px; }
 .login-arte p { margin: 0 auto; }
 .bv-marca .marca-logo { background: linear-gradient(140deg, #8c6370, #5c3a45); border: 1px solid rgba(212,162,74,.4); }
+
+/* Estoque no item da venda (no lugar das faixas de aviso) */
+.p4-estq { border-radius: 8px; padding: 1px 8px; font-size: 12px; font-weight: 600; line-height: 1.5; border: 1px solid; font-family: inherit; }
+.p4-estq.pouco { background: #fff8e8; border-color: #f1dfb3; color: #8a5f0a; }
+.p4-estq.zero { background: #fff3f2; border-color: #f3c4bf; color: #a32c21; cursor: pointer; }
+.p4-estq.zero:hover { background: #fde4e1; }

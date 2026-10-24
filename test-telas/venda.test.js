@@ -130,7 +130,9 @@ test('desconto na venda (F7) e peça sem estoque mostra o aviso da lista de espe
     await sis.pagina.waitForTimeout(300);
     assert.match(await sis.pagina.textContent('.p4-pagar'), /233,91/);
     await bipar(sis, d.saia.codigo);
-    assert.match(await sis.pagina.textContent('#alertas'), /anotar na lista de espera/);
+    // Sem estoque vira uma etiqueta discreta no item (nada de faixa de aviso em cima).
+    assert.match(await sis.pagina.textContent('#itens [data-espera]'), /sem estoque/);
+    assert.doesNotMatch(await sis.pagina.textContent('#alertas'), /estoque/);
     assert.deepEqual(sis.erros, []);
   } finally {
     await sis.fechar();
