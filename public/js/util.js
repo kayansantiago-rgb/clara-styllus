@@ -9,7 +9,9 @@ const U = (() => {
         body: corpo ? JSON.stringify(corpo) : undefined,
       });
     } catch {
-      throw new Error('Sem conexão com o servidor do PDV. Ele está aberto?');
+      throw new Error(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+        ? 'Sem conexão com o servidor do PDV. Ele está aberto?'
+        : 'Sem conexão com o computador do caixa. Confira se ele está ligado e na mesma rede.');
     }
     const dados = await res.json().catch(() => ({}));
     if (res.status === 401 && !caminho.startsWith('/api/login') && window.exigirLogin) {

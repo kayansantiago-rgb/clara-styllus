@@ -14,7 +14,7 @@ const { instalarTrocas } = require('./trocas');
 const { instalarCondicional } = require('./condicional');
 const { instalarReservas } = require('./reservas');
 const { instalarEspera } = require('./espera');
-const { instalarCelular } = require('./celular');
+const { instalarCelular, enderecosLocais } = require('./celular');
 const { instalarGiro } = require('./giro');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
@@ -335,6 +335,13 @@ function criarApi(db, opcoes = {}) {
     });
     return config();
   }, 'admin');
+
+  /** Outros computadores da loja: se está liberado e o endereço deste computador na rede. */
+  rota('GET', '/api/sistema/rede', async () => ({
+    liberado: config().rede_computadores === '1',
+    enderecos: await enderecosLocais(),
+    porta: Number(opcoes.porta || process.env.PORTA || 3456),
+  }), 'admin');
 
   // -------------------------------------------------------------- produtos
   const lerProduto = (corpo, parcial = false) => {

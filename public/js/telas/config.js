@@ -264,7 +264,16 @@ Telas.config = (() => {
               <small>${Object.entries(m.vars).map(([v, d]) => `<code>{${v}}</code> ${esc(d)}`).join(' · ')}</small></span>
               <textarea name="msg_${k}" rows="3" placeholder="${esc(m.padrao)}">${esc(c[`msg_${k}`] || '')}</textarea>
               <button type="button" class="link cfg-msg-padrao" data-msg-padrao="${k}">usar o texto padrão</button></label>`).join('')}</div>
-        </div>`)}
+        </div>
+        <div class="cartao cfg-rede">
+          <h3 class="titulo-ico">${Icone('loja')} Outros computadores da loja</h3>
+          <p class="dica">Libera o sistema para outro computador da loja (por exemplo, um para cadastrar produtos enquanto
+            este fica no caixa). Os dois usam os <b>mesmos dados</b>, ao mesmo tempo. Só funciona na rede da loja, nunca pela
+            internet, e cada pessoa entra com o próprio usuário e senha.</p>
+          ${check('rede_computadores', 'Permitir que outros computadores da loja usem o sistema')}
+          <div id="rede-info" class="rede-info"></div>
+        </div>
+        `)}
         ${secao('cupom', `
         <div class="cfg-cupom">
           <div class="cartao">
@@ -489,6 +498,7 @@ Telas.config = (() => {
     };
     api('/api/backup/status').then(mostrarBackup).catch((e) => { raiz.querySelector('#backup-status').textContent = e.message; });
     raiz.querySelector('#zerar').onclick = zerarSistema;
+    mostrarRede(raiz);
     raiz.querySelectorAll('[data-msg-padrao]').forEach((b) => {
       b.onclick = () => {
         const t = raiz.querySelector(`[name="msg_${b.dataset.msgPadrao}"]`);
@@ -545,11 +555,32 @@ Telas.config = (() => {
         sujo.hidden = true;
         aviso('Configurações salvas.');
         Atualizacao.desenharStatus(raiz.querySelector('#at-status'));
+        mostrarRede(raiz);
       } catch (e) { erro(e); }
     };
   }
 
   /** Zerar o sistema: escolhe o que apagar, confirma com a senha da administradora e digitando ZERAR. */
+  /** Endereço deste computador e o passo a passo para instalar no outro computador. */
+  async function mostrarRede(raiz) {
+    const el = raiz.querySelector('#rede-info');
+    if (!el) return;
+    let r;
+    try { r = await api('/api/sistema/rede'); } catch { return; }
+    const ip = r.enderecos[0];
+    el.innerHTML = r.liberado ? `
+      <div class="rede-passos">
+        <p><b>No outro computador:</b></p>
+        <ol>
+          <li>Copie o arquivo <b>ClaraStyllus-Computador-Extra-Setup</b> (pendrive ou WhatsApp) e abra.</li>
+          <li>Clique em Instalar. O atalho <b>Clara Styllus PDV</b> aparece na área de trabalho.</li>
+          <li>Ao abrir, ele procura este computador sozinho. Se pedir, digite o endereço: ${ip ? `<code class="rede-ip">${esc(ip)}</code>` : '<i>(este computador não está conectado a uma rede)</i>'}</li>
+        </ol>
+        <small>Este computador precisa estar ligado e com o sistema aberto. Dica: deixe o endereço dele fixo no roteador para não mudar.</small>
+      </div>`
+      : '<small class="txt-suave">Marque a opção acima e clique em <b>Salvar configurações</b> para ver como instalar no outro computador.</small>';
+  }
+
   async function zerarSistema() {
     let n;
     try { n = await U.api('/api/sistema/contagem'); } catch (e) { return U.erro(e); }

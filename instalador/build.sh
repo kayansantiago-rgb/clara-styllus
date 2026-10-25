@@ -50,3 +50,16 @@ SAIDA="$DIST/ClaraStyllus-PDV-Setup-$VERSAO.exe"
 makensis -V2 -DVERSAO="$VERSAO" -DSTAGING="$STAGING" -DSAIDA="$SAIDA" "$RAIZ/instalador/clara-styllus.nsi"
 ( cd "$DIST" && sha256sum "$(basename "$SAIDA")" > "$(basename "$SAIDA").sha256" )
 echo "Pronto: $SAIDA ($(du -h "$SAIDA" | cut -f1))"
+
+# Instalador do computador extra: só a tela que procura o caixa na rede (logo e ícone embutidos).
+mkdir -p "$STAGING/extra"
+node -e '
+const fs = require("fs");
+const [modelo, cs, icone, saida] = process.argv.slice(1);
+const uri = (f) => "data:image/png;base64," + fs.readFileSync(f).toString("base64");
+fs.writeFileSync(saida, fs.readFileSync(modelo, "utf8").replace("{{LOGO}}", uri(cs)).replace("{{ICONE}}", uri(icone))
+  .replace("{{PORTA}}", "3456").replace("{{ENDERECO}}", ""));
+' "$RAIZ/instalador/extra/abrir.modelo.html" "$RAIZ/public/img/cs.png" "$RAIZ/public/img/icone.png" "$STAGING/extra/abrir.html"
+SAIDA_EXTRA="$DIST/ClaraStyllus-Computador-Extra-Setup-$VERSAO.exe"
+makensis -V2 -DVERSAO="$VERSAO" -DSTAGING="$STAGING" -DSAIDA="$SAIDA_EXTRA" "$RAIZ/instalador/extra.nsi"
+echo "Pronto: $SAIDA_EXTRA ($(du -h "$SAIDA_EXTRA" | cut -f1))"

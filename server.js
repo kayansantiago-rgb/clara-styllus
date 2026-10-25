@@ -49,14 +49,32 @@ function criarServidor(db, opcoes = {}) {
     setInterval(procurar, 6 * 36e5).unref();
   }
 
+  // Outros computadores da loja: liberado em Configurações (ou REDE_LIBERADA=1 na linha de comando).
+  const lerRede = db.prepare(`SELECT valor FROM config WHERE chave = 'rede_computadores'`);
+  const redeLiberada = () => opcoes.redeLiberada || lerRede.get()?.valor === '1';
+
   return http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
 
-    // Quem não está neste computador (celular na rede da loja) só acessa a página da foto do produto.
-    if (!opcoes.redeLiberada && !ehLocal(req) && !liberadoParaCelular(req.method, url.pathname)) {
+    // "Você é o PDV da Clara Styllus?" — o programa do outro computador procura o caixa na rede com isso.
+    if (url.pathname === '/rede/ping') {
+      req.resume();
+      const cors = {
+        'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Private-Network': 'true',
+        'Access-Control-Allow-Methods': 'GET', 'Cache-Control': 'no-store',
+      };
+      if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
+      const loja = db.prepare(`SELECT valor FROM config WHERE chave = 'loja_nome'`).get()?.valor || 'Clara Styllus';
+      res.writeHead(200, { ...cors, 'Content-Type': 'application/json; charset=utf-8' });
+      return res.end(JSON.stringify({ app: 'clara-styllus-pdv', liberado: redeLiberada(), loja }));
+    }
+
+    // Quem não está neste computador (celular na rede da loja) só acessa a página da foto do produto,
+    // a não ser que a loja tenha liberado os outros computadores.
+    if (!ehLocal(req) && !liberadoParaCelular(req.method, url.pathname) && !redeLiberada()) {
       req.resume();
       res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-      return res.end('O sistema só pode ser usado no computador da loja.');
+      return res.end('Este computador ainda não foi liberado. No computador do caixa, vá em Configurações → Loja → Outros computadores da loja.');
     }
     if (url.pathname === '/celular') {
       return fs.readFile(path.join(PASTA_PUBLICA, 'celular.html'), (err, dados) => {

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clara Styllus · PDV</title>
+<link rel="icon" href="{{ICONE}}">
+<style>
+  :root { --ameixa: #6e4552; --ouro: #d4a24a; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: 'Segoe UI', system-ui, Arial, sans-serif; color: #fff; display: grid; place-items: center;
+    background: radial-gradient(85% 75% at 18% 12%, rgba(212,162,74,.16) 0%, transparent 60%), linear-gradient(155deg, #8a6069, #4d3139); }
+  main { width: min(460px, 92vw); text-align: center; }
+  .logo { width: 96px; height: 96px; border-radius: 24px; background: linear-gradient(140deg, #8c6370, #5c3a45);
+    display: grid; place-items: center; margin: 0 auto 22px; box-shadow: 0 10px 30px rgba(0,0,0,.25); border: 1px solid rgba(212,162,74,.35); }
+  .logo img { width: 80%; }
+  h1 { font-family: Georgia, serif; font-weight: 600; font-size: 28px; margin: 0 0 8px; }
+  p { color: rgba(255,255,255,.82); margin: 0 0 18px; line-height: 1.5; }
+  .roda { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.25); border-top-color: var(--ouro);
+    border-radius: 50%; margin: 6px auto 16px; animation: g 0.9s linear infinite; }
+  @keyframes g { to { transform: rotate(360deg); } }
+  .barra { height: 4px; background: rgba(255,255,255,.15); border-radius: 4px; overflow: hidden; margin: 0 auto 18px; width: 70%; }
+  .barra i { display: block; height: 100%; width: 0; background: var(--ouro); transition: width .2s; }
+  form { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+  input { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.35);
+    background: rgba(255,255,255,.12); color: #fff; width: 210px; }
+  input::placeholder { color: rgba(255,255,255,.55); }
+  button { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 10px; border: 0; background: var(--ouro); color: #3a2329; cursor: pointer; }
+  button.leve { background: transparent; color: #f3dfb5; text-decoration: underline; padding: 6px; }
+  .caixa { background: rgba(0,0,0,.18); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 16px 18px; text-align: left; font-size: 14.5px; }
+  .caixa ol { margin: 6px 0 0; padding-left: 20px; line-height: 1.6; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo"><img src="{{LOGO}}" alt="CS"></div>
+  <h1>Clara Styllus</h1>
+  <section id="procurando">
+    <p id="msg">Procurando o computador do caixa…</p>
+    <div class="roda"></div>
+    <div class="barra"><i id="progresso"></i></div>
+  </section>
+  <section id="falhou" hidden>
+    <p id="motivo"></p>
+    <div class="caixa" id="dicas"></div>
+    <form id="manual">
+      <input id="endereco" placeholder="ex.: 192.168.0.10" autocomplete="off" spellcheck="false">
+      <button type="submit">Conectar</button>
+    </form>
+    <p style="margin-top:14px"><button class="leve" id="denovo" type="button">Procurar de novo</button></p>
+  </section>
+</main>
+<script>
+(() => {
+  const PORTA = {{PORTA}};
+  const PADRAO = '{{ENDERECO}}'; // endereço informado na instalação (pode ficar vazio)
+  const ler = () => { try { return localStorage.getItem('clara_servidor') || PADRAO; } catch { return PADRAO; } };
+  const gravar = (ip) => { try { localStorage.setItem('clara_servidor', ip); } catch { /* sem memória */ } };
+  const $ = (id) => document.getElementById(id);
+
+  /** Pergunta ao endereço se ele é o PDV. Responde { liberado, loja } ou null. */
+  async function perguntar(ip, espera = 900) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), espera);
+    try {
+      const r = await fetch(`http://${ip}:${PORTA}/rede/ping`, { signal: ctl.signal, cache: 'no-store' });
+      const j = await r.json();
+      return j && j.app === 'clara-styllus-pdv' ? j : null;
+    } catch { return null; } finally { clearTimeout(t); }
+  }
+
+  function entrar(ip) {
+    gravar(ip);
+    $('msg').textContent = 'Encontrei! Abrindo o sistema…';
+    location.replace(`http://${ip}:${PORTA}/`);
+  }
+
+  // Faixas de rede mais comuns nos roteadores (Claro/NET, Vivo, Oi, TP-Link, Intelbras, Huawei…).
+  const FAIXAS = ['192.168.0', '192.168.1', '192.168.15', '192.168.100', '10.0.0', '192.168.2', '192.168.3',
+    '192.168.18', '192.168.10', '192.168.8', '10.0.1', '192.168.5', '192.168.50', '192.168.88', '172.16.0'];
+
+  async function procurar() {
+    $('procurando').hidden = false;
+    $('falhou').hidden = true;
+    $('msg').textContent = 'Procurando o computador do caixa…';
+    $('progresso').style.width = '0';
+    let achouBloqueado = null;
+    const salvo = ler();
+    if (salvo) {
+      const r = await perguntar(salvo, 2500);
+      if (r && r.liberado) return entrar(salvo);
+      if (r) achouBloqueado = salvo;
+    }
+    const faixas = [...FAIXAS];
+    const m = /^(\d+\.\d+\.\d+)\.\d+$/.exec(salvo || '');
+    if (m) faixas.unshift(m[1]);
+    const ips = [...new Set(faixas)].flatMap((f) => Array.from({ length: 254 }, (_, i) => `${f}.${i + 1}`));
+    let feito = 0;
+    let achado = null;
+    const LOTE = 160;
+    for (let i = 0; i < ips.length && !achado; i += LOTE) {
+      const lote = ips.slice(i, i + LOTE);
+      const res = await Promise.all(lote.map(async (ip) => [ip, await perguntar(ip)]));
+      for (const [ip, r] of res) {
+        if (r && r.liberado && !achado) achado = ip;
+        else if (r && !achouBloqueado) achouBloqueado = ip;
+      }
+      feito += lote.length;
+      $('progresso').style.width = `${Math.round((feito / ips.length) * 100)}%`;
+    }
+    if (achado) return entrar(achado);
+    falhou(achouBloqueado);
+  }
+
+  function falhou(bloqueado) {
+    $('procurando').hidden = true;
+    $('falhou').hidden = false;
+    $('endereco').value = bloqueado || ler() || '';
+    if (bloqueado) {
+      $('motivo').innerHTML = `Encontrei o computador do caixa (<b>${bloqueado}</b>), mas ele ainda não liberou este computador.`;
+      $('dicas').innerHTML = `No computador do caixa:<ol><li>Abra <b>Configurações → Loja</b>.</li>
+        <li>Marque <b>Permitir que outros computadores da loja usem o sistema</b>.</li><li>Clique em <b>Salvar configurações</b>.</li></ol>`;
+    } else {
+      $('motivo').textContent = 'Não encontrei o computador do caixa na rede.';
+      $('dicas').innerHTML = `Confira:<ol><li>O computador do caixa está <b>ligado</b> e com o sistema aberto.</li>
+        <li>Os dois computadores estão no <b>mesmo Wi-Fi / roteador</b>.</li>
+        <li>Lá em <b>Configurações → Loja → Outros computadores da loja</b> aparece o endereço: digite ele abaixo.</li></ol>`;
+    }
+    clearTimeout(falhou.t);
+    falhou.t = setTimeout(procurar, 20000); // tenta de novo sozinho
+  }
+
+  $('manual').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const ip = $('endereco').value.trim().replace(/^https?:\/\//, '').replace(/[:/].*$/, '');
+    if (!ip) return;
+    clearTimeout(falhou.t);
+    $('procurando').hidden = false;
+    $('falhou').hidden = true;
+    $('msg').textContent = `Conectando em ${ip}…`;
+    const r = await perguntar(ip, 3000);
+    if (r && r.liberado) return entrar(ip);
+    gravar(ip);
+    falhou(r ? ip : null);
+    if (!r) $('motivo').textContent = `Não consegui falar com ${ip}. Confira o endereço e se o computador do caixa está ligado.`;
+  };
+  $('denovo').onclick = () => { clearTimeout(falhou.t); procurar(); };
+  procurar();
+})();
+</script>
+</body>
+</html>

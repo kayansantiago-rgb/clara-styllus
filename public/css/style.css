@@ -2348,3 +2348,10 @@ button, a, input, select, textarea, label { touch-action: manipulation; }
 .p4-estq.pouco { background: #fff8e8; border-color: #f1dfb3; color: #8a5f0a; }
 .p4-estq.zero { background: #fff3f2; border-color: #f3c4bf; color: #a32c21; cursor: pointer; }
 .p4-estq.zero:hover { background: #fde4e1; }
+
+/* Outros computadores da loja */
+.cfg-rede .check { margin: 4px 0 10px; }
+.rede-passos { background: var(--rosa-claro); border: 1px solid var(--rosa-borda); border-radius: 12px; padding: 12px 16px; }
+.rede-passos p { margin: 0 0 4px; }
+.rede-passos ol { margin: 0 0 8px; padding-left: 20px; line-height: 1.7; }
+.rede-ip { font-size: 15px; font-weight: 700; background: #fff; border: 1px solid var(--rosa-borda); border-radius: 6px; padding: 1px 8px; user-select: all; }

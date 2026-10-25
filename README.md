@@ -5,6 +5,12 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Outros computadores da loja**: em Configurações → Loja, a administradora libera o sistema para outro
+  computador da mesma rede (ex.: um para cadastrar produtos enquanto o outro fica no caixa). Os dois usam os
+  mesmos dados ao mesmo tempo, cada um com seu login. No outro computador basta rodar o
+  `ClaraStyllus-Computador-Extra-Setup-<versão>.exe` (não pede administrador): o atalho procura o computador
+  do caixa na rede sozinho e abre o sistema em janela própria. Nada fica exposto para a internet.
+
 - **Identidade da loja**: a logo dourada (monograma CS com a borboleta) na tela de entrada, no menu, no
   ícone dos atalhos e da aba, no Resumo do mês e no catálogo do Instagram; cores do sistema no ameixa e
   dourado da marca. Em Configurações → Cupom, o botão **Usar a logo da loja** coloca a logo no cupom. A etiqueta

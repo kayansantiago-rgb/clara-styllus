@@ -241,6 +241,20 @@ test('rede da loja: quem não está no computador só acessa a página da foto',
     assert.equal((await fetch(`${rede}/api/celular/sessao/0123456789abcdef0123456789abcdef`)).status, 404);
     // No próprio computador, tudo funciona.
     assert.equal((await fetch(`http://127.0.0.1:${porta}/`)).status, 200);
+
+    // O computador extra procura o caixa pelo /rede/ping (sempre responde, com CORS).
+    let ping = await fetch(`${rede}/rede/ping`);
+    assert.equal(ping.status, 200);
+    assert.equal(ping.headers.get('access-control-allow-origin'), '*');
+    assert.deepEqual(await ping.json(), { app: 'clara-styllus-pdv', liberado: false, loja: 'Clara Styllus' });
+    // Liberado em Configurações: o outro computador usa o sistema todo (com login).
+    db.prepare(`UPDATE config SET valor = '1' WHERE chave = 'rede_computadores'`).run();
+    ping = await fetch(`${rede}/rede/ping`);
+    assert.equal((await ping.json()).liberado, true);
+    assert.equal((await fetch(`${rede}/`)).status, 200);
+    assert.equal((await fetch(`${rede}/api/produtos`)).status, 401);
+    db.prepare(`UPDATE config SET valor = '0' WHERE chave = 'rede_computadores'`).run();
+    assert.equal((await fetch(`${rede}/`)).status, 403);
   } finally {
     await new Promise((ok) => srv.close(ok));
     db.close();
