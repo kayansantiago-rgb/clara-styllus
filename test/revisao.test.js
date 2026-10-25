@@ -345,3 +345,10 @@ test('zerar o sistema: precisa da senha e de ZERAR, guarda cópia e apaga confor
   assert.equal(chamar('GET', '/api/sessao').corpo.primeiro_acesso, true);
   assert.equal(db.prepare("SELECT valor FROM config WHERE chave = 'loja_nome'").get().valor !== 'Minha Loja', true);
 });
+
+test('imprimir etiqueta do editor: valida o desenho recebido', () => {
+  const { chamar } = loja();
+  const ruim = chamar('POST', '/api/imprimir/etiquetas-imagem', { imagens: [{ l: 40, h: 240, d: 'AAAA', copias: 1 }] });
+  assert.equal(ruim.status, 400);
+  assert.equal(chamar('POST', '/api/imprimir/etiquetas-imagem', { imagens: [] }).status, 400);
+});

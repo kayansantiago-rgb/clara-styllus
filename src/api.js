@@ -19,7 +19,7 @@ const { instalarGiro } = require('./giro');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
 const documentos = require('./impressao/documentos');
-const { gerarEtiquetas } = require('./impressao/etiquetas');
+const { gerarEtiquetas, gerarEtiquetasImagem } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
 
 const HORAS_SESSAO = 14;
@@ -1953,6 +1953,26 @@ function criarApi(db, opcoes = {}) {
     const dados = gerarEtiquetas(itens, cfg);
     if (!dados) throw erro(400, 'Nenhuma etiqueta para imprimir.');
     return imprimir(cfg.impressora_etiqueta, dados, 'etiquetas');
+  });
+
+  /** Etiqueta personalizada: já vem desenhada pelo editor, em pontos pretos e brancos. */
+  rota('POST', '/api/imprimir/etiquetas-imagem', ({ corpo }) => {
+    const cfg = config();
+    const lista = corpo && Array.isArray(corpo.imagens) ? corpo.imagens : [];
+    if (!lista.length || lista.length > 1000) throw erro(400, 'Nenhuma etiqueta para imprimir.');
+    let total = 0;
+    const imagens = lista.map((im) => {
+      const l = inteiro(im.l, 'largura', { min: 1 });
+      const h = inteiro(im.h, 'altura', { min: 1 });
+      const copias = inteiro(im.copias, 'quantidade', { min: 1 });
+      if (l > 250 || h > 2400) throw erro(400, 'Etiqueta grande demais.');
+      const bits = Buffer.from(String(im.d || ''), 'base64');
+      if (bits.length !== l * h) throw erro(400, 'Desenho da etiqueta inválido.');
+      total += copias;
+      return { l, h, bits, copias };
+    });
+    if (total > 2000) throw erro(400, 'Muitas etiquetas de uma vez (máximo 2000).');
+    return imprimir(cfg.impressora_etiqueta, gerarEtiquetasImagem(imagens, cfg), 'etiquetas');
   });
 
   /** Prévia em texto do cupom (para conferir sem gastar papel). */

@@ -76,5 +76,8 @@
       `width="100%" height="${altura}" shape-rendering="crispEdges" fill="#000">${barras}</svg>`;
   }
 
-  window.CodigoBarras = { svg: svgCodigoBarras, ean13Valido };
+  /** Módulos do código ('1' barra, '0' espaço), EAN-13 quando válido, senão Code 128. */
+  const modulos = (codigo) => (ean13Valido(String(codigo || '')) ? modulosEan13(String(codigo)) : modulosCode128(String(codigo || '')));
+
+  window.CodigoBarras = { svg: svgCodigoBarras, ean13Valido, modulos };
 })();

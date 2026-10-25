@@ -33,7 +33,11 @@ function bitmap(alt, larg) {
   return { largura: w, altura: h, bytesLinha, bits };
 }
 
-const binario = (bits, inverter) => String.fromCharCode(...(inverter ? bits.map((b) => 255 - b) : bits));
+const binario = (bits, inverter) => {
+  const b = Buffer.from(bits);
+  if (inverter) for (let i = 0; i < b.length; i++) b[i] = 255 - b[i];
+  return b.toString('latin1');
+};
 
 /** ZPL ^GFA (1 = preto, em hexadecimal). */
 function zpl(b, x, y) {

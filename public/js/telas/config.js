@@ -538,6 +538,12 @@ Telas.config = (() => {
     raiz.querySelectorAll('[data-teste]').forEach((b) => {
       b.onclick = async () => {
         try {
+          // Etiqueta feita no editor: desenhada aqui e enviada como imagem.
+          if (b.dataset.teste === 'etiqueta' && EtiquetaLayout.ativo(await U.config())) {
+            return Impressao.etiquetas([{ quantidade: 1, produto: {
+              nome: 'Vestido Midi Canelado', tamanho: 'M', cor: 'Preto', referencia: '1020', preco_venda: 15990, codigo: '2000000000015',
+            } }], { config: lerForm(form) });
+          }
           // Testa com o que está na tela, mesmo antes de salvar.
           await api('/api/imprimir/teste', { metodo: 'POST', corpo: { alvo: b.dataset.teste, config: lerForm(form) } });
           aviso('Teste enviado para a impressora.');

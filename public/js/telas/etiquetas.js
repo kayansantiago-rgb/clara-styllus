@@ -45,9 +45,11 @@ Telas.etiquetas = (() => {
               <h4>Modelo da etiqueta</h4>
               <div class="et-modelos" id="modelos">
                 ${[['padrao', 'Padrão', 'Loja, nome, tamanho e preço'], ['preco', 'Preço em destaque', 'Preço bem grande'],
-    ['parcelado', 'Parcelado', 'Preço e "3x de R$ …" sem juros'], ['simples', 'Simples', 'Sem o nome da loja']].map(([k, t, d]) =>
-    `<button class="et-modelo ${k === modelo ? 'sel' : ''}" data-modelo="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}
+    ['parcelado', 'Parcelado', 'Preço e "3x de R$ …" sem juros'], ['simples', 'Simples', 'Sem o nome da loja'],
+    ['personalizado', 'Minha etiqueta', cfg.etiqueta_layout ? 'Feita no editor, do seu jeito' : 'Monte do seu jeito no editor']].map(([k, t, d]) =>
+    `<button class="et-modelo ${k === modelo ? 'sel' : ''} ${k === 'personalizado' ? 'et-modelo-meu' : ''}" data-modelo="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}
               </div>
+              <a class="btn btn-grande et-editar" href="#/editor-etiqueta">${Icone('lapis')} Editar etiqueta (editor completo)</a>
               <label class="et-parcelas" id="et-parcelas" ${modelo === 'parcelado' ? '' : 'hidden'}>Parcelas na etiqueta
                 <select id="parcelas">${Array.from({ length: 11 }, (_, i) => i + 2).filter((n) => !(Number(cfg.juros_a_partir) > 2) || n < Number(cfg.juros_a_partir)).map((n) =>
     `<option value="${n}" ${String(n) === String(cfg.etiqueta_parcelas || '3') ? 'selected' : ''}>${n}x sem juros</option>`).join('')}</select></label>
@@ -58,6 +60,8 @@ Telas.etiquetas = (() => {
     raiz.querySelector('#modelos').onclick = async (ev) => {
       const b = ev.target.closest('[data-modelo]');
       if (!b) return;
+      // "Minha etiqueta" ainda não feita: abre o editor direto.
+      if (b.dataset.modelo === 'personalizado' && !(await U.config()).etiqueta_layout) { location.hash = '#/editor-etiqueta'; return; }
       try {
         await api('/api/config', { metodo: 'PUT', corpo: { etiqueta_modelo: b.dataset.modelo } });
         await U.config(true);
@@ -146,6 +150,14 @@ Telas.etiquetas = (() => {
     const previa = raiz.querySelector('#previa');
     previa.innerHTML = `<div class="previa-folha" style="width:${cfg.etiqueta_largura_mm}mm;height:${cfg.etiqueta_altura_mm}mm"></div>`;
     ajustarPrevia(cfg);
+    if (EtiquetaLayout.ativo(cfg)) {
+      const layout = EtiquetaLayout.ler(cfg);
+      await EtiquetaLayout.pronto(layout);
+      const c = EtiquetaLayout.canvas(layout, exemplo, cfg, 16);
+      c.className = 'et-previa-canvas';
+      previa.firstElementChild.appendChild(c);
+      return;
+    }
     // Isola o CSS da etiqueta num shadow root para não afetar a página.
     const sombra = previa.firstElementChild.attachShadow({ mode: 'open' });
     sombra.innerHTML = `<style>${Impressao.cssEtiquetas({ ...cfg, etiqueta_colunas: '2' }).replace(/@page[^}]*}/g, '')}

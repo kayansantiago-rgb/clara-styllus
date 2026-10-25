@@ -276,6 +276,46 @@ function linguagem(cfg) {
   return modo;
 }
 
+/**
+ * Etiqueta personalizada (feita no editor): cada etiqueta já vem desenhada, em pontos pretos e brancos.
+ * imagens: [{ l: bytes por linha, h: altura, bits: Buffer (1 = preto), copias }].
+ */
+function gerarEtiquetasImagem(imagens, cfg) {
+  const m = medidas(cfg);
+  const l = linguagem(cfg);
+  const mmTotal = (Number(cfg.etiqueta_largura_mm) || 40) * m.colunas + (Number(cfg.etiqueta_espaco_mm) || 0) * (m.colunas - 1);
+  const b = (img) => ({ largura: img.l * 8, altura: img.h, bytesLinha: img.l, bits: img.bits });
+  // Uma coluna: cada desenho vai uma vez, com o número de cópias (mais rápido para a impressora).
+  // Várias colunas: monta as linhas com as etiquetas lado a lado.
+  const linhas = m.colunas === 1
+    ? imagens.map((img) => ({ itens: [img], copias: img.copias }))
+    : agrupar(imagens.flatMap((img) => Array(img.copias).fill(img)), m.colunas).map((itens) => ({ itens, copias: 1 }));
+  const x = (col) => col * (m.largura + m.espaco);
+  let saida = '';
+  if (l === 'tspl') {
+    saida = `SIZE ${mmTotal} mm,${Number(cfg.etiqueta_altura_mm) || 30} mm\r\nGAP ${Number(cfg.etiqueta_gap_mm) || 3} mm,0 mm\r\nDIRECTION 1,0\r\nREFERENCE 0,0\r\n`;
+    for (const ln of linhas) {
+      saida += 'CLS\r\n';
+      ln.itens.forEach((img, col) => { saida += Logo.tspl(b(img), x(col), 0); });
+      saida += `PRINT 1,${ln.copias}\r\n`;
+    }
+  } else if (l === 'epl') {
+    saida = `\nN\nq${m.larguraTotal}\nQ${m.altura},${m.gap}\nR0,0\n`;
+    for (const ln of linhas) {
+      saida += 'N\n';
+      ln.itens.forEach((img, col) => { saida += Logo.epl(b(img), x(col), 0); });
+      saida += `P${ln.copias}\n`;
+    }
+  } else {
+    for (const ln of linhas) {
+      saida += `^XA^PW${m.larguraTotal}^LL${m.altura}^LH0,0\n`;
+      ln.itens.forEach((img, col) => { saida += Logo.zpl(b(img), x(col), 0); });
+      saida += `^PQ${ln.copias}^XZ\n`;
+    }
+  }
+  return Buffer.from(saida, 'latin1');
+}
+
 /** lista: [{ produto, quantidade }] -> buffer pronto para a impressora */
 function gerarEtiquetas(itens, cfg) {
   const lista = itens.flatMap(({ produto, quantidade }) => Array(Math.max(0, quantidade)).fill(produto));
@@ -286,4 +326,4 @@ function gerarEtiquetas(itens, cfg) {
   return zpl(lista, cfg);
 }
 
-module.exports = { linguagem, SO_TSPL, valorParcela, parcelasEtiqueta, gerarEtiquetas, zpl, epl, tspl, medidas };
+module.exports = { gerarEtiquetasImagem, linguagem, SO_TSPL, valorParcela, parcelasEtiqueta, gerarEtiquetas, zpl, epl, tspl, medidas };

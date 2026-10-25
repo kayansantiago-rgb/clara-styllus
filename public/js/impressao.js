@@ -192,6 +192,11 @@ const Impressao = (() => {
 
   // ------------------------------------------------------------ etiquetas
   function htmlEtiqueta(p, cfg) {
+    // Etiqueta feita no editor: vai como imagem (chame EtiquetaLayout.pronto antes).
+    if (EtiquetaLayout.ativo(cfg)) {
+      const c = EtiquetaLayout.canvas(EtiquetaLayout.ler(cfg), p, cfg, 16);
+      return `<div class="etq etq-img"><img src="${c.toDataURL('image/png')}" alt=""></div>`;
+    }
     const detalhes = [p.tamanho && `Tam ${p.tamanho}`, p.cor, p.referencia && `Ref ${p.referencia}`]
       .filter(Boolean).join(' · ');
     const modelo = cfg.etiqueta_modelo || 'padrao';
@@ -236,6 +241,8 @@ const Impressao = (() => {
       .nome { font-size: ${Math.max(6, h * 0.2)}pt; font-weight: bold; line-height: 1.1;
               max-height: 2.2em; overflow: hidden; width: 100%; }
       .det { font-size: ${Math.max(5, h * 0.17)}pt; line-height: 1.15; }
+      .etq-img { padding: 0; }
+      .etq-img img { width: 100%; height: 100%; display: block; }
       .preco { font-size: ${Math.max(8, h * 0.36)}pt; font-weight: bold; line-height: 1.1; }
       .de { font-size: ${Math.max(5, h * 0.17)}pt; line-height: 1.1; }
       .de + .preco { font-size: ${Math.max(7, h * 0.3)}pt; }
@@ -265,10 +272,11 @@ const Impressao = (() => {
   }
 
   /** lista: [{ produto, quantidade }] */
-  async function etiquetasNavegador(lista) {
-    const cfg = await U.config();
+  async function etiquetasNavegador(lista, cfgUsar) {
+    const cfg = cfgUsar || await U.config();
+    if (EtiquetaLayout.ativo(cfg)) await EtiquetaLayout.pronto(EtiquetaLayout.ler(cfg));
     const html = lista
-      .flatMap(({ produto, quantidade }) => Array(quantidade).fill(htmlEtiqueta(produto, cfg)))
+      .flatMap(({ produto, quantidade }) => (quantidade > 0 ? Array(quantidade).fill(htmlEtiqueta(produto, cfg)) : []))
       .join('');
     const colunas = Math.max(1, Number(cfg.etiqueta_colunas) || 1);
     imprimirHtml(cssEtiquetas(cfg), colunas > 1 ? `<div class="folha">${html}</div>` : html);
@@ -334,11 +342,20 @@ const Impressao = (() => {
     return enviar('/api/imprimir/gaveta', {}, 'Gaveta aberta.');
   }
 
-  /** lista: [{ produto, quantidade }] */
-  async function etiquetas(lista) {
-    const cfg = await U.config();
-    if (cfg.impressao_etiqueta_modo === 'navegador') return etiquetasNavegador(lista);
+  /** lista: [{ produto, quantidade }]. opcoes.layout: imprime com essa etiqueta do editor (teste sem salvar). */
+  async function etiquetas(lista, opcoes = {}) {
+    let cfg = { ...await U.config(), ...(opcoes.config || {}) };
+    if (opcoes.layout) cfg = { ...cfg, etiqueta_modelo: 'personalizado', etiqueta_layout: JSON.stringify(opcoes.layout) };
+    if (cfg.impressao_etiqueta_modo === 'navegador') return etiquetasNavegador(lista, cfg);
     const total = lista.reduce((a, x) => a + x.quantidade, 0);
+    if (EtiquetaLayout.ativo(cfg)) {
+      // Desenha cada peça uma vez, já em pontos da impressora, e manda com o número de cópias.
+      const layout = EtiquetaLayout.ler(cfg);
+      await EtiquetaLayout.pronto(layout);
+      const imagens = lista.filter((x) => x.quantidade > 0)
+        .map(({ produto, quantidade }) => ({ ...EtiquetaLayout.bitmap(layout, produto, cfg), copias: quantidade }));
+      return enviar('/api/imprimir/etiquetas-imagem', { imagens }, `${total} etiqueta(s) enviada(s) para a impressora.`);
+    }
     return enviar('/api/imprimir/etiquetas',
       { itens: lista.map((x) => ({ produto_id: x.produto.id, quantidade: x.quantidade })) },
       `${total} etiqueta(s) enviada(s) para a impressora.`);

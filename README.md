@@ -5,6 +5,13 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Editor de etiqueta** (Etiquetas → Editar etiqueta): monta a etiqueta do jeito da loja — arrasta e muda o
+  tamanho de cada item (logo, monograma, nome, tamanho/cor, preço, preço "De", parcelas, código de barras,
+  textos livres, linhas, moldura e imagens), escolhe letra (moderna, elegante, simples, máquina), tamanho,
+  negrito, riscado, alinhamento e quando cada item aparece (sempre, só em liquidação, só quando parcela).
+  Desfazer/refazer, setas do teclado, prévia com qualquer peça e "ver como a impressora imprime". A etiqueta
+  vai como imagem para a impressora (TSPL, ZPL, EPL ou navegador), então sai igual à tela.
+
 - **Outros computadores da loja**: em Configurações → Loja, a administradora libera o sistema para outro
   computador da mesma rede (ex.: um para cadastrar produtos enquanto o outro fica no caixa). Os dois usam os
   mesmos dados ao mesmo tempo, cada um com seu login. No outro computador basta rodar o

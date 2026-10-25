@@ -2355,3 +2355,79 @@ button, a, input, select, textarea, label { touch-action: manipulation; }
 .rede-passos p { margin: 0 0 4px; }
 .rede-passos ol { margin: 0 0 8px; padding-left: 20px; line-height: 1.7; }
 .rede-ip { font-size: 15px; font-weight: 700; background: #fff; border: 1px solid var(--rosa-borda); border-radius: 6px; padding: 1px 8px; user-select: all; }
+
+/* Etiquetas: botão do editor e prévia da etiqueta personalizada */
+.et-editar { width: 100%; margin-top: 10px; justify-content: center; }
+.et-modelo-meu b::after { content: ' ✦'; color: var(--ouro); }
+.et-previa-canvas { width: 100%; height: 100%; display: block; }
+
+/* ---------- Editor de etiqueta ---------- */
+.ee-cab { align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.ee-acoes-topo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ee-status { font-size: 13px; color: var(--suave); margin-right: 4px; }
+#ee-salvar.pulsar { box-shadow: 0 0 0 4px rgba(212,162,74,.35); }
+.ee { display: grid; grid-template-columns: minmax(0, 1fr) 330px; grid-template-rows: auto 1fr; gap: 14px; }
+.ee-ferramentas { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--cartao);
+  border: 1px solid var(--borda); border-radius: var(--raio); padding: 10px 12px; box-shadow: var(--sombra-1); }
+.ee-ferr-tit { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--suave); font-weight: 700; margin-right: 4px; }
+.ee-ferramentas select { height: 32px; font-size: 13px; padding: 0 8px; border-radius: 8px; }
+.ee-sep { width: 1px; align-self: stretch; background: var(--borda); margin: 0 4px; }
+.ee-meio { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.ee-palco { background: repeating-linear-gradient(45deg, #f3eff0, #f3eff0 10px, #f7f4f5 10px, #f7f4f5 20px); border-radius: 14px;
+  border: 1px solid var(--borda); min-height: 300px; display: flex; align-items: center; justify-content: center; padding: 30px; overflow: auto; }
+.ee-folha { position: relative; background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.12); border-radius: 4px; flex-shrink: 0; }
+.ee-folha canvas { display: block; border-radius: 4px; }
+.ee-camada { position: absolute; inset: 0; }
+.ee-item { position: absolute; cursor: move; outline: 1px dashed transparent; touch-action: none; }
+.ee-item:hover { outline-color: rgba(149,89,104,.55); }
+.ee-item.sel { outline: 1.5px solid var(--rosa); background: rgba(149,89,104,.06); }
+.ee-item.oculto { pointer-events: none; }
+.ee-item.oculto.sel { outline: 1.5px dashed var(--rosa); background: transparent; }
+.ee-ferramentas label.btn { flex-direction: row; }
+.ee-li em { font-style: normal; font-size: 11px; color: var(--ouro); margin-left: 4px; }
+.ee-alca { position: absolute; width: 10px; height: 10px; background: #fff; border: 1.5px solid var(--rosa); border-radius: 3px; }
+.ee-alca.nw { left: -6px; top: -6px; cursor: nwse-resize; } .ee-alca.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.ee-alca.ne { right: -6px; top: -6px; cursor: nesw-resize; } .ee-alca.sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
+.ee-alca.n { left: calc(50% - 5px); top: -6px; cursor: ns-resize; } .ee-alca.s { left: calc(50% - 5px); bottom: -6px; cursor: ns-resize; }
+.ee-alca.e { right: -6px; top: calc(50% - 5px); cursor: ew-resize; } .ee-alca.w { left: -6px; top: calc(50% - 5px); cursor: ew-resize; }
+.ee-guia { position: absolute; top: -12px; bottom: -12px; width: 0; border-left: 1px dashed var(--ouro-vivo); pointer-events: none; }
+.ee-rodape { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.ee-peca { display: flex; flex-direction: row; align-items: center; gap: 8px; flex: 1; min-width: 260px; background: var(--cartao); border: 1px solid var(--borda-forte);
+  border-radius: 10px; padding: 0 10px; }
+.ee-peca input { border: 0; background: transparent; flex: 1; height: 38px; outline: none; }
+.ee-peca .i { width: 18px; height: 18px; color: var(--suave); }
+.ee-dica { margin: 0; }
+.ee-painel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ee-bloco { background: var(--cartao); border: 1px solid var(--borda); border-radius: var(--raio); padding: 14px; box-shadow: var(--sombra-1);
+  display: flex; flex-direction: column; gap: 10px; }
+.ee-bloco h4 { margin: 0; font-size: 14px; }
+.ee-bloco label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: #5d5157; }
+.ee-bloco label.check { flex-direction: row; align-items: center; font-weight: 500; }
+.ee-nada { align-items: center; text-align: center; color: var(--suave); padding: 22px 14px; }
+.ee-nada b { color: var(--texto); }
+.ee-texto textarea { resize: vertical; min-height: 54px; font-size: 14px; }
+.ee-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ee-chips small { color: var(--suave); margin-right: 2px; }
+.ee-chip { border: 1px solid var(--rosa-borda); background: var(--rosa-claro); color: var(--rosa-escuro); border-radius: 999px; padding: 2px 9px;
+  font-size: 11.5px; cursor: pointer; }
+.ee-chip:hover { background: #fff; }
+.ee-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ee-grade4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ee-grade4 label { position: relative; }
+.ee-grade4 small { position: absolute; right: 9px; bottom: 9px; color: var(--suave); font-weight: 500; font-size: 11px; }
+.ee-grade4 input { padding-right: 30px; }
+.ee-tam { display: flex; align-items: center; gap: 4px; }
+.ee-tam input { width: 64px; text-align: center; }
+.ee-toggles { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.ee-tog { min-width: 36px; height: 34px; border-radius: 8px; border: 1px solid var(--borda-forte); background: #fff; cursor: pointer; font-size: 14px; }
+.ee-tog.on { background: var(--rosa); border-color: var(--rosa); color: #fff; }
+.ee-linha-bot { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn-perigo-leve { color: var(--perigo); }
+.ee-lista { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow: auto; }
+.ee-li { display: flex; justify-content: space-between; gap: 8px; text-align: left; border: 0; background: transparent; padding: 6px 8px;
+  border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--texto); }
+.ee-li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ee-li small { color: var(--suave); }
+.ee-li:hover { background: #f6f3f4; }
+.ee-li.sel { background: var(--rosa-claro); color: var(--rosa-escuro); font-weight: 600; }
+@media (max-width: 1100px) { .ee { grid-template-columns: 1fr; } }

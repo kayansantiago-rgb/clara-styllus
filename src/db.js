@@ -196,6 +196,7 @@ const CONFIG_PADRAO = {
   etiqueta_mostrar_loja: '1',
   rede_computadores: '0', // '1' = outros computadores da loja podem usar o sistema
   etiqueta_logo: '1', // logo da loja no lugar do nome escrito
+  etiqueta_layout: '', // etiqueta feita no editor (modelo "personalizado"), em JSON
   etiqueta_mostrar_preco: '1',
   estoque_negativo: '0',
   desconto_maximo_pct: '30',

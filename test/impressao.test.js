@@ -162,3 +162,22 @@ test('etiquetadora Knup em ZPL (o padrão) recebe TSPL, senão ela ignora a impr
   assert.equal(linguagem({ ...cfg, impressora_etiqueta: 'ZDesigner GC420t' }), 'zpl');
   assert.equal(linguagem({ ...cfg, impressao_etiqueta_modo: 'epl' }), 'epl');
 });
+
+test('etiqueta do editor: desenho em pontos vira BITMAP/GFA/GW com o número de cópias', () => {
+  const { gerarEtiquetasImagem } = require('../src/impressao/etiquetas');
+  const bits = Buffer.alloc(40 * 240, 0); // 320 x 240 pontos (40 x 30 mm)
+  bits[0] = 0x80; // um ponto preto no canto
+  const img = { l: 40, h: 240, bits, copias: 3 };
+  const cfg = { ...cfgEtq, etiqueta_colunas: '1', impressao_etiqueta_modo: 'tspl' };
+  const t = gerarEtiquetasImagem([img], cfg).toString('latin1');
+  assert.match(t, /^SIZE 40 mm,30 mm\r\nGAP 3 mm,0 mm/);
+  assert.match(t, /BITMAP 0,0,40,240,0,/);
+  assert.equal(t.charCodeAt(t.indexOf('BITMAP 0,0,40,240,0,') + 20), 0x7f); // TSPL: 0 = preto
+  assert.match(t, /PRINT 1,3\r\n$/);
+  assert.match(gerarEtiquetasImagem([img], { ...cfg, impressao_etiqueta_modo: 'zpl' }).toString('latin1'), /\^GFA,9600,9600,40,80{3}[0-9A-F]+\^FS\n\^PQ3\^XZ/);
+  assert.match(gerarEtiquetasImagem([img], { ...cfg, impressao_etiqueta_modo: 'epl' }).toString('latin1'), /\nGW0,0,40,240,[\s\S]*\nP3\n$/);
+  // Duas colunas: 3 cópias viram 2 linhas (2 + 1 etiquetas).
+  const duas = gerarEtiquetasImagem([img], { ...cfgEtq, impressao_etiqueta_modo: 'tspl' }).toString('latin1');
+  assert.equal((duas.match(/^CLS\r$/gm) || []).length, 2);
+  assert.equal((duas.match(/BITMAP/g) || []).length, 3);
+});
