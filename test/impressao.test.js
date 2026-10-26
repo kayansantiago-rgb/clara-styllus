@@ -148,7 +148,7 @@ test('etiqueta modelo parcelado: "3X DE" com a parcela arredondada para cima', (
   const p = { nome: 'Vestido', codigo: '2000000000015', preco_venda: 25990, tamanho: 'M' };
   for (const saida of [t([p], cfg), z([p], cfg), e([p], cfg)].map((b) => b.toString('latin1'))) {
     assert.match(saida, /3X DE R\$ 86,64/);
-    assert.match(saida, /SEM JUROS/);
+    assert.match(saida, /SEM JUROS NO CARTAO/);
     assert.match(saida, /R\$ 259,90/);
   }
   assert.match(t([p], { ...cfg, etiqueta_parcelas: '5' }).toString('latin1'), /5X DE R\$ 51,98/);
@@ -180,4 +180,15 @@ test('etiqueta do editor: desenho em pontos vira BITMAP/GFA/GW com o número de 
   const duas = gerarEtiquetasImagem([img], { ...cfgEtq, impressao_etiqueta_modo: 'tspl' }).toString('latin1');
   assert.equal((duas.match(/^CLS\r$/gm) || []).length, 2);
   assert.equal((duas.match(/BITMAP/g) || []).length, 3);
+});
+
+test('crediário, condicional e reserva: só a via da cliente, sem linha de assinatura', () => {
+  const doc = require('../src/impressao/documentos');
+  const cfg = { loja_nome: 'Clara Styllus', cupom_colunas: '48' };
+  const cd = { id: 1, criado_em: '2026-10-26 10:00:00', cliente_nome: 'Ana Souza', prazo: '2026-10-30', pecas: 1, valor: 9990,
+    itens: [{ quantidade: 1, nome: 'Blusa', codigo: '200', preco_venda: 9990 }] };
+  const cliente = doc.condicional(cd, cfg, 'Via da cliente').texto;
+  assert.match(cliente, /Via da cliente/);
+  assert.doesNotMatch(cliente, /_{10}/);
+  assert.match(doc.condicional(cd, cfg, 'Via da loja').texto, /_{10}/);
 });

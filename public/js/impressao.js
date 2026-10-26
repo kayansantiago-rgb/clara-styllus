@@ -215,7 +215,7 @@ const Impressao = (() => {
       return `${p.preco_anterior > p.preco_venda
         ? `<div class="de">de <s>${brl(p.preco_anterior)}</s> por ${brl(p.preco_venda)}</div>`
         : `<div class="avista">${brl(p.preco_venda)}</div>`}
-        <div class="parcela">${n}x de ${brl(Math.ceil(p.preco_venda / n))}</div><div class="sjuros">sem juros</div>`;
+        <div class="parcela">${n}x de ${brl(Math.ceil(p.preco_venda / n))}</div><div class="sjuros">sem juros no cartão</div>`;
     })()
     : p.preco_anterior > p.preco_venda
       ? `<div class="de">de <s>${brl(p.preco_anterior)}</s></div><div class="preco">por ${brl(p.preco_venda)}</div>`
@@ -329,13 +329,13 @@ const Impressao = (() => {
   async function reserva(r) {
     const cfg = await U.config();
     if (!direta(cfg)) return U.aviso('Comprovante da reserva só sai na impressão direta (Configurações → Impressoras).', 'alerta');
-    return enviar(`/api/imprimir/reserva/${r.id}`, {}, 'Comprovante da reserva enviado (2 vias).');
+    return enviar(`/api/imprimir/reserva/${r.id}`, {}, 'Comprovante da reserva enviado (via da cliente).');
   }
 
   async function condicional(c) {
     const cfg = await U.config();
     if (!direta(cfg)) return U.aviso('Comprovante da condicional só sai na impressão direta (Configurações → Impressão).', 'alerta');
-    return enviar(`/api/imprimir/condicional/${c.id}`, {}, 'Comprovante da condicional enviado (2 vias).');
+    return enviar(`/api/imprimir/condicional/${c.id}`, {}, 'Comprovante da condicional enviado (via da cliente).');
   }
 
   async function abrirGaveta() {

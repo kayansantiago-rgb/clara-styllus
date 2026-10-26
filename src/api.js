@@ -1891,12 +1891,11 @@ function criarApi(db, opcoes = {}) {
       return imprimirCupom(cfg, documentos.cupomTroca(venda, cfg).bytes(), `troca-${venda.id}`);
     }
     const vias = Math.max(1, Number(cfg.cupom_vias) || 1);
-    const comCrediario = venda.crediario.length > 0;
     const nomes = ['Via do cliente', 'Via da loja'];
     const pagouDinheiro = venda.pagamentos.some((p) => p.forma === 'dinheiro');
     const partes = [];
-    // Venda no crediário sempre sai em 2 vias: uma fica assinada com a loja.
-    const total = comCrediario ? Math.max(2, vias) : vias;
+    // Crediário também sai só na via da cliente (a não ser que a loja tenha escolhido 2 vias).
+    const total = vias;
     for (let i = 0; i < total; i++) {
       partes.push(documentos.cupomVenda(venda, cfg, {
         via: total > 1 ? nomes[i] || `Via ${i + 1}` : '',
@@ -1926,16 +1925,15 @@ function criarApi(db, opcoes = {}) {
   rota('POST', '/api/imprimir/condicional/:id', ({ params }) => {
     const cfg = config();
     const c = condicional.buscar(params.id);
-    // Duas vias: uma vai com a cliente, a outra fica assinada na loja.
-    const partes = [documentos.condicional(c, cfg, 'Via da cliente'), documentos.condicional(c, cfg, 'Via da loja')];
-    return imprimirCupom(cfg, Buffer.concat(partes.map((d) => d.bytes())), `condicional-${c.id}`);
+    // Só a via da cliente.
+    return imprimirCupom(cfg, documentos.condicional(c, cfg, 'Via da cliente').bytes(), `condicional-${c.id}`);
   });
 
   rota('POST', '/api/imprimir/reserva/:id', ({ params }) => {
     const cfg = config();
     const r = reservas.buscar(params.id);
-    const partes = [documentos.reserva(r, cfg, 'Via da cliente'), documentos.reserva(r, cfg, 'Via da loja')];
-    return imprimirCupom(cfg, Buffer.concat(partes.map((d) => d.bytes())), `reserva-${r.id}`);
+    // Só a via da cliente.
+    return imprimirCupom(cfg, documentos.reserva(r, cfg, 'Via da cliente').bytes(), `reserva-${r.id}`);
   });
 
   rota('POST', '/api/imprimir/gaveta', () => {

@@ -45,7 +45,7 @@ Telas.etiquetas = (() => {
               <h4>Modelo da etiqueta</h4>
               <div class="et-modelos" id="modelos">
                 ${[['padrao', 'Padrão', 'Loja, nome, tamanho e preço'], ['preco', 'Preço em destaque', 'Preço bem grande'],
-    ['parcelado', 'Parcelado', 'Preço e "3x de R$ …" sem juros'], ['simples', 'Simples', 'Sem o nome da loja'],
+    ['parcelado', 'Parcelado', 'Preço e "3x de R$ …" sem juros no cartão'], ['simples', 'Simples', 'Sem o nome da loja'],
     ['personalizado', 'Minha etiqueta', cfg.etiqueta_layout ? 'Feita no editor, do seu jeito' : 'Monte do seu jeito no editor']].map(([k, t, d]) =>
     `<button class="et-modelo ${k === modelo ? 'sel' : ''} ${k === 'personalizado' ? 'et-modelo-meu' : ''}" data-modelo="${k}"><b>${t}</b><small>${d}</small></button>`).join('')}
               </div>

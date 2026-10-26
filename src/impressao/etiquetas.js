@@ -72,7 +72,7 @@ function conteudo(p, cfg, m) {
       linhas.push({ texto: preco(p.preco_venda), alt: 0.11 * h });
     }
     linhas.push({ texto: `${n}X DE ${preco(valorParcela(p.preco_venda, n))}`, alt: 0.16 * h });
-    linhas.push({ texto: 'SEM JUROS', alt: 0.07 * h });
+    linhas.push({ texto: 'SEM JUROS NO CARTÃO', alt: 0.07 * h });
   } else if (cfg.etiqueta_mostrar_preco === '1') {
     if (p.preco_anterior && p.preco_anterior > p.preco_venda) {
       // Liquidação: "DE R$ 159,90" riscado e "POR R$ 99,90" em destaque.

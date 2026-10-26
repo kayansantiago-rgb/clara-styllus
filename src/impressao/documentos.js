@@ -123,11 +123,14 @@ function cupomVenda(venda, cfg, { via = '', abrirGaveta = false } = {}) {
     for (const p of venda.crediario) {
       c.par(`${p.numero}/${p.total_parcelas}  venc. ${dataBr(p.vencimento)}`, num(p.valor));
     }
-    c.pular(2);
-    c.linha('Reconheço a dívida acima e me comprometo a pagar nas datas de vencimento.');
-    c.pular(2);
-    c.centro('_'.repeat(Math.min(36, c.cols)));
-    c.centro(venda.cliente_nome || 'Assinatura do cliente');
+    // Termo e assinatura só na via que fica na loja (quando a loja imprime 2 vias).
+    if (via === 'Via da loja') {
+      c.pular(2);
+      c.linha('Reconheço a dívida acima e me comprometo a pagar nas datas de vencimento.');
+      c.pular(2);
+      c.centro('_'.repeat(Math.min(36, c.cols)));
+      c.centro(venda.cliente_nome || 'Assinatura do cliente');
+    }
   }
 
   if (venda.status === 'cancelada') c.separador().tamanho('grande').centro('CANCELADA').tamanho('normal');
@@ -273,10 +276,12 @@ function condicional(cd, cfg, via = '') {
   c.separador();
   c.par(`${cd.pecas} peça(s)`, brl(cd.valor));
   c.pular(1);
-  c.linha('Recebi as peças acima para provar. Devolvo até a data combinada ou pago as que ficarem comigo.');
-  c.pular(2);
-  c.centro('_'.repeat(Math.min(36, c.cols)));
-  c.centro(cd.cliente_nome);
+  c.linha('Peças para provar. Devolva até a data combinada ou pague as que ficarem com você.');
+  if (via === 'Via da loja') {
+    c.pular(2);
+    c.centro('_'.repeat(Math.min(36, c.cols)));
+    c.centro(cd.cliente_nome);
+  }
   if (via) c.centro(via);
   return finalizar(c, cfg);
 }

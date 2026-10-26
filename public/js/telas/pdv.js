@@ -1215,7 +1215,7 @@ Telas.pdv = (() => {
         <label>Devolver até<input type="date" name="prazo" value="${prazo}" required></label>
         <label>Observação<input name="obs" placeholder="Ex.: vai mostrar para a irmã"></label>
         <div class="acoes"><button type="button" class="btn" data-fechar>Voltar</button>
-          <button class="btn btn-primario btn-grande"><i data-icone="bolsa"></i> Registrar e imprimir (2 vias)</button></div>
+          <button class="btn btn-primario btn-grande"><i data-icone="bolsa"></i> Registrar e imprimir</button></div>
       </form>`, { largura: '520px' });
     corpo.querySelector('form').onsubmit = U.umaVez(corpo.querySelector('form'), async (ev) => {
       ev.preventDefault();
@@ -1309,8 +1309,7 @@ Telas.pdv = (() => {
           <small>${venda.acrescimo ? `juros da cliente ${brl(venda.acrescimo)} · ` : ''}taxas da maquininha ${brl(venda.taxas)}</small></div>` : ''}
       </div>
       ${cred.length ? `<div class="info-cred">${Icone('caderno')} Crediário em ${cred.length}x — ${cred.map((p) =>
-    `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}<br>
-          <small>Peça para a cliente assinar a via da loja.</small></div>` : ''}
+    `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}</div>` : ''}
       ${automatica ? `<div class="status-impressao" id="st-imp">${Icone('impressora')} Imprimindo o cupom…</div>` : ''}
       <div class="vc-acoes">
         <button class="btn" id="imp">${Icone('impressora')} ${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</button>

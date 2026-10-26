@@ -92,7 +92,7 @@ const EtiquetaLayout = (() => {
       els.push(t('{detalhes}', 9.6, 2.6, 6));
       els.push(t('{preco}', 12, 3.2, 8, { negrito: true }));
       els.push(t('{parcelas}x de {parcela}', 15, 4.4, 12.5, { negrito: true, quando: 'parcelado' }));
-      els.push(t('sem juros', 19.2, 2.2, 5.5, { maiusculas: true, quando: 'parcelado' }));
+      els.push(t('sem juros no cartão', 19.2, 2.2, 5.5, { maiusculas: true, quando: 'parcelado' }));
       els.push(barras(21.6));
     } else {
       els.push(t('{detalhes}', 9.8, 2.8, 6.5));
@@ -108,7 +108,11 @@ const EtiquetaLayout = (() => {
   function ler(cfg) {
     try {
       const l = JSON.parse(cfg.etiqueta_layout || '');
-      if (l && Array.isArray(l.elementos)) return l;
+      if (l && Array.isArray(l.elementos)) {
+        // Etiquetas feitas antes: "sem juros" passou a ser "sem juros no cartão".
+        for (const e of l.elementos) if (e.tipo === 'texto' && /^\s*sem juros\s*$/i.test(e.texto || '')) e.texto = 'sem juros no cartão';
+        return l;
+      }
     } catch { /* ainda não tem */ }
     return modelo('padrao', cfg);
   }
