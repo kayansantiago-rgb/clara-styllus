@@ -818,13 +818,15 @@ Telas.pdv = (() => {
 
     const ICONES_PAG = { dinheiro: 'dinheiro', pix: 'pix', debito: 'cartao', credito: 'cartao', crediario: 'caderno', vale: 'vale', outro: 'carteira' };
     const NOMES_PAG = { debito: 'Débito', credito: 'Crédito' };
+    const pecasPag = carrinho.itens.reduce((a, it) => a + it.quantidade, 0);
     const corpo = abrirModal('Pagamento', `
-      <div class="pag2">
+      <div class="pag2 pag3">
         <div class="pag2-esq">
+          ${carrinho.cliente ? `<div class="pag3-cliente">${Icone('usuario')}<span>Cliente: <b>${esc(carrinho.cliente.nome)}</b></span></div>` : ''}
           <div class="pag2-rotulo">Forma de pagamento</div>
           <div class="formas formas-7">
             ${formas.map(([k, v], i) =>
-    `<button class="forma ${k === forma ? 'sel' : ''}" data-forma="${k}">${Icone(ICONES_PAG[k] || 'carteira')}<span>${NOMES_PAG[k] || v}</span><kbd title="Atalho: Alt + ${i + 1}">Alt+${i + 1}</kbd></button>`).join('')}
+    `<button class="forma pag3-f-${k} ${k === forma ? 'sel' : ''}" data-forma="${k}">${Icone(ICONES_PAG[k] || 'carteira')}<span>${NOMES_PAG[k] || v}</span><kbd title="Atalho: Alt + ${i + 1}">Alt+${i + 1}</kbd></button>`).join('')}
           </div>
           <form id="f-pag" class="pag2-form">
             <label class="pag2-valor"><span id="pag-rotulo">Valor recebido</span><div class="campo-moeda"><span>R$</span><input id="pag-valor" inputmode="decimal" autocomplete="off" autofocus></div></label>
@@ -844,13 +846,17 @@ Telas.pdv = (() => {
         </div>
         <aside class="pag2-dir">
           <div class="pag2-total" id="pag-total"></div>
+          <div class="pag3-sacola" title="Peças desta venda">
+            <div class="pag3-fotos">${carrinho.itens.slice(0, 5).map((it) => U.miniatura(it.produto, 'pag3-foto')).join('')}${carrinho.itens.length > 5 ? `<span class="pag3-mais">+${carrinho.itens.length - 5}</span>` : ''}</div>
+            <small>${pecasPag} ${pecasPag === 1 ? 'peça' : 'peças'} na sacola</small>
+          </div>
           <div id="lista-pag" class="lista-pag"></div>
           <div class="pag-resumo" id="pag-resumo"></div>
           <div class="pag2-liquido" id="pag-liquido"></div>
           <button class="btn btn-primario btn-grande pag2-concluir" id="concluir" disabled>${Icone('check')} Confirmar venda <kbd>Enter</kbd></button>
           <button class="btn btn-fantasma" data-fechar>Voltar <kbd>Esc</kbd></button>
         </aside>
-      </div>`, { largura: '920px' });
+      </div>`, { largura: '960px', classe: 'modal-pagamento' });
 
     const valorEl = corpo.querySelector('#pag-valor');
     const valeEl = corpo.querySelector('#pag-vale');
@@ -1305,9 +1311,11 @@ Telas.pdv = (() => {
     const impressao = automatica ? Impressao.cupom(venda) : null;
     const cred = venda.crediario || [];
     const nomesPag = { debito: 'Débito', credito: 'Crédito' };
+    const pecasVc = (venda.itens || []).reduce((a, it) => a + it.quantidade, 0);
     const corpo = abrirModal(`Venda nº ${venda.id} concluída`, `
       <div class="vc ${venda.troco ? 'com-troco' : ''}">
         <div class="vc-ico">${Icone('check')}</div>
+        <div class="vc-obrigada">Venda concluída${venda.cliente_nome ? ` · <b>${esc(venda.cliente_nome)}</b>` : ''}${pecasVc ? ` · ${pecasVc} ${pecasVc === 1 ? 'peça' : 'peças'}` : ''}</div>
         ${venda.troco
     ? `<div class="vc-rotulo">Devolva de troco</div><div class="vc-valor">${brl(venda.troco)}</div>
            <div class="vc-det">Recebido ${brl(venda.total + venda.troco)} · total ${brl(venda.total)}</div>`
@@ -1323,7 +1331,7 @@ Telas.pdv = (() => {
         <button class="btn" id="imp">${Icone('impressora')} ${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</button>
         <button class="btn" id="troca">${Icone('presente')} Cupom de troca</button>
         <button class="btn btn-primario btn-grande vc-nova" data-fechar autofocus>${Icone('sacola')} Próxima venda <kbd>Enter</kbd></button>
-      </div>`, { largura: '560px', aoFechar: () => raiz && abrir(raiz) });
+      </div>`, { largura: '580px', classe: 'modal-concluida', aoFechar: () => raiz && abrir(raiz) });
     corpo.querySelector('#imp').onclick = () => Impressao.cupom(venda, { gaveta: false });
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(venda);
     if (impressao) {
