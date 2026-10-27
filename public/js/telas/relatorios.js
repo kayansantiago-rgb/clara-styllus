@@ -369,8 +369,14 @@ Telas.relatorios = (() => {
         return;
       }
       const b = ev.target.closest('[data-del]');
-      if (!b || !(await U.confirmar('Apagar despesa', 'Apagar este lançamento?', { ok: 'Apagar', perigo: true }))) return;
-      try { await api(`/api/despesas/${b.dataset.del}`, { metodo: 'DELETE' }); carregar(); } catch (e) { erro(e); }
+      if (!b) return;
+      const linha = b.closest('tr, li, div');
+      if (linha) linha.hidden = true;
+      U.desfazivel('Lançamento apagado.', {
+        executar: (fechando) => api(`/api/despesas/${b.dataset.del}`, { metodo: 'DELETE', keepalive: fechando }),
+        aoDesfazer: () => { if (linha) linha.hidden = false; },
+        depois: () => carregar(),
+      });
     };
   }
 

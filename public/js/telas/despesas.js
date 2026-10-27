@@ -128,13 +128,18 @@ Telas.despesas = (() => {
       const ap = ev.target.closest('[data-apagar]');
       if (ap) {
         const d = r.lancamentos.find((x) => x.id === Number(ap.dataset.apagar));
-        if (!(await U.confirmar('Apagar despesa', `Apagar "${d.descricao}" (${brl(d.valor)})?${d.sangria_id ? ' Se o caixa ainda estiver aberto, o dinheiro volta para a gaveta.' : ''}`, { ok: 'Apagar', perigo: true }))) return;
-        try {
-          const res = await api(`/api/despesas/${d.id}`, { metodo: 'DELETE' });
-          aviso(res.devolvido_ao_caixa ? 'Despesa apagada. O dinheiro voltou para o caixa.' : 'Despesa apagada.');
-          atualizarStatusCaixa();
-          carregar();
-        } catch (e) { erro(e); }
+        // Some na hora, com "Desfazer" por alguns segundos (sem pergunta antes).
+        const linha = ap.closest('.dp-item, tr, li, .dsp-item') || ap.parentElement;
+        if (linha) linha.hidden = true;
+        U.desfazivel(`Despesa "${d.descricao}" (${brl(d.valor)}) apagada.`, {
+          executar: (fechando) => api(`/api/despesas/${d.id}`, { metodo: 'DELETE', keepalive: fechando }),
+          aoDesfazer: () => { if (linha) linha.hidden = false; },
+          depois: (res) => {
+            if (res && res.devolvido_ao_caixa) aviso('O dinheiro dessa despesa voltou para o caixa.');
+            atualizarStatusCaixa();
+            carregar();
+          },
+        });
       }
     };
   }

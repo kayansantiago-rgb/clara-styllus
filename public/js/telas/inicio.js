@@ -16,7 +16,51 @@ Telas.inicio = (() => {
   };
 
 
+  const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+
+  /** A loja em poucas frases, em português simples (o que mudou, o que vende, o que precisa de atenção). */
+  function frases(x) {
+    const out = [];
+    const s = x.semana;
+    const a = x.anterior;
+    if (!s.vendas) {
+      out.push(['sacola', a.vendas ? `Ainda não teve venda nos últimos 7 dias (na semana anterior foram ${brl(a.faturamento)}).`
+        : 'Ainda não tem vendas para comparar. Assim que a loja vender, o resumo aparece aqui.']);
+    } else {
+      if (a.faturamento) {
+        const pct = Math.round(((s.faturamento - a.faturamento) / a.faturamento) * 100);
+        out.push(['grafico', pct >= 5 ? `Nos últimos 7 dias você vendeu <b>${pct}% a mais</b> que na semana anterior: ${brl(s.faturamento)} contra ${brl(a.faturamento)}. 🎉`
+          : pct <= -5 ? `Nos últimos 7 dias as vendas ficaram <b>${-pct}% abaixo</b> da semana anterior (${brl(s.faturamento)} contra ${brl(a.faturamento)}). Que tal um <a href="#/produtos">catálogo no Instagram</a> ou uma liquidação?`
+            : `As vendas dos últimos 7 dias estão parecidas com as da semana anterior: <b>${brl(s.faturamento)}</b>.`]);
+      } else {
+        out.push(['grafico', `Nos últimos 7 dias a loja vendeu <b>${brl(s.faturamento)}</b> em ${s.vendas} venda(s) e ${s.pecas} peça(s).`]);
+      }
+      if (x.top) out.push(['roupa', `A peça que mais saiu foi <b>${esc(x.top.nome)}</b> (${x.top.quantidade} ${x.top.quantidade === 1 ? 'peça' : 'peças'}).`]);
+      const total = x.formas.reduce((t, f) => t + f.valor, 0);
+      if (total && x.formas[0]) {
+        const f = x.formas[0];
+        const pct = Math.round((f.valor / total) * 100);
+        out.push(['cartao', `<b>${esc(U.FORMAS[f.forma] || f.forma)}</b> foi a forma de pagamento mais usada: ${pct >= 50 ? 'mais da metade' : `${pct}%`} do que entrou.`]);
+      }
+      if (a.ticket && s.ticket) {
+        const pct = Math.round(((s.ticket - a.ticket) / a.ticket) * 100);
+        if (Math.abs(pct) >= 10) out.push(['recibo', `Cada cliente está gastando em média <b>${brl(s.ticket)}</b> por compra, ${pct > 0 ? `${pct}% a mais` : `${-pct}% a menos`} que na semana anterior.`]);
+      }
+      if (x.dia_semana && x.hora) {
+        out.push(['relogio', `O melhor dia da loja costuma ser <b>${DIAS[x.dia_semana.d]}</b>, e o movimento é maior por volta das <b>${x.hora.h}h</b>.`]);
+      }
+    }
+    if (x.atrasado.clientes) {
+      out.push(['caderno', `<b>${x.atrasado.clientes} ${x.atrasado.clientes === 1 ? 'cliente está' : 'clientes estão'}</b> com o crediário atrasado (${brl(x.atrasado.valor)}). <a href="#/crediario?aba=cobrar">Cobrar agora</a>`, 'alerta']);
+    } else {
+      out.push(['check', 'Ninguém está com o crediário atrasado. 👏', 'ok']);
+    }
+    if (x.repor) out.push(['caixa', `<b>${x.repor} ${x.repor === 1 ? 'peça está' : 'peças estão'}</b> acabando ou esgotaram. <a href="#/produtos">Ver o que repor</a>`, 'alerta']);
+    return out;
+  }
+
   async function abrir(raiz) {
+    const resumoP = api('/api/painel/resumo').catch(() => null);
     const [r, bk, conds, at, esp, res] = await Promise.all([
       api('/api/painel'), api('/api/backup/status').catch(() => null), api('/api/condicionais').catch(() => []),
       api('/api/atualizacao').catch(() => null), api('/api/espera/resumo').catch(() => null), api('/api/reservas').catch(() => []),
@@ -32,10 +76,31 @@ Telas.inicio = (() => {
     const esperadoHoje = meta ? Math.round((meta / r.mes.dias) * r.mes.dia) : 0;
     const ritmo = meta ? (r.mes.faturamento >= esperadoHoje ? 'no ritmo' : 'abaixo do ritmo') : '';
 
+    const resumo = await resumoP;
     raiz.innerHTML = `
-      <div class="cabecalho-tela">
-        <div><h1>${saudacao()}, ${esc(nome)}!</h1><p class="dica">${hojeTxt.charAt(0).toUpperCase() + hojeTxt.slice(1)}</p></div>
-      </div>
+      <section class="in2-hero">
+        <div class="in2-hero-txt">
+          <small class="in2-data">${hojeTxt.charAt(0).toUpperCase() + hojeTxt.slice(1)}</small>
+          <h1>${saudacao()}, ${esc(nome)}!</h1>
+          <div class="in2-resumo" id="in-resumo">
+            <b class="in2-resumo-tit">${Icone('estrela')} Como está a loja</b>
+            <ul>${resumo ? frases(resumo).map(([ico, t, tipo]) => `<li class="${tipo || ''}">${Icone(ico)}<span>${t}</span></li>`).join('') : '<li>Não consegui montar o resumo agora.</li>'}</ul>
+          </div>
+        </div>
+        <div class="in2-hoje">
+          <small>Vendido hoje</small>
+          <b class="in2-hoje-valor">${brl(r.hoje.faturamento)}</b>
+          <span class="in2-hoje-var">${variacao(r.hoje.faturamento, r.ontem.faturamento)}</span>
+          <div class="in2-hoje-mini">
+            <span><b>${r.hoje.vendas}</b><small>vendas</small></span>
+            <span><b>${r.hoje.pecas}</b><small>peças</small></span>
+            <span><b>${brl(r.hoje.ticket)}</b><small>ticket médio</small></span>
+          </div>
+          ${r.hoje.taxas ? `<small class="in2-hoje-liq">Cai na conta ${brl(r.hoje.liquido)}</small>` : ''}
+          <a class="btn in2-vender" href="#/pdv">${Icone('sacola')} Abrir o caixa</a>
+        </div>
+      </section>
+      <div class="in2-alertas">
 
       ${at && at.disponivel ? `<div class="pdv-alerta ok painel-alerta at-aviso"><i data-icone="nuvem"></i>
         <span>Nova versão <b>${esc(at.disponivel.versao)}</b> do sistema disponível (você está na ${esc(at.versao_atual)}).</span>
@@ -51,22 +116,16 @@ Telas.inicio = (() => {
       ${semBackup ? `<div class="pdv-alerta perigo painel-alerta"><i data-icone="nuvem"></i> ${bk.ultimo ? `O último backup foi há ${Math.round(bk.horas_desde_ultimo / 24)} dia(s).` : 'Nenhum backup foi feito ainda.'}
         Se o computador der defeito, os dados podem se perder. <a href="#/config?aba=backup">Fazer backup agora →</a></div>`
     : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="nuvem"></i> ${esc(bk.ultimo_erro)}</div>` : ''}
-      <div class="in-atalhos">
-        <a class="in-atalho destaque" href="#/pdv">${Icone('sacola')}<b>Vender</b><small>abrir o caixa</small></a>
+      </div>
+      <div class="in-atalhos in2-atalhos">
+        <a class="in-atalho" href="#/pdv">${Icone('sacola')}<b>Vender</b><small>abrir o caixa</small></a>
         <a class="in-atalho" href="#/produtos">${Icone('roupa')}<b>Produtos</b><small>cadastrar e estoque</small></a>
         <a class="in-atalho" href="#/etiquetas">${Icone('etiqueta')}<b>Etiquetas</b><small>imprimir</small></a>
         <a class="in-atalho" href="#/vendas">${Icone('recibo')}<b>Vendas</b><small>histórico e trocas</small></a>
         <a class="in-atalho" href="#/clientes">${Icone('clientes')}<b>Clientes</b><small>fichas e WhatsApp</small></a>
         <a class="in-atalho" href="#/relatorios">${Icone('grafico')}<b>Relatórios</b><small>lucro e gráficos</small></a>
       </div>
-      <div class="vd-kpis in-kpis">
-        <div class="vd-kpi destaque"><span>${Icone('carteira')} Vendido hoje</span><b>${brl(r.hoje.faturamento)}</b><small>${variacao(r.hoje.faturamento, r.ontem.faturamento)}${r.hoje.taxas ? ` · cai na conta ${brl(r.hoje.liquido)}` : ''}</small></div>
-        <div class="vd-kpi"><span>${Icone('recibo')} Vendas hoje</span><b>${r.hoje.vendas}</b><small>${variacao(r.hoje.vendas, r.ontem.vendas)}</small></div>
-        <div class="vd-kpi"><span>${Icone('roupa')} Peças hoje</span><b>${r.hoje.pecas}</b><small>${variacao(r.hoje.pecas, r.ontem.pecas)}</small></div>
-        <div class="vd-kpi"><span>${Icone('grafico')} Ticket médio hoje</span><b>${brl(r.hoje.ticket)}</b><small>${variacao(r.hoje.ticket, r.ontem.ticket)}</small></div>
-      </div>
-
-      <div class="painel-grade">
+      <div class="painel-grade in2-grade">
         <div class="cartao painel-meta">
           <h3 class="titulo-ico">${Icone('estrela')} Meta do mês
             <button class="btn btn-peq btn-fantasma in-resumo" id="resumo-img" title="Resumo do mês em imagem">${Icone('imagem')} Resumo em imagem</button></h3>

@@ -42,6 +42,8 @@ async function novoSistema({ logar = true, largura = 1366, altura = 768 } = {}) 
 
   const navegador = await playwright.chromium.launch();
   const pagina = await navegador.newPage({ viewport: { width: largura, height: altura } });
+  // Nos testes o "Desfazer" espera pouco (na loja são 8 segundos).
+  await pagina.addInitScript(() => { window.__desfazerSegundos = 0.3; });
   const erros = [];
   pagina.on('pageerror', (e) => erros.push(e.stack || e.message));
   pagina.on('dialog', (d) => d.dismiss());

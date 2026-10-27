@@ -1,10 +1,11 @@
 /* Utilidades compartilhadas pelas telas. */
 const U = (() => {
-  async function api(caminho, { metodo = 'GET', corpo } = {}) {
+  async function api(caminho, { metodo = 'GET', corpo, keepalive = false } = {}) {
     let res;
     try {
       res = await fetch(caminho, {
         method: metodo,
+        keepalive,
         headers: corpo ? { 'Content-Type': 'application/json' } : undefined,
         body: corpo ? JSON.stringify(corpo) : undefined,
       });
@@ -88,6 +89,44 @@ const U = (() => {
     document.getElementById('avisos').append(el);
     setTimeout(() => el.remove(), 9000);
   }
+
+  /**
+   * Ação com "Desfazer": o aviso fica alguns segundos com o botão; só depois a ação é feita de verdade.
+   * executar(fechando): faz a ação (fechando = a janela está fechando, manda na hora). aoDesfazer(): volta a tela.
+   * depois(resultado): chamado quando a ação foi feita.
+   */
+  const pendentes = new Set();
+  function desfazivel(msg, { executar, aoDesfazer, depois, segundos } = {}) {
+    const ms = (segundos ?? window.__desfazerSegundos ?? 8) * 1000;
+    const el = document.createElement('div');
+    el.className = 'aviso aviso-ok aviso-acao aviso-desfazer';
+    el.innerHTML = `<span>${esc(msg)}</span><button type="button">↶ Desfazer</button><i class="aviso-tempo" style="animation-duration:${ms}ms"></i>`;
+    const item = { feito: false };
+    const sair = () => { item.feito = true; pendentes.delete(item); clearTimeout(item.t); el.remove(); };
+    item.agora = async (fechando = false) => {
+      if (item.feito) return;
+      sair();
+      try {
+        const r = await executar(fechando);
+        if (depois) depois(r);
+      } catch (e) {
+        erro(e);
+        if (aoDesfazer) aoDesfazer();
+      }
+    };
+    el.querySelector('button').onclick = () => {
+      if (item.feito) return;
+      sair();
+      if (aoDesfazer) aoDesfazer();
+      aviso('Pronto, desfeito.');
+    };
+    item.t = setTimeout(() => item.agora(), ms);
+    pendentes.add(item);
+    document.getElementById('avisos').append(el);
+    return item;
+  }
+  // Fechou a janela no meio: faz o que estava esperando (não perde a exclusão).
+  window.addEventListener('pagehide', () => { for (const it of [...pendentes]) it.agora(true); });
 
   const erro = (e) => aviso(e.message || String(e), 'erro');
 
@@ -385,7 +424,7 @@ const U = (() => {
   return {
     som, fotoUrl, miniatura, reduzirImagem,
     sessao,
-    api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, avisoAcao, erro,
+    api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, avisoAcao, desfazivel, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,
     dadosForm, FORMAS, taxa, juros, pctTxt, BANDEIRAS, umaVez,
   };

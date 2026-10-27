@@ -88,7 +88,7 @@ Telas.clientes = (() => {
     raiz.querySelector('#contagem').textContent = `${lista.length} cliente(s)`;
     raiz.querySelector('#lista').innerHTML = lista.length ? lista.map((c, i) => {
       const w = zap(c.telefone);
-      return `<div class="cl-linha" data-i="${i}" tabindex="0">
+      return `<div class="cl-linha" data-i="${i}" data-id="${c.id}" tabindex="0">
         ${avatar(c, 'cl-avatar')}
         <div class="cl-nome"><b>${esc(c.nome)}</b>
           <small>${[c.telefone, c.aniversario && `aniversário ${aniversarioTxt(c.aniversario)}`].filter(Boolean).map(esc).join(' · ') || 'sem contato'}</small></div>
@@ -166,17 +166,16 @@ Telas.clientes = (() => {
     if (bExcluir) {
       bExcluir.onclick = async () => {
         const ok = await U.confirmar(`Excluir ${c.nome}?`,
-          'O cadastro sai da lista de clientes. Se ela já comprou, o nome continua nas vendas antigas, mas telefone, CPF e aniversário são apagados. Não dá para desfazer.',
+          'O cadastro sai da lista de clientes. Se ela já comprou, o nome continua nas vendas antigas, mas telefone, CPF e aniversário são apagados. Logo depois dá para desfazer.',
           { ok: 'Excluir cliente', perigo: true });
         if (!ok) return ficha(c.id);
-        try {
-          const r = await api(`/api/clientes/${c.id}`, { metodo: 'DELETE' });
-          aviso(`${r.nome} foi excluída.`);
-          carregar();
-        } catch (e) {
-          erro(e);
-          ficha(c.id);
-        }
+        // Sai da lista na hora; só apaga de verdade se não clicar em "Desfazer".
+        if (raiz) raiz.querySelectorAll(`[data-id="${c.id}"]`).forEach((x) => { x.hidden = true; });
+        U.desfazivel(`${c.nome} foi excluída.`, {
+          executar: (fechando) => api(`/api/clientes/${c.id}`, { metodo: 'DELETE', keepalive: fechando }),
+          aoDesfazer: () => carregar(),
+          depois: () => carregar(),
+        });
       };
     }
     corpo.querySelector('#vender').onclick = () => {

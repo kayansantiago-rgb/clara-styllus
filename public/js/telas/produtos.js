@@ -648,17 +648,17 @@ Telas.produtos = (() => {
       bExcluir.onclick = async () => {
         const desc = [p.nome, p.tamanho && `tam ${p.tamanho}`, p.cor].filter(Boolean).join(' · ');
         const ok = await U.confirmar('Excluir produto?',
-          `${desc} sai do cadastro, da busca e do caixa. Se a peça já foi vendida, ela continua aparecendo nas vendas antigas. Não dá para desfazer.`,
+          `${desc} sai do cadastro, da busca e do caixa. Se a peça já foi vendida, ela continua aparecendo nas vendas antigas. Logo depois dá para desfazer.`,
           { ok: 'Excluir produto', perigo: true });
         if (!ok) return formulario(p, opcoes);
-        try {
-          const r = await api(`/api/produtos/${p.id}`, { metodo: 'DELETE' });
-          aviso(`${r.nome} foi excluído.`);
-          carregar();
-        } catch (e) {
-          erro(e);
-          formulario(p, opcoes);
-        }
+        // Some da lista na hora; a exclusão de verdade só acontece se não clicar em "Desfazer".
+        todos = todos.filter((x) => x.id !== p.id);
+        if (raiz) desenhar();
+        U.desfazivel(`${desc} foi excluído.`, {
+          executar: (fechando) => api(`/api/produtos/${p.id}`, { metodo: 'DELETE', keepalive: fechando }),
+          aoDesfazer: () => carregar(),
+          depois: () => carregar(),
+        });
       };
     }
 
@@ -924,7 +924,7 @@ Telas.produtos = (() => {
         });
         const pecas = lista.reduce((a, x) => a + x.quantidade, 0);
         fecharModal();
-        aviso(`Entrada lançada: ${pecas} peça(s) em ${r.length} produto(s).`);
+        avisoEntrada(`Entrada lançada: ${pecas} peça(s) em ${r.length} produto(s).`, lista.map((x) => ({ produto: x.produto, quantidade: x.quantidade })));
         // Etiquetas com os dados atualizados (preço de agora).
         Telas.etiquetas.depoisDaEntrada(lista.map((x) => ({ produto: r.find((y) => y.id === x.produto.id) || x.produto, quantidade: x.quantidade })));
         if (raiz) carregar();
@@ -995,6 +995,25 @@ Telas.produtos = (() => {
         } catch (e) { erro(e); }
       };
     }
+  }
+
+  /** Aviso da entrada com "Desfazer": tira as peças do estoque de novo e as etiquetas da fila. */
+  function avisoEntrada(msg, itens) {
+    U.avisoAcao(msg, '↶ Desfazer', async () => {
+      try {
+        for (const { produto, quantidade } of itens) {
+          await api(`/api/produtos/${produto.id}/estoque`, { metodo: 'POST', corpo: { tipo: 'saida', quantidade, motivo: 'Entrada desfeita' } });
+        }
+        const f = U.local.ler('fila_etiquetas', []);
+        for (const { produto, quantidade } of itens) {
+          const it = f.find((y) => y.produto.id === produto.id);
+          if (it) it.quantidade = Math.max(0, it.quantidade - quantidade);
+        }
+        U.local.gravar('fila_etiquetas', f.filter((y) => y.quantidade > 0));
+        aviso('Entrada desfeita: as peças saíram do estoque e as etiquetas da fila.');
+        if (raiz) carregar();
+      } catch (e) { erro(e); }
+    });
   }
 
   /** Grade visual: tamanhos nas colunas, cores nas linhas, estoque em cada célula. */
@@ -1072,7 +1091,8 @@ Telas.produtos = (() => {
       const d = U.dadosForm(ev.target);
       try {
         const atualizado = await api(`/api/produtos/${p.id}/estoque`, { metodo: 'POST', corpo: d });
-        aviso(`Estoque de "${p.nome}" agora é ${atualizado.estoque}.`);
+        if (d.tipo === 'entrada') avisoEntrada(`Estoque de "${p.nome}" agora é ${atualizado.estoque}.`, [{ produto: atualizado, quantidade: Number(d.quantidade) }]);
+        else aviso(`Estoque de "${p.nome}" agora é ${atualizado.estoque}.`);
         fecharModal();
         if (d.tipo === 'entrada') Telas.etiquetas.depoisDaEntrada([{ produto: atualizado, quantidade: Number(d.quantidade) }]);
         if (raiz) carregar();

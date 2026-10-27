@@ -5,6 +5,12 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Início remodelado com resumo em palavras**: "como está a loja" escrito em português simples (vendas da
+  semana × anterior, peça mais vendida, forma de pagamento mais usada, ticket médio, melhor dia e horário,
+  crediário atrasado e peças para repor) e o vendido hoje em destaque.
+- **Desfazer**: excluir produto ou cliente e apagar despesa só acontecem depois de alguns segundos, com o botão
+  "Desfazer"; entrada de estoque também tem "Desfazer" (tira as peças e as etiquetas da fila).
+
 - **Produtos remodelado**: painel com peças em estoque, valor em estoque, lucro previsto e o que precisa repor;
   visão **Modelos** (cada roupa uma vez, com as cores e os tamanhos e a quantidade de cada um), além de Lista e
   Vitrine; filtros (com estoque, para repor, esgotados, inativos) e ordenação.

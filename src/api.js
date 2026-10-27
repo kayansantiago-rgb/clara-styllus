@@ -1650,6 +1650,37 @@ function criarApi(db, opcoes = {}) {
   }, 'admin');
 
   // ----------------------------------------------------------------- painel
+  /**
+   * Resumo da loja em palavras (Início): esta semana × a anterior, o mais vendido, como as clientes pagam,
+   * o melhor dia e horário, crediário atrasado e estoque para repor. A frase é montada na tela.
+   */
+  rota('GET', '/api/painel/resumo', () => {
+    const dia = (desloc) => new Date(Date.now() + desloc * 864e5).toLocaleDateString('sv-SE');
+    const periodo = (de, ate) => {
+      const t = db.prepare(`SELECT COUNT(*) AS vendas, COALESCE(SUM(total),0) AS faturamento FROM vendas
+        WHERE status = 'concluida' AND date(criado_em) BETWEEN ? AND ?`).get(de, ate);
+      const pecas = db.prepare(`SELECT COALESCE(SUM(i.quantidade),0) AS n FROM venda_itens i JOIN vendas v ON v.id = i.venda_id
+        WHERE v.status = 'concluida' AND date(v.criado_em) BETWEEN ? AND ?`).get(de, ate).n;
+      return { vendas: Number(t.vendas), faturamento: Number(t.faturamento), pecas: Number(pecas),
+        ticket: t.vendas ? Math.round(Number(t.faturamento) / Number(t.vendas)) : 0 };
+    };
+    const semana = periodo(dia(-6), dia(0));
+    const anterior = periodo(dia(-13), dia(-7));
+    const formas = planos(db.prepare(`SELECT p.forma, SUM(p.valor) AS valor FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
+      WHERE v.status = 'concluida' AND date(v.criado_em) BETWEEN ? AND ? GROUP BY p.forma ORDER BY valor DESC`).all(dia(-6), dia(0)));
+    const top = plano(db.prepare(`SELECT i.nome, SUM(i.quantidade) AS quantidade FROM venda_itens i JOIN vendas v ON v.id = i.venda_id
+      WHERE v.status = 'concluida' AND date(v.criado_em) BETWEEN ? AND ? GROUP BY i.nome ORDER BY quantidade DESC LIMIT 1`).get(dia(-6), dia(0)) || null);
+    const diaSemana = plano(db.prepare(`SELECT CAST(strftime('%w', criado_em) AS INTEGER) AS d, SUM(total) AS valor FROM vendas
+      WHERE status = 'concluida' AND date(criado_em) >= ? GROUP BY d ORDER BY valor DESC LIMIT 1`).get(dia(-27)) || null);
+    const hora = plano(db.prepare(`SELECT CAST(strftime('%H', criado_em) AS INTEGER) AS h, COUNT(*) AS n FROM vendas
+      WHERE status = 'concluida' AND date(criado_em) >= ? GROUP BY h ORDER BY n DESC LIMIT 1`).get(dia(-27)) || null);
+    const atrasado = plano(db.prepare(`SELECT COUNT(DISTINCT cliente_id) AS clientes, COALESCE(SUM(valor - valor_pago),0) AS valor
+      FROM crediario_parcelas WHERE status = 'aberta' AND vencimento < ?`).get(dia(0)));
+    const repor = db.prepare(`SELECT COUNT(*) AS n FROM produtos WHERE ativo = 1 AND excluido_em IS NULL AND servico = 0
+      AND estoque <= estoque_minimo AND (estoque > 0 OR id IN (SELECT produto_id FROM venda_itens))`).get().n;
+    return { semana, anterior, formas, top, dia_semana: diaSemana, hora, atrasado, repor: Number(repor) };
+  }, 'admin');
+
   rota('GET', '/api/painel', () => {
     const cfg = config();
     const dia = (desloc) => new Date(Date.now() + desloc * 864e5).toLocaleDateString('sv-SE');

@@ -352,3 +352,18 @@ test('imprimir etiqueta do editor: valida o desenho recebido', () => {
   assert.equal(ruim.status, 400);
   assert.equal(chamar('POST', '/api/imprimir/etiquetas-imagem', { imagens: [] }).status, 400);
 });
+
+test('resumo do Início: semana, mais vendido, forma de pagamento e crediário atrasado', () => {
+  const { chamar, p } = loja();
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  const vazio = chamar('GET', '/api/painel/resumo').corpo;
+  assert.equal(vazio.semana.vendas, 0);
+  chamar('POST', '/api/vendas', { itens: [{ produto_id: p.id, quantidade: 2 }], pagamentos: [{ forma: 'pix', valor: p.preco_venda * 2 }] });
+  const r = chamar('GET', '/api/painel/resumo').corpo;
+  assert.equal(r.semana.vendas, 1);
+  assert.equal(r.semana.pecas, 2);
+  assert.equal(r.top.nome, p.nome);
+  assert.equal(r.formas[0].forma, 'pix');
+  assert.equal(r.atrasado.clientes, 0);
+  assert.ok(r.dia_semana && r.hora);
+});

@@ -358,9 +358,10 @@ test('aba Despesas: lança compra e salário, tira da gaveta, filtra, edita e ap
     assert.equal(rel.totais.compras_mercadoria, 150000);
     // Apagar o vale: o dinheiro volta para a gaveta (caixa ainda aberto).
     const vale = sis.db.prepare(`SELECT id FROM despesas WHERE descricao = 'Vale da Bia'`).get();
+    // Sem pergunta: some na hora e o aviso tem "Desfazer"; passado o tempo, apaga de verdade.
     await p.click(`[data-apagar="${vale.id}"]`);
-    await p.click('#modal-corpo .btn-perigo, #modal-corpo .btn-primario');
-    await p.waitForTimeout(700);
+    await p.waitForSelector('.aviso-desfazer');
+    await p.waitForTimeout(1200);
     cx = await sis.api('/api/caixa/atual');
     assert.equal(cx.dinheiro_esperado, 10000);
     assert.deepEqual(sis.erros, []);
