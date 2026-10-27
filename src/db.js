@@ -517,6 +517,13 @@ function migrar(db) {
   if (!colunas('clientes').includes('foto_versao')) {
     db.exec('ALTER TABLE clientes ADD COLUMN foto_versao INTEGER');
   }
+  // Celulares que ficam conectados para tirar as fotos (lê o QR Code uma vez só).
+  db.exec(`CREATE TABLE IF NOT EXISTS celular_aparelhos (
+    token TEXT PRIMARY KEY,
+    nome TEXT NOT NULL,
+    criado_em TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    visto_em TEXT
+  )`);
   db.exec(`CREATE TABLE IF NOT EXISTS cliente_fotos (
     cliente_id INTEGER PRIMARY KEY REFERENCES clientes(id),
     tipo TEXT NOT NULL,

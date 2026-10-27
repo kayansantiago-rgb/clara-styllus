@@ -203,6 +203,8 @@ function liberadoParaCelular(metodo, caminho) {
   if (metodo === 'GET' && caminho === '/celular') return true;
   if (metodo === 'GET' && /^\/api\/celular\/sessao\/[0-9a-f]{32}$/.test(caminho)) return true;
   if (metodo === 'POST' && /^\/api\/celular\/foto\/[0-9a-f]{32}$/.test(caminho)) return true;
+  // Celular conectado perguntando se tem foto para tirar.
+  if (metodo === 'GET' && /^\/api\/celular\/aparelho\/[0-9a-f]{32}$/.test(caminho)) return true;
   return false;
 }
 

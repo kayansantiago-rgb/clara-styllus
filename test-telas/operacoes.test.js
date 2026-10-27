@@ -233,7 +233,7 @@ test('crediário quitado aparece em "Quitados"; administradora exclui o cadastro
   }
 });
 
-test('foto pelo celular: QR Code no cadastro, o celular tira a foto e ela aparece no produto', OPC, async () => {
+test('foto pelo celular: QR Code só na primeira vez; depois o pedido vai direto para o celular conectado', OPC, async () => {
   const sis = await novoSistema();
   try {
     const d = await dadosBasicos(sis);
@@ -245,7 +245,8 @@ test('foto pelo celular: QR Code no cadastro, o celular tira a foto e ela aparec
     await sis.pagina.waitForSelector('#foto-celular');
     const resp = sis.pagina.waitForResponse((r) => r.url().endsWith('/api/celular/sessao') && r.request().method() === 'POST');
     await sis.pagina.click('#foto-celular');
-    const { token } = await (await resp).json();
+    const { token, parear } = await (await resp).json();
+    assert.match(parear, /^[0-9a-f]{32}$/);
     await sis.pagina.waitForSelector('#foto-celular-painel svg.qrcode');
 
     // "Celular": outra página, entrando pelo endereço da rede (não pelo computador).
@@ -253,12 +254,11 @@ test('foto pelo celular: QR Code no cadastro, o celular tira a foto e ela aparec
     const fotoArq = require('node:path').join(sis.pasta, 'foto.png');
     await cel.setContent('<div style="width:300px;height:300px;background:linear-gradient(45deg,#a14d6f,#f6dd9b)"></div>');
     await cel.screenshot({ path: fotoArq });
-    await cel.goto(`http://${ip}:${sis.porta}/celular#${token}`);
-    await cel.waitForFunction(() => document.getElementById('nome').textContent !== 'Carregando…');
-    assert.match(await cel.textContent('#nome'), /Blusa Linho · P · Off/);
     // O celular não consegue abrir o sistema.
     assert.equal((await cel.goto(`http://${ip}:${sis.porta}/`)).status(), 403);
-    await cel.goto(`http://${ip}:${sis.porta}/celular#${token}`);
+    await cel.goto(`http://${ip}:${sis.porta}/celular#s=${token}&parear=${parear}`);
+    await cel.waitForFunction(() => /Blusa/.test(document.getElementById('nome').textContent));
+    assert.match(await cel.textContent('#nome'), /Blusa Linho · P · Off/);
     await cel.setInputFiles('#arquivo', fotoArq);
     await cel.waitForSelector('.msg.ok');
 
@@ -268,6 +268,19 @@ test('foto pelo celular: QR Code no cadastro, o celular tira a foto e ela aparec
     await sis.pagina.click('#modal-corpo form .fp-rodape .btn-primario');
     await sis.pagina.waitForTimeout(1000);
     assert.ok((await sis.api(`/api/produtos/${d.blusa.id}`)).foto_versao, 'a foto foi gravada na blusa');
+
+    // Fechou o cadastro: o celular volta a esperar, conectado.
+    await cel.waitForFunction(() => /conectado/.test(document.getElementById('titulo').textContent), null, { timeout: 8000 });
+    // Próxima peça: sem QR Code, o nome aparece sozinho no celular.
+    await sis.pagina.evaluate((v) => Telas.produtos.formulario(v), await sis.api(`/api/produtos/${d.vestido.id}`));
+    await sis.pagina.waitForSelector('#foto-celular');
+    await sis.pagina.click('#foto-celular');
+    await sis.pagina.waitForSelector('.fp-celular-direto');
+    assert.equal(await sis.pagina.$('#foto-celular-painel svg.qrcode'), null);
+    await cel.waitForFunction(() => /Vestido/.test(document.getElementById('nome').textContent), null, { timeout: 8000 });
+    await cel.setInputFiles('#arquivo', fotoArq);
+    await sis.pagina.waitForSelector('#foto-previa img', { timeout: 8000 });
+    assert.equal((await sis.api('/api/celular/aparelhos')).filter((a) => a.online).length, 1);
     await cel.close();
     assert.deepEqual(sis.erros, []);
   } finally {

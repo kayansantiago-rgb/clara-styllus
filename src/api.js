@@ -914,7 +914,7 @@ function criarApi(db, opcoes = {}) {
   instalarInventario({ db, rota, erro, inteiro, texto, plano, planos, transacao });
   const reservas = instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto });
   instalarEspera({ db, rota, erro, inteiro, texto, plano, planos });
-  instalarCelular({ rota, erro, texto });
+  instalarCelular({ db, rota, erro, texto });
 
   // ----------------------------------------------------------------- caixa
   // Venda conta no caixa em que foi feita se está concluída, ou se foi cancelada depois, com outro caixa aberto.

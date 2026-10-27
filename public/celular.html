@@ -27,6 +27,7 @@
     .ok { color: #1d7a4e; font-weight: 700; }
     .erro { color: #b3261e; font-weight: 600; }
     input[type=file] { display: none; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
@@ -47,27 +48,90 @@
   </div>
   <script>
     (function () {
-      var token = (location.hash || '').replace('#', '');
       var msg = document.getElementById('msg');
       var nome = document.getElementById('nome');
+      var titulo = document.getElementById('titulo');
+      var previa = document.getElementById('previa');
+      var iconeCamera = previa.innerHTML;
+      var botoes = [document.getElementById('tirar'), document.getElementById('galeria')];
       function aviso(t, classe) { msg.className = 'msg ' + (classe || ''); msg.textContent = t; }
+      function mostrarBotoes(sim) { botoes.forEach(function (b) { b.hidden = !sim; }); }
 
-      if (!/^[0-9a-f]{32}$/.test(token)) {
-        nome.textContent = '—';
-        aviso('Código inválido. Gere um QR Code novo no computador.', 'erro');
-        return;
+      // Endereço: #s=<foto>&parear=<celular> (QR Code novo) ou #<foto> (QR Code antigo).
+      var hash = (location.hash || '').replace('#', '');
+      var params = {};
+      hash.split('&').forEach(function (p) { var kv = p.split('='); if (kv[1]) params[kv[0]] = kv[1]; else if (kv[0]) params.s = kv[0]; });
+      var guardado = null;
+      try { guardado = localStorage.getItem('clara_celular'); } catch (e) { /* sem memória */ }
+      if (/^[0-9a-f]{32}$/.test(params.parear || '')) {
+        guardado = params.parear;
+        try { localStorage.setItem('clara_celular', guardado); } catch (e) { /* sem memória */ }
       }
-      fetch('/api/celular/sessao/' + token).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-        .then(function (x) {
-          if (!x.ok) throw new Error(x.j.erro || 'Código vencido.');
-          nome.textContent = x.j.nome;
-          if (x.j.tipo === 'cliente') {
-            document.title = 'Foto da cliente · Clara Styllus';
-            document.getElementById('titulo').textContent = 'Foto da cliente';
-            document.getElementById('msg').textContent = 'A foto aparece sozinha no cadastro da cliente, no computador da loja.';
-          }
-        })
-        .catch(function (e) { nome.textContent = '—'; aviso(e.message, 'erro'); document.getElementById('tirar').hidden = true; document.getElementById('galeria').hidden = true; });
+      var aparelho = /^[0-9a-f]{32}$/.test(guardado || '') ? guardado : null;
+      var token = /^[0-9a-f]{32}$/.test(params.s || '') ? params.s : null;
+      if (token || aparelho) history.replaceState(null, '', '/celular');
+
+      /** Mostra a peça (ou a cliente) que vai receber a foto. */
+      function usarPedido(p) {
+        if (token === p.token) return;
+        token = p.token;
+        nome.textContent = p.nome;
+        previa.innerHTML = iconeCamera;
+        document.getElementById('tirar-txt').textContent = 'Tirar foto';
+        titulo.textContent = p.tipo === 'cliente' ? 'Foto da cliente' : 'Foto do produto';
+        document.title = (p.tipo === 'cliente' ? 'Foto da cliente' : 'Foto do produto') + ' · Clara Styllus';
+        mostrarBotoes(true);
+        aviso(p.tipo === 'cliente' ? 'A foto aparece sozinha no cadastro da cliente, no computador.' : 'A foto aparece sozinha no cadastro, no computador da loja.');
+        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+      }
+      /** Celular conectado, sem pedido: fica esperando o computador pedir uma foto. */
+      var esperando = false;
+      function esperar(nomeCelular) {
+        esperando = true;
+        token = null;
+        titulo.textContent = 'Celular conectado ✓';
+        nome.textContent = 'Esperando uma foto…';
+        previa.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>';
+        mostrarBotoes(false);
+        aviso('Deixe esta página aberta' + (nomeCelular ? ' (' + nomeCelular + ')' : '') + '. Quando for cadastrar uma peça no computador e clicar em "Celular", o nome dela aparece aqui para tirar a foto.', 'ok');
+      }
+
+      function perguntar() {
+        if (!aparelho) return;
+        fetch('/api/celular/aparelho/' + aparelho, { cache: 'no-store' })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
+          .then(function (x) {
+            if (x.status === 404) {
+              aparelho = null;
+              try { localStorage.removeItem('clara_celular'); } catch (e) { /* sem memória */ }
+              if (!token) { nome.textContent = '—'; aviso('Este celular foi desconectado. Leia o QR Code de novo no computador.', 'erro'); }
+              return;
+            }
+            if (x.j.pedido) { esperando = false; usarPedido(x.j.pedido); } else if (!esperando) esperar(x.j.nome);
+          })
+          .catch(function () { /* sem rede agora: tenta de novo */ })
+          .then(function () { if (aparelho) setTimeout(perguntar, 1500); });
+      }
+
+      if (token) {
+        fetch('/api/celular/sessao/' + token).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (x) {
+            if (!x.ok) throw new Error(x.j.erro || 'Código vencido.');
+            var t = token; token = null;
+            usarPedido({ token: t, nome: x.j.nome, tipo: x.j.tipo });
+          })
+          .catch(function (e) {
+            if (aparelho) return; // conectado: só espera o próximo pedido
+            nome.textContent = '—'; aviso(e.message, 'erro'); mostrarBotoes(false);
+          });
+      } else if (!aparelho) {
+        nome.textContent = '—';
+        aviso('Código inválido. Leia o QR Code no computador.', 'erro');
+        mostrarBotoes(false);
+      } else {
+        esperar('');
+      }
+      perguntar();
 
       /** Diminui a foto (no máximo 1200 px) para enviar rápido pelo Wi-Fi. */
       function reduzir(arquivo, lado, qualidade) {
@@ -91,15 +155,16 @@
       function enviar(ev) {
         var arq = ev.target.files && ev.target.files[0];
         ev.target.value = '';
-        if (!arq) return;
+        if (!arq || !token) return;
+        var alvo = token;
         var botao = document.getElementById('tirar');
         botao.setAttribute('disabled', '');
         aviso('Enviando a foto…');
         reduzir(arq, 1200, 0.82)
           .then(function (dados) { return dados.length > 2e6 ? reduzir(arq, 900, 0.7) : dados; })
           .then(function (dados) {
-            document.getElementById('previa').innerHTML = '<img alt="" src="' + dados + '">';
-            return fetch('/api/celular/foto/' + token, {
+            previa.innerHTML = '<img alt="" src="' + dados + '">';
+            return fetch('/api/celular/foto/' + alvo, {
               method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem: dados }),
             });
           })

@@ -43,7 +43,7 @@ test('relatórios: mapa de calor, curva ABC e peças paradas', OPC, async () => 
     await print(sis, 'rel-paradas', sis.pagina.locator('#paradas'));
     // Clicar no modelo abre Produtos já filtrado.
     await sis.pagina.click('#abc .abc-modelo');
-    await sis.pagina.waitForSelector('.pr-lista, .pr-vitrine');
+    await sis.pagina.waitForSelector('.pr-lista, .pr-vitrine, .pr-modelos');
     await sis.pagina.waitForTimeout(400);
     assert.equal(await sis.pagina.inputValue('#q'), 'Vestido Midi Floral');
     assert.deepEqual(sis.erros, []);

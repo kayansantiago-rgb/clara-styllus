@@ -5,6 +5,13 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Produtos remodelado**: painel com peças em estoque, valor em estoque, lucro previsto e o que precisa repor;
+  visão **Modelos** (cada roupa uma vez, com as cores e os tamanhos e a quantidade de cada um), além de Lista e
+  Vitrine; filtros (com estoque, para repor, esgotados, inativos) e ordenação.
+- **Celular conectado para fotos**: o celular lê o QR Code uma vez só e fica conectado; depois, ao clicar em
+  "Celular" no cadastro, o nome da peça aparece sozinho no celular para tirar a foto (Configurações → Loja mostra
+  e desconecta os celulares).
+
 - **Cadastro de peça remodelado**: vitrine ao vivo à esquerda (foto grande, nome, preço, margem e a etiqueta
   como vai sair) e 3 passos à direita (peça, preço, tamanhos/cores); tamanhos em botões, cores com bolinha,
   quantidades com − e +, preço pelo custo em um clique (×2, ×2,2, ×2,5, ×3).

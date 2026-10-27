@@ -273,6 +273,12 @@ Telas.config = (() => {
           ${check('rede_computadores', 'Permitir que outros computadores da loja usem o sistema')}
           <div id="rede-info" class="rede-info"></div>
         </div>
+        <div class="cartao cfg-celulares">
+          <h3 class="titulo-ico">${Icone('telefone')} Celulares para tirar foto</h3>
+          <p class="dica">O celular lê o QR Code uma vez só (no cadastro, botão <b>Celular</b>) e fica conectado: depois, é só deixar a
+            página aberta nele que o nome da peça aparece sozinho na hora de tirar a foto.</p>
+          <div id="cel-lista" class="cel-lista"></div>
+        </div>
         `)}
         ${secao('cupom', `
         <div class="cfg-cupom">
@@ -499,6 +505,7 @@ Telas.config = (() => {
     api('/api/backup/status').then(mostrarBackup).catch((e) => { raiz.querySelector('#backup-status').textContent = e.message; });
     raiz.querySelector('#zerar').onclick = zerarSistema;
     mostrarRede(raiz);
+    mostrarCelulares(raiz);
     raiz.querySelectorAll('[data-msg-padrao]').forEach((b) => {
       b.onclick = () => {
         const t = raiz.querySelector(`[name="msg_${b.dataset.msgPadrao}"]`);
@@ -567,6 +574,28 @@ Telas.config = (() => {
   }
 
   /** Zerar o sistema: escolhe o que apagar, confirma com a senha da administradora e digitando ZERAR. */
+  /** Celulares conectados para tirar foto (com o botão de desconectar). */
+  async function mostrarCelulares(raiz) {
+    const el = raiz.querySelector('#cel-lista');
+    if (!el) return;
+    let lista = [];
+    try { lista = await api('/api/celular/aparelhos'); } catch { return; }
+    el.innerHTML = lista.length ? lista.map((a) => `<div class="cel-item">
+        <span class="cel-ponto ${a.online ? 'on' : ''}"></span>
+        <div><b>${esc(a.nome)}</b><small>${a.online ? 'Com a página aberta agora' : `Visto em ${esc(U.dataHora(a.visto_em))}`}</small></div>
+        <button type="button" class="btn btn-peq btn-fantasma" data-desconectar="${esc(a.token)}">Desconectar</button></div>`).join('')
+      : '<small class="txt-suave">Nenhum celular conectado ainda.</small>';
+    el.onclick = async (ev) => {
+      const b = ev.target.closest('[data-desconectar]');
+      if (!b) return;
+      try {
+        await api(`/api/celular/aparelhos/${b.dataset.desconectar}`, { metodo: 'DELETE' });
+        aviso('Celular desconectado.');
+        mostrarCelulares(raiz);
+      } catch (e) { erro(e); }
+    };
+  }
+
   /** Endereço deste computador e o passo a passo para instalar no outro computador. */
   async function mostrarRede(raiz) {
     const el = raiz.querySelector('#rede-info');

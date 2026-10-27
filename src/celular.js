@@ -68,8 +68,20 @@ async function enderecosLocais() {
   return ordenarEnderecos(os.networkInterfaces(), await ipDaRotaPrincipal());
 }
 
-function instalarCelular({ rota, erro, texto }) {
+const ONLINE_MS = 12e3; // celular que perguntou há menos de 12 s está com a página aberta
+
+function instalarCelular({ db, rota, erro, texto }) {
   const sessoes = new Map();
+  // Celulares conectados: o que cada um está esperando agora (token do aparelho -> token da sessão)
+  // e quando perguntou pela última vez.
+  const pedidos = new Map();
+  const vistos = new Map();
+  const aparelho = (token) => {
+    const a = db.prepare('SELECT token, nome FROM celular_aparelhos WHERE token = ?').get(String(token || ''));
+    if (!a) throw erro(404, 'Este celular foi desconectado. Leia o QR Code de novo no computador.');
+    return a;
+  };
+  const online = (token) => Date.now() - (vistos.get(token) || 0) < ONLINE_MS;
   const limpar = () => {
     const agora = Date.now();
     for (const [t, s] of sessoes) if (agora - s.criada > VALIDADE_MS) sessoes.delete(t);
@@ -81,15 +93,62 @@ function instalarCelular({ rota, erro, texto }) {
     return s;
   };
 
-  /** Computador: abre a sessão e recebe os endereços para montar o QR Code. */
+  /**
+   * Computador: abre a sessão e recebe os endereços para montar o QR Code.
+   * Com um celular conectado e com a página aberta, o pedido já vai para ele (sem QR Code).
+   * Sem celular, devolve também um código de aparelho novo: quem ler o QR fica conectado.
+   */
   rota('POST', '/api/celular/sessao', async ({ corpo }) => {
     limpar();
     if (sessoes.size > 50) throw erro(429, 'Muitas fotos pendentes. Espere alguns minutos.');
     const token = crypto.randomBytes(16).toString('hex');
     const tipo = corpo && corpo.tipo === 'cliente' ? 'cliente' : 'produto';
     sessoes.set(token, { criada: Date.now(), nome: texto(corpo && corpo.nome, 120) || (tipo === 'cliente' ? 'Cliente' : 'Produto'), tipo, foto: null });
-    return { token, enderecos: await enderecosLocais(), validade_min: VALIDADE_MS / 60e3 };
+    const conectados = db.prepare('SELECT token, nome FROM celular_aparelhos ORDER BY visto_em DESC').all().filter((a) => online(a.token));
+    let enviado = null;
+    let parear = null;
+    if (conectados.length && !(corpo && corpo.qr)) {
+      enviado = conectados[0];
+      pedidos.set(enviado.token, token);
+      sessoes.get(token).aparelho = enviado.token;
+    } else {
+      // Aparelhos que nunca leram o QR somem depois de 1 dia.
+      db.prepare(`DELETE FROM celular_aparelhos WHERE visto_em IS NULL AND criado_em < datetime('now','localtime','-1 day')`).run();
+      parear = crypto.randomBytes(16).toString('hex');
+      const n = db.prepare('SELECT COUNT(*) AS n FROM celular_aparelhos').get().n;
+      db.prepare('INSERT INTO celular_aparelhos (token, nome) VALUES (?, ?)').run(parear, `Celular ${n + 1}`);
+      // Esta foto já fica como o pedido do celular que ler o QR.
+      pedidos.set(parear, token);
+      sessoes.get(token).aparelho = parear;
+    }
+    return {
+      token, enderecos: await enderecosLocais(), validade_min: VALIDADE_MS / 60e3,
+      celular: enviado ? { nome: enviado.nome } : null, parear,
+    };
   }, 'logado');
+
+  /** Celular conectado: "tem foto para tirar?" (pergunta a cada 1,5 s com a página aberta). */
+  rota('GET', '/api/celular/aparelho/:token', ({ params }) => {
+    limpar();
+    const a = aparelho(params.token);
+    if (!vistos.has(a.token)) db.prepare(`UPDATE celular_aparelhos SET visto_em = datetime('now','localtime') WHERE token = ?`).run(a.token);
+    vistos.set(a.token, Date.now());
+    const t = pedidos.get(a.token);
+    const s = t && sessoes.get(t);
+    if (t && !s) pedidos.delete(a.token);
+    return { nome: a.nome, pedido: s ? { token: t, nome: s.nome, tipo: s.tipo } : null };
+  }, 'publico');
+
+  /** Computador: celulares conectados (Configurações). */
+  rota('GET', '/api/celular/aparelhos', () => db.prepare(`SELECT token, nome, visto_em FROM celular_aparelhos
+    WHERE visto_em IS NOT NULL ORDER BY visto_em DESC`).all().map((a) => ({ ...a, online: online(a.token) })), 'logado');
+
+  rota('DELETE', '/api/celular/aparelhos/:token', ({ params }) => {
+    db.prepare('DELETE FROM celular_aparelhos WHERE token = ?').run(String(params.token));
+    pedidos.delete(String(params.token));
+    vistos.delete(String(params.token));
+    return { ok: true };
+  }, 'admin');
 
   /** Celular: confere o código e mostra o nome da peça. */
   rota('GET', '/api/celular/sessao/:token', ({ params }) => {
@@ -117,6 +176,8 @@ function instalarCelular({ rota, erro, texto }) {
 
   /** Computador: fechou o cadastro, a sessão acaba. */
   rota('DELETE', '/api/celular/sessao/:token', ({ params }) => {
+    const s = sessoes.get(String(params.token));
+    if (s && s.aparelho && pedidos.get(s.aparelho) === String(params.token)) pedidos.delete(s.aparelho);
     sessoes.delete(String(params.token));
     return { ok: true };
   }, 'logado');

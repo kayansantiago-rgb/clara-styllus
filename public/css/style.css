@@ -2578,3 +2578,97 @@ input.fp-auto { background: #fbf7ec; }
 .cad-etq-previa .etq-auto .segmento { flex: 1; padding: 6px 4px; font-size: 12px; }
 .ge-step input::-webkit-outer-spin-button, .ge-step input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .ge-step input[type=number] { -moz-appearance: textfield; }
+
+/* Celular conectado */
+.fp-celular-direto { display: flex; gap: 12px; align-items: flex-start; }
+.fp-celular-ico { width: 44px; height: 44px; border-radius: 12px; background: var(--rosa-claro); display: grid; place-items: center; flex-shrink: 0; }
+.fp-celular-ico .i { width: 24px; height: 24px; color: var(--rosa); }
+.fp-celular-links { display: flex; gap: 14px; flex-wrap: wrap; }
+.cel-lista { display: flex; flex-direction: column; gap: 6px; }
+.cel-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 10px; }
+.cel-item div { flex: 1; display: flex; flex-direction: column; }
+.cel-item small { color: var(--suave); }
+.cel-ponto { width: 10px; height: 10px; border-radius: 50%; background: #c9bec1; }
+.cel-ponto.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(35,132,90,.18); }
+
+/* =================== Produtos (remodelado) =================== */
+.pr2 { display: flex; flex-direction: column; gap: 14px; }
+.pr2-topo { margin-bottom: 0; }
+.pr2-acoes .btn-grande { min-height: 44px; padding: 0 20px; }
+.pr2-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.pr2-kpi { display: flex; gap: 12px; align-items: center; background: #fff; border: 1px solid var(--borda); border-radius: 18px; padding: 14px 16px;
+  box-shadow: var(--sombra-1); text-align: left; font: inherit; color: inherit; }
+.pr2-kpi > div { display: flex; flex-direction: column; min-width: 0; }
+.pr2-kpi small { font-size: 12px; color: var(--suave); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
+.pr2-kpi b { font-size: 26px; font-weight: 750; letter-spacing: -.6px; line-height: 1.15; white-space: nowrap; }
+.pr2-kpi em { font-style: normal; font-size: 12.5px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr2-kpi-ico { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: var(--rosa-claro); flex-shrink: 0; }
+.pr2-kpi-ico .i { width: 22px; height: 22px; color: var(--rosa); }
+.pr2-kpi.destaque { background: linear-gradient(140deg, #8c6370, #5c3a45); border: 0; color: #fff; }
+.pr2-kpi.destaque small, .pr2-kpi.destaque em { color: rgba(255,255,255,.75); }
+.pr2-kpi.destaque .pr2-kpi-ico { background: rgba(212,162,74,.22); }
+.pr2-kpi.destaque .pr2-kpi-ico .i { color: #f1d29a; }
+.pr2-kpi.alerta { cursor: pointer; }
+.pr2-kpi.alerta .pr2-kpi-ico { background: #fff3dc; }
+.pr2-kpi.alerta .pr2-kpi-ico .i { color: var(--alerta); }
+.pr2-kpi.alerta b { color: #8a5f0a; }
+.pr2-kpi.alerta:hover { border-color: var(--alerta); }
+.pr2-kpi.alerta.tudo-ok .pr2-kpi-ico { background: #e9f7ef; } .pr2-kpi.alerta.tudo-ok .pr2-kpi-ico .i { color: var(--ok); } .pr2-kpi.alerta.tudo-ok b { color: var(--ok); }
+.pr2-barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #fff; border: 1px solid var(--borda); border-radius: 16px; padding: 10px; box-shadow: var(--sombra-1); }
+.pr2-busca { flex: 1 1 280px; margin: 0; }
+.pr2-busca input { height: 44px; font-size: 15px; }
+.pr2-filtros { display: flex; background: #f4f0f1; border-radius: 12px; padding: 3px; gap: 2px; }
+.pr2-f { font: inherit; font-size: 13px; font-weight: 600; border: 0; background: transparent; padding: 8px 12px; border-radius: 9px; color: #6c5f66; cursor: pointer; white-space: nowrap; }
+.pr2-f:hover { color: var(--texto); }
+.pr2-f.sel { background: #fff; color: var(--rosa-escuro); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.pr2-ordem { display: flex; flex-direction: row; align-items: center; gap: 6px; font-size: 12.5px; color: var(--suave); font-weight: 600; }
+.pr2-ordem select { height: 38px; font-size: 13px; padding: 0 8px; border-radius: 10px; }
+.pr2-cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.pr2-cats:empty { display: none; }
+.pr2-cat { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--borda-forte); background: #fff; border-radius: 999px; padding: 6px 14px; cursor: pointer; color: #5d5157; }
+.pr2-cat small { color: var(--suave); font-weight: 500; margin-left: 2px; }
+.pr2-cat.sel { background: var(--texto); border-color: var(--texto); color: #fff; }
+.pr2-cat.sel small { color: rgba(255,255,255,.7); }
+
+/* Cartões por modelo */
+.pr-modelos { display: flex; flex-direction: column; gap: 10px; }
+.pm { display: grid; grid-template-columns: 96px minmax(0, 1fr) 190px; gap: 16px; align-items: stretch; background: #fff; border: 1px solid var(--borda);
+  border-radius: 18px; padding: 12px; box-shadow: var(--sombra-1); transition: box-shadow .15s, border-color .15s; }
+.pm:hover { box-shadow: var(--sombra-2); border-color: var(--borda-forte); }
+.pm.inativo { opacity: .55; }
+.pm-foto { border: 0; padding: 0; background: none; cursor: pointer; }
+.pm-foto .pm-img, .pm-foto img, .pm-foto .miniatura { width: 96px; height: 120px; border-radius: 12px; object-fit: cover; display: grid; place-items: center; }
+.pm-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 2px; }
+.pm-topo { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.pm-topo > div:first-child { display: flex; flex-direction: column; min-width: 0; }
+.pm-cat { font-size: 11px; color: var(--ouro); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
+.pm-nome { font-size: 17px; font-weight: 700; line-height: 1.25; }
+.pm-ref { color: var(--suave); font-size: 12px; }
+.pm-preco { text-align: right; white-space: nowrap; display: flex; flex-direction: column; align-items: flex-end; }
+.pm-preco b { font-size: 18px; color: var(--rosa-escuro); }
+.pm-preco small, .pm-preco s { color: var(--suave); font-size: 12px; }
+.pm-cor { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pm-cor-nome { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: #5d5157; min-width: 96px; }
+.pm-tams { display: flex; flex-wrap: wrap; gap: 5px; }
+.pm-v { font: inherit; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--borda-forte); background: #fff; border-radius: 9px;
+  padding: 3px 4px 3px 9px; cursor: pointer; font-size: 13px; font-weight: 700; color: #5d5157; }
+.pm-v b { min-width: 22px; padding: 1px 6px; border-radius: 6px; background: #e9f7ef; color: #1d6e4a; font-size: 12px; text-align: center; }
+.pm-v.baixo b { background: #fff3dc; color: #8a5f0a; }
+.pm-v.zero { color: #a3959c; border-style: dashed; }
+.pm-v.zero b { background: #fdeceb; color: #a32c21; }
+.pm-v.servico b { background: #eef0ff; color: #3f4fa8; }
+.pm-v:hover { border-color: var(--rosa); }
+.pm-lado { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; gap: 8px; border-left: 1px solid var(--borda); padding-left: 14px; }
+.pm-estoque { display: flex; flex-direction: column; align-items: flex-end; }
+.pm-estoque b { font-size: 28px; font-weight: 750; letter-spacing: -.8px; line-height: 1; }
+.pm-estoque small { color: var(--suave); font-size: 12px; }
+.pm-estoque em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--rosa-escuro); margin-top: 2px; }
+.pm-estoque.zero b, .pm-estoque.zero em { color: #a32c21; }
+.pm-acoes { display: flex; gap: 2px; }
+@media (max-width: 900px) { .pm { grid-template-columns: 72px 1fr; } .pm-lado { grid-column: 1 / -1; flex-direction: row; border-left: 0; padding-left: 0; } .pm-foto .pm-img, .pm-foto img { width: 72px; height: 90px; } }
+.pm-img { width: 96px; height: 120px; border-radius: 12px; object-fit: cover; background: var(--rosa-claro); color: #bd96a0; display: grid; place-items: center; }
+.pm-img .i { width: 30px; height: 30px; }
+.pr2-busca { flex: 1 1 220px; min-width: 200px; }
+.pm { grid-template-columns: 80px minmax(0, 1fr) 180px; padding: 10px 12px; }
+.pm-img, .pm-foto .pm-img, .pm-foto img { width: 80px; height: 100px; }
+.pr2-barra .segmento { padding: 0 10px; }
