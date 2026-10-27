@@ -2949,3 +2949,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 /* Cores das formas de pagamento: as mesmas do caixa em todo o sistema */
 .forma-dinheiro { --cor-forma: #2f9e6a; } .forma-pix { --cor-forma: #16a596; } .forma-debito { --cor-forma: #2f5fa8; }
 .forma-credito { --cor-forma: #7a49a6; } .forma-crediario { --cor-forma: #b06d80; } .forma-vale { --cor-forma: #c99a3e; } .forma-outro { --cor-forma: #7a6d74; }
+
+/* Vitrine de Produtos: os 6 botões dividem a largura do cartão (o lápis não fica mais cortado) */
+.pr-card-acoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2px; }
+.pr-card-acoes .btn-ico { padding: 6px 0; width: 100%; min-width: 0; }
+.pr-card-acoes .btn-ico .i { width: 17px; height: 17px; }
