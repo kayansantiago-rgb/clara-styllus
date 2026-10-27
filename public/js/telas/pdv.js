@@ -253,7 +253,7 @@ Telas.pdv = (() => {
           <span class="ec-info"><b>${brl(c.saldo)}</b><small>${c.parcelas} parcela(s) em aberto</small></span>
           ${c.vencido > 0 ? `<span class="selo perigo">${brl(c.vencido)} vencido</span>` : '<span class="selo ok">em dia</span>'}
         </button>`).join('') ||
-        `<div class="ec-vazio">${Icone('caderno')}<b>${q ? 'Ninguém com esse nome devendo no crediário' : 'Ninguém devendo no crediário'}</b><small>${q ? 'Confira o nome, o CPF ou o telefone.' : 'Tudo pago! 🎉'}</small></div>`;
+        `<div class="ec-vazio">${Icone('caderno')}<b>${q ? 'Ninguém com esse nome devendo no crediário' : 'Ninguém devendo no crediário'}</b><small>${q ? 'Confira o nome, o CPF ou o telefone.' : 'Tudo pago.'}</small></div>`;
     };
     corpo.querySelector('#q-deve').addEventListener('input', U.debounce((ev) => buscar(ev.target.value.trim()), 200));
     lista.onclick = (ev) => {

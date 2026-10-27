@@ -141,7 +141,7 @@ const ResumoMes = (() => {
       const pctMeta = Math.round((d.faturamento / d.meta) * 100);
       ctx.fillStyle = 'rgba(255,255,255,.75)';
       ctx.font = `500 26px ${SANS}`;
-      ctx.fillText(pctMeta >= 100 ? `🎉 Meta batida: ${pctMeta}% de ${brl(d.meta)}` : `${pctMeta}% da meta de ${brl(d.meta)}`, W / 2, y + 62);
+      ctx.fillText(pctMeta >= 100 ? `Meta batida: ${pctMeta}% de ${brl(d.meta)}` : `${pctMeta}% da meta de ${brl(d.meta)}`, W / 2, y + 62);
     }
     y += 110;
 

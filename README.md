@@ -5,6 +5,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Acabamento profissional**: o mesmo padrão em todas as telas (quadros de números, cartões, abas, botões,
+  campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
+  emojis nos textos do sistema.
+
 - **Caixa remodelado**: barra de cima na cor da marca, leitor grande, "último item" com foto para conferir o
   que bipou, sacola em cartões, total em destaque, formas de pagamento com cores próprias e a lista de atalhos
   de teclado sempre visível. Telas de **pagamento** e de **venda concluída** no mesmo estilo (formas coloridas,

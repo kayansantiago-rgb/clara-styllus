@@ -2877,3 +2877,75 @@ input.fp-auto { background: #fbf7ec; }
 .modal-concluida .vc.com-troco .vc-valor { color: #1d6e4a; }
 .modal-concluida .vc-acoes .btn:not(.vc-nova) { min-height: 48px; border-radius: 14px; }
 .modal-concluida .vc-nova { background: linear-gradient(135deg, #a46373, #764350); border: 0; box-shadow: 0 10px 24px rgba(118,67,80,.3); }
+
+/* =====================================================================
+   Acabamento profissional: o mesmo padrão em todas as telas
+   (quadros de números, cartões, abas, botões, campos, tabelas e menu).
+   ===================================================================== */
+:root {
+  --fundo: #f5f2f3;
+  --sombra-1: 0 1px 2px rgba(35,29,31,.04), 0 2px 8px rgba(35,29,31,.04);
+  --sombra-2: 0 12px 32px rgba(35,29,31,.09), 0 2px 6px rgba(35,29,31,.04);
+}
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+b, strong { font-weight: 650; }
+
+/* Cabeçalho das telas */
+.cabecalho-tela { padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--borda); }
+.cabecalho-tela h1 { font-size: 30px; line-height: 1.15; }
+.cabecalho-tela .subtitulo, .cabecalho-tela .dica { margin-top: 4px; font-size: 13.5px; color: var(--suave); }
+.pr2-topo, .ee-cab { border-bottom: 0; padding-bottom: 0; }
+
+/* Cartões */
+.cartao { border-radius: 16px; padding: 18px 20px; }
+.cartao h3, .cartao .titulo-ico { font-size: 15px; font-weight: 700; letter-spacing: -.1px; }
+.titulo-ico .i { width: 18px; height: 18px; }
+
+/* Quadros de números (Vendas, Crediário, Relatórios, Reservas, Caixa, Despesas, Vendedores) */
+.vd-kpi { border-radius: 16px; padding: 14px 16px; gap: 2px; }
+.vd-kpi > span { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--suave); gap: 9px; margin-bottom: 4px; }
+.vd-kpi > span .i { width: 15px; height: 15px; padding: 7px; box-sizing: content-box; border-radius: 10px; background: var(--rosa-claro); color: var(--rosa); flex-shrink: 0; }
+.vd-kpi b { font-size: 25px; font-weight: 700; letter-spacing: -.5px; }
+.vd-kpi small { color: var(--suave); }
+.vd-kpi.destaque { background: linear-gradient(140deg, #8c6370, #5c3a45); box-shadow: 0 12px 28px rgba(92,58,69,.22); }
+.vd-kpi.destaque > span, .vd-kpi.destaque small { color: rgba(255,255,255,.78); }
+.vd-kpi.destaque > span .i { background: rgba(212,162,74,.22); color: #f1d29a; }
+
+/* Abas e filtros */
+.segmentos { background: #efe9eb; border-radius: 12px; padding: 3px; }
+.segmento { font-weight: 600; border-radius: 9px; }
+.segmento.sel { box-shadow: 0 1px 2px rgba(35,29,31,.08), 0 2px 6px rgba(35,29,31,.06); }
+.chip-filtro { font-weight: 600; }
+
+/* Botões e campos */
+.btn { border-radius: 11px; font-weight: 600; }
+.btn-primario { background: linear-gradient(180deg, #9b5e6d, #8a5160); border-color: #84505d; }
+.btn-primario:hover:not(:disabled) { background: linear-gradient(180deg, #8f5463, #7a4553); }
+input, select, textarea { border-radius: 11px; }
+:focus-visible { outline: 2px solid rgba(149,89,104,.45); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
+/* Tabelas */
+.tabela th { font-size: 11px; letter-spacing: .8px; font-weight: 700; color: #8d7f86; background: #faf8f9; }
+.tabela td { border-bottom-color: #f1ecee; }
+.tabela tbody tr:hover td { background: #fcfafb; }
+
+/* Menu lateral */
+.menu { background: #fff; }
+.menu-titulo { font-size: 10.5px; letter-spacing: 1.6px; font-weight: 700; color: #b0a3aa; }
+.menu nav a { border-radius: 10px; font-weight: 550; color: #5a4e54; }
+.menu nav a .i { color: #a3959c; }
+.menu nav a:hover { background: #f7f3f4; }
+.menu nav a.ativo { background: linear-gradient(90deg, var(--rosa-claro), #fbf7f8); color: var(--rosa-escuro); font-weight: 650; }
+
+/* Barras de rolagem discretas */
+* { scrollbar-width: thin; scrollbar-color: #d6cdd0 transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d6cdd0; border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background-color: #c2b6ba; }
+
+/* Avisos (toasts) */
+.aviso { border-radius: 12px; font-size: 14px; box-shadow: 0 14px 34px rgba(35,29,31,.22); }
+/* Cores das formas de pagamento: as mesmas do caixa em todo o sistema */
+.forma-dinheiro { --cor-forma: #2f9e6a; } .forma-pix { --cor-forma: #16a596; } .forma-debito { --cor-forma: #2f5fa8; }
+.forma-credito { --cor-forma: #7a49a6; } .forma-crediario { --cor-forma: #b06d80; } .forma-vale { --cor-forma: #c99a3e; } .forma-outro { --cor-forma: #7a6d74; }

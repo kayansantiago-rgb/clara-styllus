@@ -9,7 +9,7 @@ Telas.relatorios = (() => {
   }
 
   const PERIODOS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['mes', 'Este mês'], ['passado', 'Mês passado'], ['outro', 'Escolher datas']];
-  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#d98a9e', vale: '#008300', outro: '#4a3aa7' };
+  const COR_FORMA = { dinheiro: '#2f9e6a', pix: '#16a596', debito: '#2f5fa8', credito: '#7a49a6', crediario: '#b06d80', vale: '#c99a3e', outro: '#7a6d74' };
   const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const SEMANA_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
   const SEMANA_ORDEM = [1, 2, 3, 4, 5, 6, 0];
@@ -279,7 +279,7 @@ Telas.relatorios = (() => {
     el.innerHTML = `
       <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3>
         <label class="pp-dias">Sem vender há <select id="pp-dias">${[30, 60, 90, 120, 180].map((n) => `<option value="${n}" ${n === diasParado ? 'selected' : ''}>${n} dias</option>`).join('')}</select></label></div>
-      ${!r.modelos.length ? `<div class="vazio">Nenhuma peça parada há mais de ${r.dias} dias. Estoque girando bem! 🎉</div>` : `
+      ${!r.modelos.length ? `<div class="vazio">Nenhuma peça parada há mais de ${r.dias} dias. Estoque girando bem.</div>` : `
       <div class="pp-resumo">
         <div><small>Modelos parados</small><b>${r.modelos.length}</b></div>
         <div><small>Peças</small><b>${r.pecas}</b></div>

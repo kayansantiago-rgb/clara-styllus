@@ -29,7 +29,7 @@ Telas.inicio = (() => {
     } else {
       if (a.faturamento) {
         const pct = Math.round(((s.faturamento - a.faturamento) / a.faturamento) * 100);
-        out.push(['grafico', pct >= 5 ? `Nos últimos 7 dias você vendeu <b>${pct}% a mais</b> que na semana anterior: ${brl(s.faturamento)} contra ${brl(a.faturamento)}. 🎉`
+        out.push(['grafico', pct >= 5 ? `Nos últimos 7 dias você vendeu <b>${pct}% a mais</b> que na semana anterior: ${brl(s.faturamento)} contra ${brl(a.faturamento)}.`
           : pct <= -5 ? `Nos últimos 7 dias as vendas ficaram <b>${-pct}% abaixo</b> da semana anterior (${brl(s.faturamento)} contra ${brl(a.faturamento)}). Que tal um <a href="#/produtos">catálogo no Instagram</a> ou uma liquidação?`
             : `As vendas dos últimos 7 dias estão parecidas com as da semana anterior: <b>${brl(s.faturamento)}</b>.`]);
       } else {
@@ -53,7 +53,7 @@ Telas.inicio = (() => {
     if (x.atrasado.clientes) {
       out.push(['caderno', `<b>${x.atrasado.clientes} ${x.atrasado.clientes === 1 ? 'cliente está' : 'clientes estão'}</b> com o crediário atrasado (${brl(x.atrasado.valor)}). <a href="#/crediario?aba=cobrar">Cobrar agora</a>`, 'alerta']);
     } else {
-      out.push(['check', 'Ninguém está com o crediário atrasado. 👏', 'ok']);
+      out.push(['check', 'Ninguém está com o crediário atrasado.', 'ok']);
     }
     if (x.repor) out.push(['caixa', `<b>${x.repor} ${x.repor === 1 ? 'peça está' : 'peças estão'}</b> acabando ou esgotaram. <a href="#/produtos">Ver o que repor</a>`, 'alerta']);
     return out;
@@ -134,7 +134,7 @@ Telas.inicio = (() => {
             <div class="meta-barra" role="progressbar" aria-valuenow="${pctMeta}" aria-valuemin="0" aria-valuemax="100">
               <i style="width:${pctMeta}%"></i><span class="meta-marca" style="left:${Math.min(100, (esperadoHoje / meta) * 100)}%" title="Onde deveria estar hoje"></span>
             </div>
-            ${r.mes.faturamento >= meta ? '<div class="meta-batida">🎉 Meta batida! Parabéns à equipe.</div>' : ''}
+            ${r.mes.faturamento >= meta ? `<div class="meta-batida">${Icone('check')} Meta batida! Parabéns à equipe.</div>` : ''}
             <div class="meta-rodape"><span><b>${pctMeta}%</b> atingido · ${ritmo}</span>
               <span>Projeção: <b>${brl(r.mes.projecao)}</b></span></div>
             <p class="dica">Faltam ${brl(Math.max(0, meta - r.mes.faturamento))} em ${r.mes.dias - r.mes.dia + 1} dia(s)
@@ -201,7 +201,7 @@ Telas.inicio = (() => {
         setTimeout(() => {
           Animacoes.confete();
           U.som('meta');
-          U.aviso('🎉 Parabéns! A meta do mês foi batida!');
+          U.aviso('Parabéns! A meta do mês foi batida.');
         }, 500);
       }
     }

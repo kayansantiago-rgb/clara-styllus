@@ -77,7 +77,7 @@ Telas.caixa = (() => {
   }
 
   // -------------------------------------------------------------- painel
-  const COR_FORMA = { dinheiro: '#2a78d6', pix: '#eb6834', debito: '#1baf7a', credito: '#eda100', crediario: '#d98a9e', vale: '#008300', outro: '#4a3aa7' };
+  const COR_FORMA = { dinheiro: '#2f9e6a', pix: '#16a596', debito: '#2f5fa8', credito: '#7a49a6', crediario: '#b06d80', vale: '#c99a3e', outro: '#7a6d74' };
 
   function painel(r) {
     const troco = r.vendas.troco;
