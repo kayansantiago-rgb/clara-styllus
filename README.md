@@ -5,6 +5,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Caixa remodelado**: barra de cima na cor da marca, leitor grande, "último item" com foto para conferir o
+  que bipou, sacola em cartões, total em destaque, formas de pagamento com cores próprias e a lista de atalhos
+  de teclado sempre visível. **Vendas em espera** (F3 ou "Pôr em espera"): a cliente foi ao provador, a venda
+  fica guardada e o caixa atende a próxima; depois é só retomar.
+
 - **Início remodelado com resumo em palavras**: "como está a loja" escrito em português simples (vendas da
   semana × anterior, peça mais vendida, forma de pagamento mais usada, ticket médio, melhor dia e horário,
   crediário atrasado e peças para repor) e o vendido hoje em destaque.

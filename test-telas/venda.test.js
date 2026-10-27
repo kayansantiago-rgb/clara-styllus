@@ -214,3 +214,28 @@ test('desconto com botões prontos: 5/10/15/20%, tecla de atalho, por peça e re
     await sis.fechar();
   }
 });
+
+test('vendas em espera: guarda a venda (F3), atende outra e retoma a primeira', OPC, async () => {
+  const sis = await novoSistema();
+  const p = sis.pagina;
+  try {
+    const d = await dadosBasicos(sis);
+    await sis.ir('pdv');
+    await bipar(sis, d.vestido.codigo);
+    await bipar(sis, d.blusa.codigo);
+    await p.keyboard.press('F3');
+    await p.waitForSelector('#espera-n:not([hidden])');
+    assert.equal(await p.textContent('#espera-n'), '1');
+    assert.match(await p.textContent('#itens'), /Caixa livre/);
+    // Outra cliente: só a saia; depois retoma a primeira (a da saia vai para a espera).
+    await bipar(sis, d.saia.codigo);
+    await p.click('#t-espera');
+    await p.click('[data-retomar]');
+    await p.waitForTimeout(300);
+    assert.match(await p.textContent('#itens'), /Vestido Midi Floral[\s\S]*Blusa Linho/);
+    assert.equal(await p.textContent('#espera-n'), '1');
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

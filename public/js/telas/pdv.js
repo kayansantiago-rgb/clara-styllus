@@ -57,7 +57,7 @@ Telas.pdv = (() => {
     const hora = caixa.aberto_em.split(' ')[1]?.slice(0, 5) || '';
     const eu = U.sessao.usuario;
     raiz.innerHTML = `
-      <div class="pdv4">
+      <div class="pdv4 pdv5">
         <header class="p4-topo">
           <div class="p3-mais">
             <button class="p4-nav-btn" id="t-nav" title="Ir para outra tela">${Icone('grade')}<span>Menu</span></button>
@@ -77,13 +77,14 @@ Telas.pdv = (() => {
               <a href="#/config" data-admin>${Icone('ajustes')} Configurações</a>
             </div>
           </div>
+          <div class="p5-marca"><span class="marca-logo"><img src="/img/cs.png" alt="CS"></span></div>
           <div class="p4-caixa"><span class="ponto ok"></span><b>Caixa ${caixa.id} aberto</b><small>desde ${esc(hora)}</small></div>
           <div class="p4-topo-acoes">
+            <button class="p4-acao p5-espera" id="t-espera" title="Vendas em espera (F3)">${Icone('relogio')}<span>Em espera</span><i class="p5-badge" id="espera-n" hidden></i></button>
             <button class="p4-acao" id="t-troca" title="Troca ou devolução de uma venda (bipe o cupom)">${Icone('troca')}<span>Troca</span></button>
             <button class="p4-acao" id="t-condicional" title="Mandar as peças desta venda como condicional (malinha)">${Icone('bolsa')}<span>Condicional</span></button>
             <button class="p4-acao" id="t-reservar" title="Separar as peças com sinal para a cliente buscar depois">${Icone('reserva')}<span>Reservar</span></button>
             <button class="p4-acao" id="t-crediario" title="Receber pagamento do crediário (F10)">${Icone('caderno')}<span>Crediário</span></button>
-            <button class="p4-acao" id="t-gaveta" title="Abrir a gaveta">${Icone('gaveta')}<span>Gaveta</span></button>
             <div class="p3-mais">
               <button class="p4-acao" id="t-mais" title="Sangria, suprimento e fechar o caixa">${Icone('carteira')}<span>Caixa</span></button>
               <div class="p3-menu" id="menu-caixa" hidden>
@@ -103,27 +104,32 @@ Telas.pdv = (() => {
         </header>
 
         <section class="p4-venda">
-          <div class="p4-passo"><span>1</span>Bipe a etiqueta ou procure a peça</div>
           <div class="pdv-busca p4-busca">
             <span class="pdv-busca-ico">${Icone('codigo')}</span>
             <input id="busca" autocomplete="off" placeholder="Bipe aqui ou digite o nome da peça…">
             <kbd>F2</kbd>
             <div id="sugestoes" class="sugestoes" hidden></div>
           </div>
+          <div class="pdv-ultimo p5-ultimo" id="ultimo"></div>
           <div class="pdv-alertas" id="alertas"></div>
           <div class="p4-lista-cab">
-            <div><b>Peças da venda</b><span id="itens-cont"></span></div>
-            <button class="btn btn-claro btn-peq" id="btn-sem-etiqueta">${Icone('estrela')} Peça sem etiqueta</button>
+            <div><b>Sacola</b><span id="itens-cont"></span></div>
+            <div class="p5-lista-acoes">
+              <button class="btn btn-claro btn-peq" id="t-pausar" title="Guardar esta venda e atender outra cliente (F3)">${Icone('relogio')} Pôr em espera</button>
+              <button class="btn btn-claro btn-peq" id="btn-sem-etiqueta">${Icone('estrela')} Peça sem etiqueta</button>
+            </div>
           </div>
           <div class="pdv-lista p4-lista" id="itens"></div>
           <div class="p4-rapidos" id="secao-atalhos" hidden>
             <span>${Icone('raio')} Rápido</span>
             <div class="pdv-atalhos" id="atalhos"></div>
           </div>
+          <div class="p5-teclas">${[['F2', 'Buscar'], ['F3', 'Em espera'], ['F4', 'Dividir'], ['F6', 'Cliente'], ['F7', 'Desconto'], ['F8', 'Tirar última'], ['F9', 'Cancelar'], ['F10', 'Crediário']]
+    .map(([k, t]) => `<span><kbd>${k}</kbd>${t}</span>`).join('')}</div>
         </section>
 
         <aside class="p4-pagar">
-          <div class="p4-passo"><span>2</span>Confira a cliente e o total</div>
+          <div class="p4-passo">Cliente</div>
           <button class="pdv-cliente" id="btn-cliente">
             <span class="pdv-cliente-ico">${Icone('usuario')}</span>
             <span id="cliente-info" class="pdv-cliente-txt"></span>
@@ -138,7 +144,7 @@ Telas.pdv = (() => {
             <button id="btn-desconto">${Icone('etiqueta')}<span id="desconto-txt">Desconto</span><kbd>F7</kbd></button>
             <button id="btn-cpf">${Icone('recibo')}<span id="cpf-txt">CPF na nota</span></button>
           </div>
-          <div class="p4-passo"><span>3</span>Como a cliente vai pagar?</div>
+          <div class="p4-passo">Como a cliente vai pagar?</div>
           <div class="pdv-pagar p4-formas">
             ${[...FORMAS_RAPIDAS, ['vale', 'vale', 'Vale-troca']].map(([k, ico, nome]) => `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}<span>${nome}</span></button>`).join('')}
           </div>
@@ -169,11 +175,13 @@ Telas.pdv = (() => {
     const recarregar = () => { atualizarStatusCaixa(); if (raiz) abrir(raiz); };
     raiz.querySelector('#t-sangria').onclick = () => Telas.caixa.movimento('sangria', recarregar);
     raiz.querySelector('#t-suprimento').onclick = () => Telas.caixa.movimento('suprimento', recarregar);
-    raiz.querySelector('#t-gaveta').onclick = () => Impressao.abrirGaveta();
     raiz.querySelector('#t-troca').onclick = () => Trocas.perguntarVenda();
     raiz.querySelector('#t-condicional').onclick = () => enviarCondicional();
     raiz.querySelector('#t-reservar').onclick = () => reservar();
     raiz.querySelector('#t-crediario').onclick = () => receberCrediario();
+    raiz.querySelector('#t-pausar').onclick = () => pausarVenda();
+    raiz.querySelector('#t-espera').onclick = () => listaEspera();
+    contarEspera();
     raiz.querySelector('#t-tela').onclick = alternarTelaCheia;
     const menu = raiz.querySelector('#menu-caixa');
     raiz.querySelector('#t-mais').onclick = (ev) => { ev.stopPropagation(); menu.hidden = !menu.hidden; };
@@ -1334,10 +1342,90 @@ Telas.pdv = (() => {
     }
   }
 
+  // ------------------------------------------------------ vendas em espera
+  // A cliente foi para o provador (ou esqueceu algo): a venda fica guardada e o caixa atende a próxima.
+  const ESPERA = 'pdv_espera';
+  const emEspera = () => local.ler(ESPERA, []) || [];
+  function totalDe(c) {
+    const sub = c.itens.reduce((a, it) => a + it.produto.preco_venda * it.quantidade - (it.desconto || 0), 0);
+    const d = lerDesconto(c.desconto, sub);
+    return sub - (Number.isFinite(d) && d > 0 ? Math.min(d, sub) : 0);
+  }
+  function contarEspera() {
+    const el = raiz && raiz.querySelector('#espera-n');
+    if (!el) return;
+    const n = emEspera().length;
+    el.hidden = !n;
+    el.textContent = n;
+    raiz.querySelector('#t-espera').classList.toggle('tem', n > 0);
+  }
+  function guardarAtual() {
+    const lista = emEspera();
+    const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    lista.push({ id: Date.now(), hora, nome: carrinho.cliente ? carrinho.cliente.nome : '', carrinho });
+    local.gravar(ESPERA, lista);
+    return lista[lista.length - 1];
+  }
+  function pausarVenda() {
+    if (!carrinho.itens.length) return aviso('A sacola está vazia: não tem venda para pôr em espera.', 'alerta');
+    const g = guardarAtual();
+    carrinho = novoCarrinho();
+    salvar();
+    saldoCliente = null;
+    desenhar();
+    contarEspera();
+    aviso(`Venda ${g.nome ? `da ${g.nome.split(' ')[0]}` : `das ${g.hora}`} em espera. O caixa está livre para a próxima cliente.`);
+    raiz.querySelector('#busca').focus();
+  }
+  function listaEspera() {
+    const lista = emEspera();
+    if (!lista.length) return aviso('Nenhuma venda em espera. Use "Pôr em espera" (F3) quando a cliente for ao provador.', 'alerta');
+    const corpo = U.abrirModal('Vendas em espera', `
+      <p class="dica">Clique em <b>Retomar</b> para continuar a venda.${carrinho.itens.length ? ' A venda que está no caixa agora vai para a espera no lugar dela.' : ''}</p>
+      <div class="p5-esperas">${lista.map((g) => {
+    const pecas = g.carrinho.itens.reduce((a, it) => a + it.quantidade, 0);
+    return `<div class="p5-esp" data-id="${g.id}">
+          <div class="p5-esp-fotos">${g.carrinho.itens.slice(0, 3).map((it) => U.miniatura(it.produto, 'p5-esp-foto')).join('')}</div>
+          <div class="p5-esp-txt"><b>${esc(g.nome || `Venda das ${g.hora}`)}</b>
+            <small>${pecas} peça(s) · desde ${esc(g.hora)} · ${esc(g.carrinho.itens.map((it) => it.produto.nome).slice(0, 2).join(', '))}${g.carrinho.itens.length > 2 ? '…' : ''}</small></div>
+          <b class="p5-esp-total">${brl(totalDe(g.carrinho))}</b>
+          <button class="btn btn-primario btn-peq" data-retomar="${g.id}">Retomar</button>
+          <button class="btn-ico" data-descartar="${g.id}" title="Descartar esta venda">${Icone('lixeira')}</button>
+        </div>`;
+  }).join('')}</div>
+      <div class="acoes"><button class="btn" data-fechar>Fechar</button></div>`, { largura: '680px' });
+    corpo.querySelector('.p5-esperas').onclick = async (ev) => {
+      const r = ev.target.closest('[data-retomar]');
+      const d = ev.target.closest('[data-descartar]');
+      if (r) {
+        const g = emEspera().find((x) => x.id === Number(r.dataset.retomar));
+        let resto = emEspera().filter((x) => x.id !== g.id);
+        local.gravar(ESPERA, resto);
+        if (carrinho.itens.length) { guardarAtual(); resto = emEspera(); }
+        carrinho = g.carrinho;
+        salvar();
+        U.fecharModal();
+        saldoCliente = null;
+        carregarSaldoCliente();
+        desenhar();
+        contarEspera();
+        aviso(`Venda ${g.nome ? `da ${g.nome.split(' ')[0]}` : `das ${g.hora}`} de volta ao caixa.`);
+        raiz.querySelector('#busca').focus();
+      }
+      if (d) {
+        if (!(await U.confirmar('Descartar venda em espera?', 'As peças saem da lista (nada foi cobrado nem tirado do estoque).', { ok: 'Descartar', perigo: true }))) return listaEspera();
+        local.gravar(ESPERA, emEspera().filter((x) => x.id !== Number(d.dataset.descartar)));
+        contarEspera();
+        if (emEspera().length) listaEspera();
+      }
+    };
+  }
+
   function tecla(ev) {
     if (!raiz || !caixa) return;
     const mapa = {
       F2: () => raiz.querySelector('#busca').focus(),
+      F3: () => { if (!U.modalAberto()) { if (carrinho.itens.length) pausarVenda(); else listaEspera(); } },
       F4: () => !U.modalAberto() && finalizar('dinheiro', undefined, { dividir: true }),
       F6: () => !U.modalAberto() && escolherCliente(),
       F7: () => !U.modalAberto() && pedirDesconto(),
