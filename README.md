@@ -5,6 +5,9 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Cadastro de peça remodelado**: vitrine ao vivo à esquerda (foto grande, nome, preço, margem e a etiqueta
+  como vai sair) e 3 passos à direita (peça, preço, tamanhos/cores); tamanhos em botões, cores com bolinha,
+  quantidades com − e +, preço pelo custo em um clique (×2, ×2,2, ×2,5, ×3).
 - **Cadastro de produto mais rápido**: categorias em um clique (e o nome "Vestido…" já escolhe Vestido),
   tamanhos lembrados por categoria, cores comuns em um clique, **Salvar e fazer outro** (mesma categoria,
   marca e tamanhos), **Cadastrar parecido** a partir de um produto, Ctrl+Enter salva.

@@ -7,12 +7,33 @@ const GradeEditor = (() => {
   const { esc, api } = U;
 
   const PRESETS = [
-    ['Letras', ['PP', 'P', 'M', 'G', 'GG']],
-    ['Letras + XG', ['P', 'M', 'G', 'GG', 'XG']],
-    ['Numeração 34–46', ['34', '36', '38', '40', '42', '44', '46']],
-    ['Plus 48–54', ['48', '50', '52', '54']],
-    ['Tamanho único', ['U']],
+    ['PP ao GG', ['PP', 'P', 'M', 'G', 'GG']],
+    ['P ao XG', ['P', 'M', 'G', 'GG', 'XG']],
+    ['34 ao 46', ['34', '36', '38', '40', '42', '44', '46']],
+    ['Plus 48 ao 54', ['48', '50', '52', '54']],
+    ['Único', ['U']],
   ];
+  // Tamanhos mostrados como botões (toque liga/desliga), na ordem da arara.
+  const GRUPOS_TAM = [
+    ['Letras', ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG']],
+    ['Números', ['34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54']],
+    ['', ['U']],
+  ];
+  const ORDEM = GRUPOS_TAM.flatMap(([, l]) => l);
+  // Bolinha de cor para as cores conhecidas.
+  const TONS = {
+    preto: '#151515', branco: '#ffffff', 'off-white': '#f3eee4', offwhite: '#f3eee4', off: '#f3eee4', nude: '#e2bf9f', bege: '#d6c1a1',
+    marrom: '#7a5136', caramelo: '#b87a3d', azul: '#2f5fa8', 'azul marinho': '#1f2f55', marinho: '#1f2f55', jeans: '#4d6d8c',
+    rosa: '#eaa3bc', pink: '#e2417f', vermelho: '#c0392b', vinho: '#6d1f33', verde: '#3f8f5a', 'verde militar': '#55603b',
+    amarelo: '#f1c84b', mostarda: '#c99a2e', laranja: '#e8823a', lilás: '#b99ad6', lilas: '#b99ad6', roxo: '#6c3d91',
+    cinza: '#9a9a9a', grafite: '#4a4a4a', dourado: '#c9a548', prata: '#c0c0c0', terracota: '#b5583b',
+  };
+  const tom = (c) => {
+    const k = String(c || '').trim().toLowerCase();
+    if (/estampad|floral|xadrez|listrad|animal|onça|onca|poá|poa/.test(k)) return 'conic-gradient(#e8a0b8 0 25%, #f1c84b 0 50%, #3f8f5a 0 75%, #2f5fa8 0)';
+    return TONS[k] || null;
+  };
+  const bolinha = (c) => { const t = tom(c); return `<i class="ge-dot ${t ? '' : 'sem'}" ${t ? `style="background:${t}"` : ''}></i>`; };
 
   // Cores comuns de loja de roupa (aparecem como sugestão junto com as já usadas).
   const CORES_COMUNS = ['Preto', 'Branco', 'Off-white', 'Nude', 'Bege', 'Marrom', 'Azul', 'Jeans', 'Rosa', 'Vermelho', 'Verde', 'Amarelo', 'Lilás', 'Cinza', 'Estampado'];
@@ -39,32 +60,35 @@ const GradeEditor = (() => {
 
     el.innerHTML = `
       <div class="ge">
-        <div class="ge-linha">
-          <b>1. Tamanhos</b>
-          <div class="ge-presets">${PRESETS.map(([n], i) => `<button type="button" class="chip-preset" data-preset="${i}">${n}</button>`).join('')}</div>
+        <div class="ge-bloco">
+          <div class="ge-linha"><b>Tamanhos</b>
+            <div class="ge-presets"><small>Rápido:</small>${PRESETS.map(([n], i) => `<button type="button" class="chip-preset" data-preset="${i}">${n}</button>`).join('')}</div>
+          </div>
+          <div class="ge-toggles" id="ge-tam"></div>
+          <div class="ge-add"><input id="ge-tam-novo" placeholder="Outro tamanho e Enter (ex.: EXG, 10 anos)" list="ge-tam-lista"><datalist id="ge-tam-lista"></datalist></div>
         </div>
-        <div class="ge-chips" id="ge-tam"></div>
-        <div class="ge-add"><input id="ge-tam-novo" placeholder="Outro tamanho e Enter (ex.: 36, EXG, 10 anos)" list="ge-tam-lista"><datalist id="ge-tam-lista"></datalist></div>
-
-        <div class="ge-linha"><b>2. Cores</b></div>
-        <div class="ge-chips" id="ge-cor"></div>
-        <div class="ge-add"><input id="ge-cor-novo" placeholder="Digite a cor e Enter (ex.: Preto, Off-white, Estampado)" list="ge-cor-lista"><datalist id="ge-cor-lista"></datalist></div>
-
-        <div class="ge-linha">
-          <b>3. Quantidade de cada uma</b>
-          <span class="ge-ferramentas">
-            <label class="ge-preencher">Preencher vazias com <input type="number" min="0" id="ge-n" value="1"> <button type="button" class="btn btn-peq" id="ge-preencher">ok</button></label>
-            <button type="button" class="btn btn-peq" id="ge-zerar">Zerar</button>
-            <button type="button" class="btn btn-peq btn-bipar" id="ge-bipar"><i data-icone="camera"></i> Modo bipar</button>
-          </span>
+        <div class="ge-bloco">
+          <div class="ge-linha"><b>Cores</b><small class="dica">Toque para adicionar. Sem cor = cor única.</small></div>
+          <div class="ge-chips" id="ge-cor"></div>
+          <div class="ge-add"><input id="ge-cor-novo" placeholder="Outra cor e Enter (ex.: Azul bebê, Estampado)" list="ge-cor-lista"><datalist id="ge-cor-lista"></datalist></div>
         </div>
-        <div class="ge-bipe" id="ge-bipe" hidden>
-          <div class="pdv-busca"><span class="pdv-busca-ico">⌕</span>
-            <input id="ge-leitor" autocomplete="off" placeholder="Bipe a etiqueta do fornecedor de cada peça"></div>
-          <div class="ge-bipe-info" id="ge-bipe-info"></div>
+        <div class="ge-bloco ge-bloco-qtd">
+          <div class="ge-linha">
+            <b>Quantidades</b>
+            <span class="ge-ferramentas">
+              <label class="ge-preencher">Todas com <input type="number" min="0" id="ge-n" value="1"> <button type="button" class="btn btn-peq" id="ge-preencher">aplicar</button></label>
+              <button type="button" class="btn btn-peq" id="ge-zerar">Zerar</button>
+              <button type="button" class="btn btn-peq btn-bipar" id="ge-bipar"><i data-icone="codigo"></i> Bipar etiquetas do fornecedor</button>
+            </span>
+          </div>
+          <div class="ge-bipe" id="ge-bipe" hidden>
+            <div class="pdv-busca"><span class="pdv-busca-ico">⌕</span>
+              <input id="ge-leitor" autocomplete="off" placeholder="Bipe a etiqueta do fornecedor de cada peça"></div>
+            <div class="ge-bipe-info" id="ge-bipe-info"></div>
+          </div>
+          <div class="tabela-rolagem"><table class="ge-tabela" id="ge-tabela"></table></div>
+          <div class="ge-rodape" id="ge-rodape"></div>
         </div>
-        <div class="tabela-rolagem"><table class="ge-tabela" id="ge-tabela"></table></div>
-        <div class="ge-rodape" id="ge-rodape"></div>
       </div>`;
 
     const $ = (s) => el.querySelector(s);
@@ -84,15 +108,19 @@ const GradeEditor = (() => {
         if (vistas.has(k) || cores.some((x) => x.toLowerCase() === k)) return false;
         vistas.add(k);
         return true;
-      }).slice(0, 14);
-      $('#ge-tam').innerHTML = tamanhos.map((t) => `<span class="chip">${esc(t)}<button type="button" data-rm-tam="${esc(t)}" title="Tirar">×</button></span>`).join('')
-        || '<small class="dica">Nenhum tamanho (peça sem tamanho). Use um botão acima ou digite abaixo.</small>';
-      $('#ge-cor').innerHTML = cores.map((c) => `<span class="chip chip-cor">${esc(c)}<button type="button" data-rm-cor="${esc(c)}" title="Tirar">×</button></span>`).join('')
-        + (sugCores.length ? `<span class="ge-sug">${sugCores.map((c) => `<button type="button" class="chip-sug" data-add-cor="${esc(c)}">+ ${esc(c)}</button>`).join('')}</span>` : '')
-        || '<small class="dica">Nenhuma cor (peça de cor única).</small>';
+      }).slice(0, 16);
+      const on = (t) => tamanhos.some((x) => x.toLowerCase() === t.toLowerCase());
+      const extras = tamanhos.filter((t) => !ORDEM.some((o) => o.toLowerCase() === t.toLowerCase()));
+      $('#ge-tam').innerHTML = GRUPOS_TAM.map(([g, lista]) => `<div class="ge-grupo">${g ? `<small>${g}</small>` : ''}${lista.map((t) =>
+        `<button type="button" class="ge-t ${on(t) ? 'on' : ''}" data-tog-tam="${esc(t)}">${t === 'U' ? 'Único' : esc(t)}</button>`).join('')}</div>`).join('')
+        + (extras.length ? `<div class="ge-grupo"><small>Outros</small>${extras.map((t) => `<button type="button" class="ge-t on" data-tog-tam="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : '');
+      $('#ge-cor').innerHTML = cores.map((c) => `<span class="chip chip-cor">${bolinha(c)}${esc(c)}<button type="button" data-rm-cor="${esc(c)}" title="Tirar">×</button></span>`).join('')
+        + (sugCores.length ? `<span class="ge-sug">${sugCores.map((c) => `<button type="button" class="chip-sug" data-add-cor="${esc(c)}">${bolinha(c)}${esc(c)}</button>`).join('')}</span>` : '');
       desenharTabela();
     }
 
+    const peso = (t) => { const i = ORDEM.findIndex((o) => o.toLowerCase() === String(t).toLowerCase()); return i < 0 ? 999 : i; };
+    const ordenar = (lista) => [...lista].sort((a, b) => peso(a) - peso(b));
     const adicionar = (lista, valor) => {
       const v = String(valor || '').trim();
       if (!v || lista.some((x) => x.toLowerCase() === v.toLowerCase())) return lista;
@@ -103,8 +131,22 @@ const GradeEditor = (() => {
       const t = ev.target;
       const td = t.closest('[data-cel]');
       if (td && t.tagName !== 'INPUT') td.querySelector('input').focus();
+      const bt = t.closest('[data-tog-tam],[data-mais-k],[data-menos-k]');
+      if (bt && bt.dataset.togTam !== undefined) {
+        const v = bt.dataset.togTam;
+        tamanhos = tamanhos.some((x) => x.toLowerCase() === v.toLowerCase()) ? tamanhos.filter((x) => x.toLowerCase() !== v.toLowerCase()) : ordenar(adicionar(tamanhos, v));
+        return desenharChips();
+      }
+      if (bt && (bt.dataset.maisK !== undefined || bt.dataset.menosK !== undefined)) {
+        const k = bt.dataset.maisK ?? bt.dataset.menosK;
+        qtd.set(k, Math.max(0, (qtd.get(k) || 0) + (bt.dataset.maisK !== undefined ? 1 : -1)));
+        const inp = el.querySelector(`.ge-qtd[data-k="${CSS.escape(k)}"]`);
+        if (inp) { inp.value = qtd.get(k) || ''; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+        return;
+      }
       if (t.dataset.preset !== undefined) {
         for (const tam of PRESETS[Number(t.dataset.preset)][1]) tamanhos = adicionar(tamanhos, tam);
+        tamanhos = ordenar(tamanhos);
         desenharChips();
       } else if (t.dataset.rmTam !== undefined) {
         tamanhos = tamanhos.filter((x) => x !== t.dataset.rmTam);
@@ -112,8 +154,8 @@ const GradeEditor = (() => {
       } else if (t.dataset.rmCor !== undefined) {
         cores = cores.filter((x) => x !== t.dataset.rmCor);
         desenharChips();
-      } else if (t.dataset.addCor !== undefined) {
-        cores = adicionar(cores, t.dataset.addCor);
+      } else if (t.closest('[data-add-cor]')) {
+        cores = adicionar(cores, t.closest('[data-add-cor]').dataset.addCor);
         desenharChips();
       }
     });
@@ -143,12 +185,14 @@ const GradeEditor = (() => {
     function desenharTabela() {
       const tab = $('#ge-tabela');
       tab.innerHTML = `
-        <thead><tr><th>${cores.length ? 'Cor \\ Tam.' : ''}</th>${colunas().map((t) => `<th>${t ? esc(t) : 'Único'}</th>`).join('')}<th>Total</th></tr></thead>
-        <tbody>${linhas().map((c) => `<tr><th>${c ? esc(c) : (tamanhos.length ? 'Qtd.' : 'Quantidade')}</th>${colunas().map((t) => {
+        <thead><tr><th></th>${colunas().map((t) => `<th>${t && t !== 'U' ? esc(t) : 'Único'}</th>`).join('')}<th>Total</th></tr></thead>
+        <tbody>${linhas().map((c) => `<tr><th>${c ? `${bolinha(c)}${esc(c)}` : (tamanhos.length ? 'Qtd.' : 'Quantidade')}</th>${colunas().map((t) => {
     const k = chave(t, c);
     if (existentes.has(k)) return '<td><span class="ge-existe" title="Já cadastrado">✓ já existe</span></td>';
-    return `<td class="${selecionada === k ? 'ge-sel' : ''}" data-cel="${esc(k)}">
+    return `<td class="${selecionada === k ? 'ge-sel' : ''}" data-cel="${esc(k)}"><div class="ge-step">
+            <button type="button" tabindex="-1" data-menos-k="${esc(k)}">−</button>
             <input type="number" min="0" class="ge-qtd" data-k="${esc(k)}" value="${qtd.get(k) || ''}" placeholder="0">
+            <button type="button" tabindex="-1" data-mais-k="${esc(k)}">+</button></div>
             ${cod.get(k) ? `<small class="ge-cod" title="${esc(cod.get(k))}"><i data-icone="etiqueta"></i> ${esc(cod.get(k).slice(-6))}</small>` : ''}</td>`;
   }).join('')}<td class="grade-total">${colunas().reduce((a, t) => a + (qtd.get(chave(t, c)) || 0), 0)}</td></tr>`).join('')}</tbody>`;
       atualizarRodape();
@@ -290,7 +334,7 @@ const GradeEditor = (() => {
       tamanhos: () => [...tamanhos],
       cores: () => [...cores],
       /** Troca os tamanhos (ex.: os que a loja usa nesta categoria). */
-      definirTamanhos: (lista) => { tamanhos = []; for (const t of lista) tamanhos = adicionar(tamanhos, t); desenharChips(); },
+      definirTamanhos: (lista) => { tamanhos = []; for (const t of lista) tamanhos = adicionar(tamanhos, t); tamanhos = ordenar(tamanhos); desenharChips(); },
     };
   }
 

@@ -212,7 +212,7 @@ Telas.etiquetas = (() => {
   function escolhaHtml({ curto = false } = {}) {
     const m = modoAuto();
     return `<div class="etq-auto" data-etq-auto><span>${Icone('etiqueta')} ${curto ? 'Etiquetas:' : 'Etiquetas das peças que chegaram:'}</span>
-      <div class="segmentos">${OPCOES_AUTO.map(([k, t]) => `<button type="button" class="segmento ${k === m ? 'sel' : ''}" data-etq-modo="${k}">${t}</button>`).join('')}</div></div>`;
+      <div class="segmentos">${OPCOES_AUTO.map(([k, t]) => `<button type="button" class="segmento ${k === m ? 'sel' : ''}" data-etq-modo="${k}">${curto ? { fila: 'Para a fila', imprimir: 'Imprimir já', nao: 'Não' }[k] : t}</button>`).join('')}</div></div>`;
   }
   function ligarEscolha(el) {
     const box = el.querySelector('[data-etq-auto]');

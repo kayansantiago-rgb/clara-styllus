@@ -29,7 +29,7 @@ test('cadastro rápido: categoria pelo nome, tamanhos lembrados, "fazer outro" e
     // Abriu outro cadastro na mesma categoria, com os mesmos tamanhos.
     await p.waitForFunction(() => document.querySelector('[name=nome]') && document.querySelector('[name=nome]').value === '');
     assert.equal(await p.inputValue('[name=categoria]'), 'Vestido');
-    assert.equal(await p.$$eval('#ge-tam .chip', (xs) => xs.length), 5);
+    assert.equal(await p.$$eval("#ge-tam .ge-t.on", (xs) => xs.length), 5);
     // As 10 etiquetas (5 tamanhos x 2) foram para a fila sem perguntar.
     assert.equal((await fila(sis)).reduce((a, x) => a + x.quantidade, 0), 10);
     assert.match(await p.textContent('#avisos'), /10 etiqueta\(s\) na fila/);

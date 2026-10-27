@@ -93,12 +93,14 @@ const U = (() => {
 
   // --------------------------------------------------------------- modal
   let aoFecharModal = null;
-  function abrirModal(titulo, html, { largura, aoFechar } = {}) {
+  function abrirModal(titulo, html, { largura, aoFechar, classe } = {}) {
     document.getElementById('modal-titulo').textContent = titulo;
     const corpo = document.getElementById('modal-corpo');
     corpo.innerHTML = html;
     const fundo = document.getElementById('modal-fundo');
-    fundo.querySelector('.modal').style.maxWidth = largura || '';
+    const caixa = fundo.querySelector('.modal');
+    caixa.style.maxWidth = largura || '';
+    caixa.className = `modal ${classe || ''}`.trim();
     fundo.hidden = false;
     aoFecharModal = aoFechar || null;
     const foco = corpo.querySelector('[autofocus]') || corpo.querySelector('input, select, button');

@@ -208,8 +208,8 @@ Telas.produtos = (() => {
   }
 
   /** Preço sugerido = custo × markup, arredondado para cima (,90 / ,99 / ,00). */
-  function precoSugerido(custo, cfg) {
-    const mk = Number(String(cfg.markup_padrao || '').replace(',', '.'));
+  function precoSugerido(custo, cfg, markup) {
+    const mk = markup || Number(String(cfg.markup_padrao || '').replace(',', '.'));
     if (!(custo > 0 && mk > 0)) return null;
     let v = Math.round(custo * mk);
     const final = { 90: 90, 99: 99, '00': 0 }[cfg.arredondar_preco];
@@ -267,54 +267,76 @@ Telas.produtos = (() => {
     const semFoto = `<span class="foto-vazia">${Icone('imagem')}<small>sem foto</small></span>`;
     const moeda = (nome, valor, extra = '') =>
       `<div class="campo-moeda"><span>R$</span><input name="${nome}" inputmode="decimal" value="${valor ? num(valor) : ''}" ${extra}></div>`;
-    const corpo = abrirModal(novo ? (opcoes.base ? `Adicionar tamanhos/cores — ${p.nome}` : 'Novo produto') : `Editar produto`, `
-      <form class="fp" id="f-prod" autocomplete="off">
-        <div class="fp-corpo">
-          <aside class="fp-lateral">
-            <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : semFoto}</div>
-            <div class="fp-foto-acoes">
-              <label class="btn btn-claro">${Icone('camera')} ${U.fotoUrl(p) ? 'Trocar foto' : 'Escolher foto'}<input type="file" accept="image/*" capture="environment" id="foto-arquivo" hidden></label>
-              <button type="button" class="btn btn-claro" id="foto-celular" title="Tirar a foto com o celular (mesmo Wi-Fi da loja)">${Icone('telefone')} Pelo celular</button>
-              <button type="button" class="btn btn-fantasma btn-perigo-claro" id="foto-remover" ${U.fotoUrl(p) ? '' : 'hidden'}>${Icone('lixeira')}</button>
+    const titulo = novo ? (opcoes.base ? `Adicionar tamanhos/cores — ${p.nome}` : 'Nova peça') : 'Editar peça';
+    const passo = (n, t, sub) => `<div class="cad-passo-cab"><span class="cad-num" data-passo="${n}">${n}</span><div><h3>${t}</h3>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+    const corpo = abrirModal(titulo, `
+      <form class="fp cad" id="f-prod" autocomplete="off">
+        <div class="cad-corpo">
+          <aside class="cad-vitrine fp-lateral">
+            <div class="cad-foto">
+              <div class="foto-previa" id="foto-previa">${U.fotoUrl(p) ? `<img src="${U.fotoUrl(p)}" alt="">` : semFoto}</div>
+              <div class="cad-foto-botoes">
+                <label class="btn btn-claro">${Icone('camera')} ${U.fotoUrl(p) ? 'Trocar' : 'Foto'}<input type="file" accept="image/*" capture="environment" id="foto-arquivo" hidden></label>
+                <button type="button" class="btn btn-claro" id="foto-celular" title="Tirar a foto com o celular (mesmo Wi-Fi da loja)">${Icone('telefone')} Celular</button>
+                <button type="button" class="btn btn-claro btn-perigo-claro" id="foto-remover" title="Tirar a foto" ${U.fotoUrl(p) ? '' : 'hidden'}>${Icone('lixeira')}</button>
+              </div>
             </div>
             <div class="fp-fundo" id="foto-fundo" ${U.fotoUrl(p) ? '' : 'hidden'}></div>
             <div class="fp-celular" id="foto-celular-painel" hidden></div>
-            <small class="fp-ajuda">A foto aparece no caixa para conferir se bipou a peça certa.${novo ? ' Vale para todos os tamanhos e cores criados agora.' : ''}</small>
-            ${novo ? '' : `<label class="check fp-ajuda"><input type="checkbox" id="foto-cor" checked> Usar a mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
-            <div class="fp-margem" id="margem-box" hidden>
-              <small>Margem de lucro</small>
-              <b id="margem-pct"></b>
-              <span id="margem"></span>
+            ${novo ? '' : `<label class="check fp-ajuda"><input type="checkbox" id="foto-cor" checked> Mesma foto em todos os tamanhos ${p.cor ? `da cor ${esc(p.cor)}` : 'deste produto'}</label>`}
+            <div class="cad-resumo">
+              <small class="cad-resumo-cat" id="cad-v-cat"></small>
+              <b class="cad-resumo-nome" id="cad-v-nome"></b>
+              <div class="cad-resumo-preco" id="cad-v-preco"></div>
+              <div class="fp-margem cad-margem" id="margem-box" hidden>
+                <div class="cad-margem-topo"><small>Margem</small><b id="margem-pct"></b></div>
+                <div class="cad-barra"><i id="cad-barra"></i></div>
+                <span id="margem"></span>
+              </div>
             </div>
+            <div class="cad-etq-previa"><small>Etiqueta</small><div id="cad-etq"></div>
+              ${novo ? `<div class="fp-etq">${Telas.etiquetas.escolhaHtml({ curto: true })}</div>` : ''}</div>
           </aside>
 
-          <div class="fp-principal">
-            <section class="fp-secao">
-              <h3>Informações da peça</h3>
-              <label>Nome da peça *<input name="nome" class="campo-destaque" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado"></label>
-              <div class="fp-cats" id="fp-cats">${categorias.map((c) => `<button type="button" class="chip-sug ${String(p.categoria || '').toLowerCase() === c.toLowerCase() ? 'sel' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
-              <div class="fp-grid3">
-                <label>Categoria<input name="categoria" value="${esc(p.categoria)}" placeholder="Vestido, blusa, calça…" list="lista-categorias"></label>
-                <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}" placeholder="Opcional" list="lista-marcas"></label>
-                <label>Referência<input name="referencia" value="${esc(p.referencia)}" placeholder="Cód. do fornecedor"></label>
-              </div>
+          <div class="cad-passos fp-principal">
+            <section class="cad-passo">
+              ${passo(1, 'Qual é a peça?', 'Nome e categoria')}
+              <input name="nome" class="cad-nome" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado">
+              <div class="cad-cats fp-cats" id="fp-cats">${categorias.map((c) => `<button type="button" class="cad-cat ${String(p.categoria || '').toLowerCase() === c.toLowerCase() ? 'sel' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+              <details class="cad-mais" ${p.marca || p.referencia ? 'open' : ''}><summary>Categoria, marca e referência</summary>
+                <div class="fp-grid3">
+                  <label>Categoria<input name="categoria" value="${esc(p.categoria)}" placeholder="Outra categoria" list="lista-categorias"></label>
+                  <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}" placeholder="Opcional" list="lista-marcas"></label>
+                  <label>Referência<input name="referencia" value="${esc(p.referencia)}" placeholder="Cód. do fornecedor"></label>
+                </div>
+              </details>
             </section>
 
-            <section class="fp-secao">
-              <h3>Preço e estoque</h3>
-              <div class="fp-grid3">
-                <label>Preço de custo${moeda('preco_custo', p.preco_custo, 'placeholder="0,00"')}</label>
-                <label>Preço de venda *${moeda('preco_venda', p.preco_venda, 'placeholder="0,00" class="campo-destaque"')}</label>
-                <label>Estoque mínimo<input name="estoque_minimo" type="number" min="0" value="${p.estoque_minimo ?? 0}" title="Avisa quando o estoque chegar neste número"></label>
+            <section class="cad-passo">
+              ${passo(2, 'Preço', 'O sistema sugere o preço pelo custo')}
+              <div class="cad-precos">
+                <label class="cad-preco">Custo (quanto pagou)${moeda('preco_custo', p.preco_custo, 'placeholder="0,00"')}</label>
+                <span class="cad-seta">→</span>
+                <label class="cad-preco cad-preco-venda">Preço de venda *${moeda('preco_venda', p.preco_venda, 'placeholder="0,00"')}</label>
               </div>
+              <div class="cad-markups" id="cad-markups"></div>
               <span class="sugestao-preco" id="sugestao-preco" hidden></span>
-              <label class="so-admin fp-liquidacao">Preço “De” — liquidação <small>deixe vazio se a peça não estiver em promoção · sai riscado na etiqueta</small>
-                ${moeda('preco_anterior', p.preco_anterior, 'placeholder="Preço antigo"')}</label>
+              <details class="cad-mais" ${p.preco_anterior ? 'open' : ''}><summary>Liquidação e estoque mínimo</summary>
+                <div class="fp-grid3">
+                  <label class="so-admin fp-liquidacao">Preço "De" (liquidação)${moeda('preco_anterior', p.preco_anterior, 'placeholder="Preço antigo"')}</label>
+                  <label>Estoque mínimo<input name="estoque_minimo" type="number" min="0" value="${p.estoque_minimo ?? 0}" title="Avisa quando o estoque chegar neste número"></label>
+                </div>
+              </details>
             </section>
 
-            ${novo ? '' : `
-            <section class="fp-secao">
-              <h3>Variação</h3>
+            ${novo ? `
+            <section class="cad-passo fp-grade">
+              ${passo(3, 'Tamanhos, cores e quantidades', 'Toque nos tamanhos e nas cores que chegaram')}
+              <div id="grade-editor"></div>
+              <label class="check cad-zeradas"><input type="checkbox" id="criar-zeradas"> Cadastrar também as combinações com 0 (aparecem como esgotadas)</label>
+            </section>` : `
+            <section class="cad-passo">
+              ${passo(3, 'Esta variação', 'Tamanho, cor e código de barras')}
               <div class="fp-grid3">
                 <label>Tamanho<input name="tamanho" value="${esc(p.tamanho)}"></label>
                 <label>Cor<input name="cor" value="${esc(p.cor)}"></label>
@@ -323,44 +345,38 @@ Telas.produtos = (() => {
               <label class="interruptor"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}><span class="trilho"></span>
                 <span class="txt"><b>Produto ativo</b><small>Desligado, a peça some do caixa e das buscas.</small></span></label>
             </section>`}
+
+            <details class="cad-mais cad-outras fp-opcoes" ${p.atalho || p.servico ? 'open' : ''}><summary>Outras opções (botão rápido no caixa, serviço)</summary>
+              <label class="interruptor"><input type="checkbox" name="atalho" ${p.atalho ? 'checked' : ''}><span class="trilho"></span>
+                <span class="txt"><b>Botão rápido no caixa</b><small>Para sacola, embrulho e itens vendidos toda hora.</small></span></label>
+              <label class="interruptor"><input type="checkbox" name="servico" ${p.servico ? 'checked' : ''}><span class="trilho"></span>
+                <span class="txt"><b>É um serviço</b><small>Não controla estoque (ajuste de barra…). Com preço 0, o valor é perguntado na hora.</small></span></label>
+            </details>
           </div>
         </div>
-
-        ${novo ? `
-        <section class="fp-secao fp-grade">
-          <h3>Tamanhos, cores e quantidades</h3>
-          <p class="dica">Cada combinação vira um produto com seu próprio código de barras. Peças sem etiqueta do fornecedor
-            recebem um código da loja automaticamente.</p>
-          <div id="grade-editor"></div>
-          <label class="check"><input type="checkbox" id="criar-zeradas"> Cadastrar também as combinações com quantidade 0 (aparecem como esgotadas, para repor depois)</label>
-        </section>` : ''}
-
-        <section class="fp-opcoes">
-          <label class="interruptor"><input type="checkbox" name="atalho" ${p.atalho ? 'checked' : ''}><span class="trilho"></span>
-            <span class="txt"><b>Botão rápido no caixa</b><small>Para sacola, embrulho e itens vendidos toda hora.</small></span></label>
-          <label class="interruptor"><input type="checkbox" name="servico" ${p.servico ? 'checked' : ''}><span class="trilho"></span>
-            <span class="txt"><b>É um serviço</b><small>Não controla estoque (ajuste de barra…). Com preço 0, o valor é perguntado na hora.</small></span></label>
-        </section>
 
         <datalist id="lista-categorias">${[...new Set([...atributos.categorias, 'Vestido', 'Blusa', 'Camisa', 'Calça', 'Saia', 'Short', 'Macacão', 'Conjunto', 'Body', 'Cropped', 'Jaqueta', 'Casaco', 'Moda praia', 'Lingerie', 'Acessório', 'Bolsa', 'Calçado'])]
     .map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
         <datalist id="lista-marcas">${atributos.marcas.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
 
-        <div class="fp-rodape">
-          ${novo ? `<div class="fp-etq">${Telas.etiquetas.escolhaHtml({ curto: true })}</div>` : ''}
-          ${novo ? '' : `<button type="button" class="btn btn-fantasma btn-perigo-claro fp-excluir" id="excluir-produto">${Icone('lixeira')} Excluir produto</button>
-            <button type="button" class="btn btn-fantasma" id="parecido" title="Abre um cadastro novo com os mesmos dados (categoria, preços, tamanhos)">⧉ Cadastrar parecido</button>`}
+        <div class="fp-rodape cad-rodape">
+          ${novo ? `<div class="cad-total" id="cad-total"></div>` : `
+            <button type="button" class="btn btn-fantasma btn-perigo-claro fp-excluir" id="excluir-produto">${Icone('lixeira')} Excluir</button>
+            <button type="button" class="btn btn-fantasma" id="parecido" title="Abre um cadastro novo com os mesmos dados (categoria, preços, tamanhos)">⧉ Cadastrar parecido</button>
+            <span class="cad-espaco"></span>`}
           <button type="button" class="btn" data-fechar>Cancelar</button>
           ${novo && !opcoes.base ? `<button type="submit" class="btn" data-outro="1" title="Salva e já abre outro cadastro na mesma categoria (Ctrl+Shift+Enter)">${Icone('mais')} Salvar e fazer outro</button>` : ''}
-          <button type="submit" class="btn btn-primario" title="Ctrl+Enter">${Icone('check')} ${novo ? 'Cadastrar produto' : 'Salvar alterações'}</button>
+          <button type="submit" class="btn btn-primario" title="Ctrl+Enter">${Icone('check')} ${novo ? 'Cadastrar peça' : 'Salvar alterações'}</button>
         </div>
-      </form>`, { largura: novo ? '980px' : '860px' });
+      </form>`, { largura: '1180px', classe: 'modal-cadastro' });
 
     const form = corpo.querySelector('form');
     Telas.etiquetas.ligarEscolha(corpo);
     const editor = novo
       ? GradeEditor.criar(corpo.querySelector('#grade-editor'), { existentes, tamanhos: tamIniciais, cores: corIniciais, codigoPendente: opcoes.codigo })
       : null;
+    // ---------------------------------------------------- vitrine (lado esquerdo, ao vivo)
+    const vitrine = U.debounce(() => desenharVitrine(), 120);
     const margem = () => {
       const c = U.paraCentavos(form.preco_custo.value);
       const v = U.paraCentavos(form.preco_venda.value);
@@ -371,16 +387,82 @@ Telas.produtos = (() => {
         corpo.querySelector('#margem-pct').textContent = `${pct.toFixed(0)}%`;
         corpo.querySelector('#margem-pct').className = pct < 30 ? 'txt-perigo' : '';
         corpo.querySelector('#margem').textContent = `Lucro de ${U.brl(v - c)} por peça · markup ${(v / c).toFixed(2).replace('.', ',')}x`;
+        const barra = corpo.querySelector('#cad-barra');
+        barra.style.width = `${Math.max(4, Math.min(100, pct))}%`;
+        barra.className = pct < 30 ? 'baixa' : pct < 50 ? 'media' : 'boa';
       }
-      // Sugestão pelo markup padrão da loja (Configurações → Regras de venda).
-      const sug = precoSugerido(c, cfg);
-      const el = corpo.querySelector('#sugestao-preco');
-      el.hidden = !sug || sug === v;
-      if (sug && sug !== v) {
-        el.innerHTML = `Sugerido pelo markup ${esc(cfg.markup_padrao)}x: <b>${U.brl(sug)}</b> <button type="button" class="link">usar</button>`;
-        el.querySelector('button').onclick = () => { form.preco_venda.value = num(sug); margem(); };
+      // Markup em um clique: x2, x2,2, x2,5, x3 (e o da loja, se for outro).
+      const mkLoja = Number(String(cfg.markup_padrao || '').replace(',', '.'));
+      const mks = [...new Set([mkLoja, 2, 2.2, 2.5, 3].filter((m) => m > 1))];
+      corpo.querySelector('#cad-markups').innerHTML = c > 0 ? `<small>Preço pelo custo:</small>${mks.map((m) => {
+        const pv = precoSugerido(c, cfg, m);
+        return `<button type="button" class="cad-mk ${pv === v ? 'sel' : ''}" data-mk="${pv}"><span>×${String(m).replace('.', ',')}${m === mkLoja ? ' (loja)' : ''}</span><b>${U.brl(pv)}</b></button>`;
+      }).join('')}` : '';
+      corpo.querySelector('#sugestao-preco').hidden = true;
+      vitrine();
+    };
+    corpo.querySelector('#cad-markups').onclick = (ev) => {
+      const b = ev.target.closest('[data-mk]');
+      if (!b) return;
+      form.preco_venda.value = num(Number(b.dataset.mk));
+      form.preco_venda.dataset.mexeu = '1';
+      margem();
+    };
+    const desenharVitrine = async () => {
+      if (!form.isConnected) return; // a janela já fechou (ou abriu outro cadastro)
+      const nome = form.nome.value.trim();
+      const cat = form.categoria.value.trim();
+      const v = U.paraCentavos(form.preco_venda.value) || 0;
+      const de = U.paraCentavos(form.preco_anterior ? form.preco_anterior.value : '') || 0;
+      corpo.querySelector('#cad-v-nome').textContent = nome || 'Nome da peça';
+      corpo.querySelector('#cad-v-nome').classList.toggle('cad-vazio', !nome);
+      corpo.querySelector('#cad-v-cat').textContent = [cat, form.marca.value.trim()].filter(Boolean).join(' · ');
+      corpo.querySelector('#cad-v-preco').innerHTML = v > 0
+        ? `${de > v ? `<s>${brl(de)}</s>` : ''}<b>${brl(v)}</b>` : '<span class="cad-vazio">R$ 0,00</span>';
+      // Passos completos ganham o ✓.
+      const feito = [!!nome, v > 0, editor ? editor.variantes(false).length > 0 : !!form.codigo.value];
+      corpo.querySelectorAll('[data-passo]').forEach((el) => {
+        const ok = feito[Number(el.dataset.passo) - 1];
+        el.classList.toggle('ok', ok);
+        el.textContent = ok ? '✓' : el.dataset.passo;
+      });
+      if (editor) {
+        const vs = editor.variantes(false);
+        const pecas = vs.reduce((a, x) => a + x.quantidade, 0);
+        corpo.querySelector('#cad-total').innerHTML = pecas
+          ? `<b>${pecas}</b> peça(s) · ${vs.length} variação(ões)${v ? ` · <span>${brl(v * pecas)} em estoque</span>` : ''}`
+          : '<span class="txt-suave">Nenhuma peça ainda</span>';
+      }
+      // Etiqueta como vai sair, com os dados digitados.
+      const pr = {
+        nome: nome || 'Nome da peça', categoria: cat, preco_venda: v, preco_anterior: de > v ? de : null,
+        tamanho: editor ? (editor.tamanhos()[0] || '') : form.tamanho.value, cor: editor ? (editor.cores()[0] || '') : form.cor.value,
+        referencia: form.referencia.value, codigo: (!editor && form.codigo.value) || '2000000000015',
+      };
+      const caixa = corpo.querySelector('#cad-etq');
+      const larg = Number(cfg.etiqueta_largura_mm) || 40;
+      const alt = Number(cfg.etiqueta_altura_mm) || 30;
+      if (EtiquetaLayout.ativo(cfg)) {
+        const layout = EtiquetaLayout.ler(cfg);
+        await EtiquetaLayout.pronto(layout);
+        caixa.innerHTML = '';
+        const cv = EtiquetaLayout.canvas(layout, pr, cfg, 12);
+        cv.className = 'cad-etq-canvas';
+        caixa.appendChild(cv);
+      } else {
+        if (!caixa.firstElementChild || !caixa.firstElementChild.shadowRoot) {
+          caixa.innerHTML = `<div class="cad-etq-folha" style="width:${larg}mm;height:${alt}mm"></div>`;
+          caixa.firstElementChild.attachShadow({ mode: 'open' });
+        }
+        const sombra = caixa.firstElementChild.shadowRoot;
+        sombra.innerHTML = `<style>${Impressao.cssEtiquetas({ ...cfg, etiqueta_colunas: '2' }).replace(/@page[^}]*}/g, '')}
+          .etq { outline: none; background: #fff; }</style>${Impressao.htmlEtiqueta(pr, cfg)}`;
+        const z = Math.min(1.6, 300 / (larg * 3.78));
+        caixa.firstElementChild.style.zoom = z.toFixed(3);
       }
     };
+    form.addEventListener('input', vitrine);
+    form.addEventListener('click', () => setTimeout(vitrine, 0));
     // Categoria em um clique; os tamanhos que a loja costuma usar nela entram sozinhos.
     const TAMS = 'tamanhos_por_categoria';
     const escolherCategoria = (c, { auto = false } = {}) => {
