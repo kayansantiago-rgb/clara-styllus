@@ -5,6 +5,13 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Cadastro de produto mais rápido**: categorias em um clique (e o nome "Vestido…" já escolhe Vestido),
+  tamanhos lembrados por categoria, cores comuns em um clique, **Salvar e fazer outro** (mesma categoria,
+  marca e tamanhos), **Cadastrar parecido** a partir de um produto, Ctrl+Enter salva.
+- **Etiquetas ao dar entrada**: ao cadastrar peças ou lançar entrada (bipagem ou estoque), as etiquetas vão
+  sozinhas para a fila na quantidade certa, com o botão "Imprimir agora" (ou imprime direto, ou não faz nada —
+  a escolha fica lembrada).
+
 - **Editor de etiqueta** (Etiquetas → Editar etiqueta): monta a etiqueta do jeito da loja — arrasta e muda o
   tamanho de cada item (logo, monograma, nome, tamanho/cor, preço, preço "De", parcelas, código de barras,
   textos livres, linhas, moldura e imagens), escolhe letra (moderna, elegante, simples, máquina), tamanho,

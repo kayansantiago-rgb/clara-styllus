@@ -201,5 +201,51 @@ Telas.etiquetas = (() => {
     } catch (e) { erro(e); }
   }
 
-  return { abrir, adicionar, sair: () => { raiz = null; } };
+  // ------------------------------------------------- etiquetas ao dar entrada
+  // O que fazer com as etiquetas quando chega mercadoria (cadastro novo ou entrada de estoque).
+  // Fica lembrado neste computador: fila (padrão), imprimir na hora ou não fazer nada.
+  const PREF = 'etiquetas_ao_entrar';
+  const OPCOES_AUTO = [['fila', 'Mandar para a fila'], ['imprimir', 'Imprimir agora'], ['nao', 'Não']];
+  const modoAuto = () => (OPCOES_AUTO.some(([k]) => k === local.ler(PREF, 'fila')) ? local.ler(PREF, 'fila') : 'fila');
+
+  /** Escolha "Etiquetas: fila / imprimir agora / não" para colocar nos formulários de entrada. */
+  function escolhaHtml({ curto = false } = {}) {
+    const m = modoAuto();
+    return `<div class="etq-auto" data-etq-auto><span>${Icone('etiqueta')} ${curto ? 'Etiquetas:' : 'Etiquetas das peças que chegaram:'}</span>
+      <div class="segmentos">${OPCOES_AUTO.map(([k, t]) => `<button type="button" class="segmento ${k === m ? 'sel' : ''}" data-etq-modo="${k}">${t}</button>`).join('')}</div></div>`;
+  }
+  function ligarEscolha(el) {
+    const box = el.querySelector('[data-etq-auto]');
+    if (!box) return;
+    box.onclick = (ev) => {
+      const b = ev.target.closest('[data-etq-modo]');
+      if (!b) return;
+      local.gravar(PREF, b.dataset.etqModo);
+      box.querySelectorAll('[data-etq-modo]').forEach((x) => x.classList.toggle('sel', x === b));
+    };
+  }
+
+  /** Depois da entrada: manda as etiquetas para a fila (com botão "imprimir agora") ou imprime direto. */
+  async function depoisDaEntrada(lista) {
+    lista = lista.filter((x) => x.produto && x.quantidade > 0 && !x.produto.servico);
+    const total = lista.reduce((a, x) => a + x.quantidade, 0);
+    if (!total) return;
+    const m = modoAuto();
+    if (m === 'nao') return;
+    if (m === 'imprimir') { await Impressao.etiquetas(lista); return; }
+    lista.forEach((x) => adicionar(x.produto, x.quantidade));
+    U.avisoAcao(`${total} etiqueta(s) na fila de impressão.`, 'Imprimir agora', async () => {
+      if (await Impressao.etiquetas(lista) === false) return;
+      // Saíram: tira da fila o que acabou de imprimir.
+      const f = fila();
+      for (const x of lista) {
+        const it = f.find((y) => y.produto.id === x.produto.id);
+        if (it) it.quantidade = Math.max(0, it.quantidade - x.quantidade);
+      }
+      gravar(f.filter((y) => y.quantidade > 0));
+      if (raiz) desenhar();
+    });
+  }
+
+  return { abrir, adicionar, escolhaHtml, ligarEscolha, depoisDaEntrada, sair: () => { raiz = null; } };
 })();

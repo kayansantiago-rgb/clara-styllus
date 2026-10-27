@@ -2431,3 +2431,26 @@ button, a, input, select, textarea, label { touch-action: manipulation; }
 .ee-li:hover { background: #f6f3f4; }
 .ee-li.sel { background: var(--rosa-claro); color: var(--rosa-escuro); font-weight: 600; }
 @media (max-width: 1100px) { .ee { grid-template-columns: 1fr; } }
+
+/* Aviso com botão ("Imprimir agora") e escolha das etiquetas ao dar entrada */
+.aviso-acao { pointer-events: auto; display: flex; align-items: center; gap: 14px; }
+.aviso-acao button { border: 0; background: #fff; color: #1f6b4a; font-weight: 700; border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.etq-auto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; font-weight: 600; color: #5d5157; }
+.etq-auto > span { display: inline-flex; align-items: center; gap: 6px; }
+.etq-auto .i { width: 17px; height: 17px; color: var(--rosa); }
+.etq-auto .segmento { font-size: 13px; }
+
+/* Cadastro de produto mais rápido */
+.fp-cats { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 2px; }
+.chip-sug { font: inherit; font-size: 12.5px; border: 1px solid var(--borda-forte); background: #fff; color: #5d5157; border-radius: 99px;
+  padding: 4px 11px; cursor: pointer; transition: background .12s, border-color .12s; }
+.chip-sug:hover { border-color: var(--rosa); color: var(--rosa-escuro); }
+.chip-sug.sel { background: var(--rosa); border-color: var(--rosa); color: #fff; font-weight: 600; }
+.ge-sug { display: inline-flex; flex-wrap: wrap; gap: 5px; margin-left: 4px; }
+.ge-sug .chip-sug { font-size: 12px; padding: 2px 9px; border-style: dashed; }
+input.fp-auto { background: #fbf7ec; }
+.fp-etq { margin-right: auto; }
+.fp-etq .etq-auto > span { font-size: 12.5px; }
+.fp-etq .etq-auto { gap: 6px; }
+.fp-rodape .btn { white-space: nowrap; }
+.fp-rodape { align-items: center; flex-wrap: wrap; }

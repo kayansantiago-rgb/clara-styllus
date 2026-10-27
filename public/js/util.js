@@ -79,6 +79,16 @@ const U = (() => {
     setTimeout(() => el.remove(), tipo === 'erro' ? 6000 : 3000);
   }
 
+  /** Aviso com um botão (ex.: "Imprimir agora"); fica mais tempo na tela. */
+  function avisoAcao(msg, botao, fn) {
+    const el = document.createElement('div');
+    el.className = 'aviso aviso-ok aviso-acao';
+    el.innerHTML = `<span>${esc(msg)}</span><button type="button">${esc(botao)}</button>`;
+    el.querySelector('button').onclick = () => { el.remove(); fn(); };
+    document.getElementById('avisos').append(el);
+    setTimeout(() => el.remove(), 9000);
+  }
+
   const erro = (e) => aviso(e.message || String(e), 'erro');
 
   // --------------------------------------------------------------- modal
@@ -373,7 +383,7 @@ const U = (() => {
   return {
     som, fotoUrl, miniatura, reduzirImagem,
     sessao,
-    api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, erro,
+    api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, avisoAcao, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,
     dadosForm, FORMAS, taxa, juros, pctTxt, BANDEIRAS, umaVez,
   };

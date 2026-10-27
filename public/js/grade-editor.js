@@ -14,6 +14,9 @@ const GradeEditor = (() => {
     ['Tamanho único', ['U']],
   ];
 
+  // Cores comuns de loja de roupa (aparecem como sugestão junto com as já usadas).
+  const CORES_COMUNS = ['Preto', 'Branco', 'Off-white', 'Nude', 'Bege', 'Marrom', 'Azul', 'Jeans', 'Rosa', 'Vermelho', 'Verde', 'Amarelo', 'Lilás', 'Cinza', 'Estampado'];
+
   const chave = (t, c) => `${(t || '').toLowerCase()}|${(c || '').toLowerCase()}`;
 
   /**
@@ -75,11 +78,17 @@ const GradeEditor = (() => {
 
     // ------------------------------------------------------------ chips
     function desenharChips() {
-      const sugCores = sugestoes.cores.filter((c) => !cores.some((x) => x.toLowerCase() === c.toLowerCase())).slice(0, 8);
+      const vistas = new Set();
+      const sugCores = [...sugestoes.cores, ...CORES_COMUNS].filter((c) => {
+        const k = c.toLowerCase();
+        if (vistas.has(k) || cores.some((x) => x.toLowerCase() === k)) return false;
+        vistas.add(k);
+        return true;
+      }).slice(0, 14);
       $('#ge-tam').innerHTML = tamanhos.map((t) => `<span class="chip">${esc(t)}<button type="button" data-rm-tam="${esc(t)}" title="Tirar">×</button></span>`).join('')
         || '<small class="dica">Nenhum tamanho (peça sem tamanho). Use um botão acima ou digite abaixo.</small>';
       $('#ge-cor').innerHTML = cores.map((c) => `<span class="chip chip-cor">${esc(c)}<button type="button" data-rm-cor="${esc(c)}" title="Tirar">×</button></span>`).join('')
-        + (sugCores.length ? `<span class="ge-sug">usadas antes: ${sugCores.map((c) => `<button type="button" class="link" data-add-cor="${esc(c)}">${esc(c)}</button>`).join(' ')}</span>` : '')
+        + (sugCores.length ? `<span class="ge-sug">${sugCores.map((c) => `<button type="button" class="chip-sug" data-add-cor="${esc(c)}">+ ${esc(c)}</button>`).join('')}</span>` : '')
         || '<small class="dica">Nenhuma cor (peça de cor única).</small>';
       desenharTabela();
     }
@@ -275,7 +284,14 @@ const GradeEditor = (() => {
       $('#ge-bipar').classList.add('ativo');
       infoBipe();
     }
-    return { variantes, temTamanhoOuCor: () => tamanhos.length + cores.length > 0 };
+    return {
+      variantes,
+      temTamanhoOuCor: () => tamanhos.length + cores.length > 0,
+      tamanhos: () => [...tamanhos],
+      cores: () => [...cores],
+      /** Troca os tamanhos (ex.: os que a loja usa nesta categoria). */
+      definirTamanhos: (lista) => { tamanhos = []; for (const t of lista) tamanhos = adicionar(tamanhos, t); desenharChips(); },
+    };
   }
 
   return { criar, chave };

@@ -140,6 +140,7 @@ Telas.produtos = (() => {
     <button class="btn-ico so-admin" data-acao="estoque" data-i="${i}" title="Entrada / ajuste de estoque">${Icone('caixa')}</button>
     <button class="btn-ico" data-acao="etiqueta" data-i="${i}" title="Mandar para impressão de etiquetas">${Icone('etiqueta')}</button>
     <button class="btn-ico" data-acao="avisar" data-i="${i}" title="Avisar clientes que podem gostar (WhatsApp)">${Icone('whatsapp')}</button>
+    <button class="btn-ico so-admin" data-acao="parecido" data-i="${i}" title="Cadastrar parecido (mesma categoria, preços e tamanhos)">${Icone('mais')}</button>
     <button class="btn-ico so-admin" data-acao="editar" data-i="${i}" title="Editar">${Icone('lapis')}</button>`;
 
   function desenhar() {
@@ -192,6 +193,7 @@ Telas.produtos = (() => {
     if (!b) return;
     const p = lista[Number(b.dataset.i)];
     if (b.dataset.acao === 'editar') formulario(p);
+    if (b.dataset.acao === 'parecido') formulario(null, { modelo: p });
     if (b.dataset.acao === 'estoque') estoque(p);
     if (b.dataset.acao === 'grade') grade(p);
     if (b.dataset.acao === 'avisar') {
@@ -244,7 +246,24 @@ Telas.produtos = (() => {
         }));
       } catch (e) { erro(e); }
     }
+    // "Cadastrar parecido": mesmos dados de um produto que já existe (nome, categoria, preços, tamanhos).
+    if (novo && opcoes.modelo) {
+      const b = opcoes.modelo;
+      p = { nome: b.nome, categoria: b.categoria, marca: b.marca, preco_custo: b.preco_custo, preco_venda: b.preco_venda, estoque_minimo: b.estoque_minimo };
+      try {
+        const g = await api(`/api/produtos/grade?nome=${encodeURIComponent(b.nome)}${b.referencia ? `&referencia=${encodeURIComponent(b.referencia)}` : ''}`);
+        tamIniciais = g.tamanhos.filter((t) => t !== '—');
+      } catch { /* sem grade */ }
+    }
+    // "Cadastrar e fazer outro": continua na mesma categoria, marca e tamanhos.
+    if (novo && opcoes.repetir) {
+      p = { categoria: opcoes.repetir.categoria, marca: opcoes.repetir.marca };
+      tamIniciais = opcoes.repetir.tamanhos || [];
+    }
     p = p || {};
+    const atributos = await api('/api/produtos/atributos').catch(() => ({ categorias: [], marcas: [] }));
+    const CATS_PADRAO = ['Vestido', 'Blusa', 'Calça', 'Saia', 'Short', 'Conjunto', 'Body', 'Cropped', 'Macacão', 'Casaco'];
+    const categorias = [...new Map([...atributos.categorias, ...CATS_PADRAO].map((c) => [c.toLowerCase(), c])).values()].slice(0, 12);
     const semFoto = `<span class="foto-vazia">${Icone('imagem')}<small>sem foto</small></span>`;
     const moeda = (nome, valor, extra = '') =>
       `<div class="campo-moeda"><span>R$</span><input name="${nome}" inputmode="decimal" value="${valor ? num(valor) : ''}" ${extra}></div>`;
@@ -273,9 +292,10 @@ Telas.produtos = (() => {
             <section class="fp-secao">
               <h3>Informações da peça</h3>
               <label>Nome da peça *<input name="nome" class="campo-destaque" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado"></label>
+              <div class="fp-cats" id="fp-cats">${categorias.map((c) => `<button type="button" class="chip-sug ${String(p.categoria || '').toLowerCase() === c.toLowerCase() ? 'sel' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
               <div class="fp-grid3">
                 <label>Categoria<input name="categoria" value="${esc(p.categoria)}" placeholder="Vestido, blusa, calça…" list="lista-categorias"></label>
-                <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}" placeholder="Opcional"></label>
+                <label>Marca / fornecedor<input name="marca" value="${esc(p.marca)}" placeholder="Opcional" list="lista-marcas"></label>
                 <label>Referência<input name="referencia" value="${esc(p.referencia)}" placeholder="Cód. do fornecedor"></label>
               </div>
             </section>
@@ -322,17 +342,22 @@ Telas.produtos = (() => {
             <span class="txt"><b>É um serviço</b><small>Não controla estoque (ajuste de barra…). Com preço 0, o valor é perguntado na hora.</small></span></label>
         </section>
 
-        <datalist id="lista-categorias">${['Vestido', 'Blusa', 'Camisa', 'Calça', 'Saia', 'Short', 'Macacão', 'Conjunto', 'Body', 'Cropped', 'Jaqueta', 'Casaco', 'Moda praia', 'Lingerie', 'Acessório', 'Bolsa', 'Calçado']
-    .map((c) => `<option value="${c}">`).join('')}</datalist>
+        <datalist id="lista-categorias">${[...new Set([...atributos.categorias, 'Vestido', 'Blusa', 'Camisa', 'Calça', 'Saia', 'Short', 'Macacão', 'Conjunto', 'Body', 'Cropped', 'Jaqueta', 'Casaco', 'Moda praia', 'Lingerie', 'Acessório', 'Bolsa', 'Calçado'])]
+    .map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
+        <datalist id="lista-marcas">${atributos.marcas.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
 
         <div class="fp-rodape">
-          ${novo ? '' : `<button type="button" class="btn btn-fantasma btn-perigo-claro fp-excluir" id="excluir-produto">${Icone('lixeira')} Excluir produto</button>`}
+          ${novo ? `<div class="fp-etq">${Telas.etiquetas.escolhaHtml({ curto: true })}</div>` : ''}
+          ${novo ? '' : `<button type="button" class="btn btn-fantasma btn-perigo-claro fp-excluir" id="excluir-produto">${Icone('lixeira')} Excluir produto</button>
+            <button type="button" class="btn btn-fantasma" id="parecido" title="Abre um cadastro novo com os mesmos dados (categoria, preços, tamanhos)">⧉ Cadastrar parecido</button>`}
           <button type="button" class="btn" data-fechar>Cancelar</button>
-          <button class="btn btn-primario">${Icone('check')} ${novo ? 'Cadastrar produto' : 'Salvar alterações'}</button>
+          ${novo && !opcoes.base ? `<button type="submit" class="btn" data-outro="1" title="Salva e já abre outro cadastro na mesma categoria (Ctrl+Shift+Enter)">${Icone('mais')} Salvar e fazer outro</button>` : ''}
+          <button type="submit" class="btn btn-primario" title="Ctrl+Enter">${Icone('check')} ${novo ? 'Cadastrar produto' : 'Salvar alterações'}</button>
         </div>
       </form>`, { largura: novo ? '980px' : '860px' });
 
     const form = corpo.querySelector('form');
+    Telas.etiquetas.ligarEscolha(corpo);
     const editor = novo
       ? GradeEditor.criar(corpo.querySelector('#grade-editor'), { existentes, tamanhos: tamIniciais, cores: corIniciais, codigoPendente: opcoes.codigo })
       : null;
@@ -356,6 +381,46 @@ Telas.produtos = (() => {
         el.querySelector('button').onclick = () => { form.preco_venda.value = num(sug); margem(); };
       }
     };
+    // Categoria em um clique; os tamanhos que a loja costuma usar nela entram sozinhos.
+    const TAMS = 'tamanhos_por_categoria';
+    const escolherCategoria = (c, { auto = false } = {}) => {
+      form.categoria.value = c;
+      corpo.querySelectorAll('[data-cat]').forEach((b) => b.classList.toggle('sel', b.dataset.cat.toLowerCase() === c.toLowerCase()));
+      const usados = (U.local.ler(TAMS, {}) || {})[c.toLowerCase()];
+      if (editor && usados && usados.length && !editor.tamanhos().length) editor.definirTamanhos(usados);
+      if (auto) form.categoria.classList.add('fp-auto');
+    };
+    corpo.querySelector('#fp-cats').onclick = (ev) => {
+      const b = ev.target.closest('[data-cat]');
+      if (b) { escolherCategoria(b.dataset.cat); form.preco_custo.focus(); }
+    };
+    form.categoria.addEventListener('change', () => { form.categoria.classList.remove('fp-auto'); escolherCategoria(form.categoria.value.trim()); });
+    // Nome "Vestido midi..." já escolhe a categoria Vestido (se ainda estiver vazia).
+    const semAc = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    form.nome.addEventListener('input', () => {
+      if (form.categoria.value && !form.categoria.classList.contains('fp-auto')) return;
+      const primeira = semAc(form.nome.value.trim().split(/\s+/)[0] || '');
+      if (primeira.length < 3) return;
+      const todas = [...categorias, ...atributos.categorias];
+      const achou = todas.find((c) => { const k = semAc(c); return primeira === k || primeira === `${k}s` || `${primeira}s` === k; });
+      if (achou) escolherCategoria(achou, { auto: true });
+      else if (form.categoria.classList.contains('fp-auto')) { form.categoria.value = ''; corpo.querySelectorAll('[data-cat]').forEach((b) => b.classList.remove('sel')); }
+    });
+    // Primeira letra maiúscula no nome.
+    form.nome.addEventListener('blur', () => {
+      const v = form.nome.value.trim();
+      if (v) form.nome.value = v.charAt(0).toUpperCase() + v.slice(1);
+    });
+    if (novo && p.categoria) escolherCategoria(p.categoria);
+    // Ctrl+Enter salva; Ctrl+Shift+Enter salva e abre outro.
+    form.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' || !(ev.ctrlKey || ev.metaKey)) return;
+      ev.preventDefault();
+      const b = ev.shiftKey && form.querySelector('[data-outro]');
+      form.requestSubmit(b || form.querySelector('.fp-rodape .btn-primario'));
+    });
+    const bParecido = corpo.querySelector('#parecido');
+    if (bParecido) bParecido.onclick = () => formulario(null, { modelo: p });
     const bExcluir = corpo.querySelector('#excluir-produto');
     if (bExcluir) {
       bExcluir.onclick = async () => {
@@ -492,6 +557,7 @@ Telas.produtos = (() => {
 
     form.onsubmit = async (ev) => {
       ev.preventDefault();
+      const fazerOutro = !!(ev.submitter && ev.submitter.dataset.outro);
       const d = U.dadosForm(form);
       const base = {
         nome: d.nome, referencia: d.referencia, categoria: d.categoria, marca: d.marca,
@@ -531,14 +597,20 @@ Telas.produtos = (() => {
           const criados = await api('/api/produtos/grade', { metodo: 'POST', corpo: { ...base, variantes } });
           await salvarFoto(criados.map((x) => x.id));
           aviso(criados.length > 1 ? `${criados.length} produtos criados.` : 'Produto criado.');
-          const qtdEtiquetas = criados.reduce((a, x) => a + x.estoque, 0);
-          if (qtdEtiquetas && await U.confirmar('Etiquetas', `Mandar ${qtdEtiquetas} etiqueta(s) para a fila de impressão?`, { ok: 'Sim' })) {
-            criados.forEach((x) => x.estoque && Telas.etiquetas.adicionar(x, x.estoque));
+          // Lembra os tamanhos desta categoria para os próximos cadastros.
+          if (base.categoria && editor.tamanhos().length) {
+            const mapa = U.local.ler('tamanhos_por_categoria', {}) || {};
+            mapa[base.categoria.toLowerCase()] = editor.tamanhos();
+            U.local.gravar('tamanhos_por_categoria', mapa);
           }
+          Telas.etiquetas.depoisDaEntrada(criados.map((x) => ({ produto: x, quantidade: x.estoque })));
           chegaram = criados.filter((x) => x.estoque > 0).map((x) => x.id);
         }
-        fecharModal();
         if (raiz) carregar();
+        if (fazerOutro) {
+          return formulario(null, { repetir: { categoria: base.categoria, marca: base.marca, tamanhos: editor.tamanhos() } });
+        }
+        fecharModal();
         // Peça nova com estoque: mostra quem pode gostar (só abre se alguma cliente combinar).
         if (chegaram.length) Interessadas.abrir(chegaram, { auto: true });
       } catch (e) { erro(e); }
@@ -559,12 +631,13 @@ Telas.produtos = (() => {
       <div class="tabela-rolagem baixa"><table class="tabela"><thead><tr><th></th><th>Produto</th><th class="r">Estoque atual</th><th class="c">Chegou</th><th></th></tr></thead>
         <tbody id="ent-lista"></tbody></table></div>
       <div class="ent-total" id="ent-total"></div>
-      <label class="check"><input type="checkbox" id="ent-etq"> Mandar etiquetas dessas peças para a fila de impressão</label>
+      ${Telas.etiquetas.escolhaHtml()}
       <label>Observação<input id="ent-motivo" placeholder="Ex.: NF 1234 do fornecedor"></label>
       <div class="acoes">
         <button class="btn" data-fechar>Cancelar</button>
         <button class="btn btn-primario btn-grande" id="ent-ok" disabled>Confirmar entrada</button>
       </div>`, { largura: '820px' });
+    Telas.etiquetas.ligarEscolha(corpo);
     const leitor = corpo.querySelector('#ent-leitor');
     const msg = (html, tipo = '') => { corpo.querySelector('#ent-msg').innerHTML = html ? `<span class="ge-msg ${tipo}">${html}</span>` : ''; };
     const desenhar = () => {
@@ -628,9 +701,10 @@ Telas.produtos = (() => {
           corpo: { itens: lista.map((x) => ({ produto_id: x.produto.id, quantidade: x.quantidade })), motivo: corpo.querySelector('#ent-motivo').value },
         });
         const pecas = lista.reduce((a, x) => a + x.quantidade, 0);
-        if (corpo.querySelector('#ent-etq').checked) lista.forEach((x) => Telas.etiquetas.adicionar(x.produto, x.quantidade));
         fecharModal();
         aviso(`Entrada lançada: ${pecas} peça(s) em ${r.length} produto(s).`);
+        // Etiquetas com os dados atualizados (preço de agora).
+        Telas.etiquetas.depoisDaEntrada(lista.map((x) => ({ produto: r.find((y) => y.id === x.produto.id) || x.produto, quantidade: x.quantidade })));
         if (raiz) carregar();
         Interessadas.abrir(r.map((x) => x.id), { auto: true });
       } catch (e) { erro(e); }
@@ -759,8 +833,12 @@ Telas.produtos = (() => {
         <label>Motivo<input name="motivo"></label>
         <button class="btn btn-primario">Lançar</button>
       </form>
+      <div id="est-etq">${Telas.etiquetas.escolhaHtml()}</div>
       <h3>Histórico</h3>
       <div class="tabela-rolagem baixa"><table class="tabela"><tbody id="movs"></tbody></table></div>`, { largura: '720px' });
+    Telas.etiquetas.ligarEscolha(corpo);
+    // A escolha das etiquetas só vale para entrada.
+    corpo.querySelector('[name=tipo]').onchange = (ev) => { corpo.querySelector('#est-etq').hidden = ev.target.value !== 'entrada'; };
     api(`/api/produtos/${p.id}/movimentos`).then((movs) => {
       corpo.querySelector('#movs').innerHTML = movs.map((m) => `
         <tr><td>${U.dataHora(m.criado_em)}</td><td>${esc(m.tipo)}</td>
@@ -773,10 +851,8 @@ Telas.produtos = (() => {
       try {
         const atualizado = await api(`/api/produtos/${p.id}/estoque`, { metodo: 'POST', corpo: d });
         aviso(`Estoque de "${p.nome}" agora é ${atualizado.estoque}.`);
-        if (d.tipo === 'entrada' && await U.confirmar('Etiquetas', `Mandar ${d.quantidade} etiqueta(s) para a fila de impressão?`, { ok: 'Sim' })) {
-          Telas.etiquetas.adicionar(atualizado, Number(d.quantidade));
-        }
         fecharModal();
+        if (d.tipo === 'entrada') Telas.etiquetas.depoisDaEntrada([{ produto: atualizado, quantidade: Number(d.quantidade) }]);
         if (raiz) carregar();
       } catch (e) { erro(e); }
     };
