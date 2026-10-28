@@ -1,5 +1,9 @@
 /* Crediário: quem está devendo, parcelas, recebimentos e débitos antigos. */
 Telas.crediario = (() => {
+  /** Foto da cliente (quando tem) ou as iniciais. */
+  const avatarCli = (c) => (c.foto_versao
+    ? `<img class="avatar cl-foto" src="/api/clientes/${c.id}/foto?v=${c.foto_versao}" alt="" loading="lazy">`
+    : `<span class="avatar">${U.esc(String(c.nome || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase())}</span>`);
   const { esc, brl, api, aviso, erro, abrirModal, fecharModal, dataHora } = U;
   let raiz;
   let lista = [];
@@ -105,7 +109,7 @@ Telas.crediario = (() => {
           : { nome: c.nome, valor: brl(c.a_vencer) };
         const zap = Zap.attrs(c.telefone, chave, vars);
         return `<div class="cr-linha cb-linha ${atrasada ? 'cr-vermelho' : 'cr-amarelo'} ${c.cobrada_hoje ? 'cobrada' : ''}" data-cobrar="${c.id}">
-          <span class="avatar">${esc(iniciais(c.nome))}</span>
+          ${avatarCli(c)}
           <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc(c.telefone || 'sem telefone')}</small></div>
           <div>${atrasada ? selo({ cor: 'vermelho', txt: `atrasada ${c.dias_atraso} dia${c.dias_atraso === 1 ? '' : 's'}` })
     : selo({ cor: 'amarelo', txt: c.proximo_vencimento === U.hoje() ? 'vence hoje' : `vence ${dataBr(c.proximo_vencimento)}` })}</div>
@@ -160,7 +164,7 @@ Telas.crediario = (() => {
     if (situacao === 'quitados') {
       raiz.querySelector('#lista').innerHTML = lista.map((c, i) => `
       <div class="cr-linha cr-quitado" data-i="${i}" tabindex="0">
-        <span class="avatar">${esc(iniciais(c.nome))}</span>
+        ${avatarCli(c)}
         <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></div>
         <div><span class="semaforo verde"><i></i>quitado</span></div>
         <div class="cr-num"><small>Quitou em</small><b>${c.quitado_em ? dataBr(c.quitado_em.slice(0, 10)) : '—'}</b><small>cliente desde ${dataBr(c.desde.slice(0, 10))}</small></div>
@@ -174,7 +178,7 @@ Telas.crediario = (() => {
       const sem = semaforo(c.vencido, c.proximo_vencimento, c.dias_atraso);
       return `
       <div class="cr-linha cr-v2 cr-${sem.cor}" data-i="${i}" tabindex="0">
-        <span class="avatar">${esc(iniciais(c.nome))}</span>
+        ${avatarCli(c)}
         <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></div>
         <div>${selo(sem)}</div>
         <div class="cr-prog">

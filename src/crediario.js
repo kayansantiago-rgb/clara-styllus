@@ -164,7 +164,7 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
     const dias = Math.max(0, Math.min(15, Number(config().cobranca_dias_antes) || 0));
     const limite = new Date(Date.now() + dias * 864e5).toLocaleDateString('sv-SE');
     const lista = planos(db.prepare(
-      `SELECT c.id, c.nome, c.telefone,
+      `SELECT c.id, c.nome, c.telefone, c.foto_versao,
          SUM(p.valor - p.valor_pago) AS saldo,
          COALESCE(SUM(CASE WHEN p.vencimento < ? THEN p.valor - p.valor_pago END), 0) AS vencido,
          COALESCE(SUM(CASE WHEN p.vencimento >= ? AND p.vencimento <= ? THEN p.valor - p.valor_pago END), 0) AS a_vencer,
@@ -203,7 +203,7 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
     return planos(
       db
         .prepare(
-          `SELECT c.id, c.nome, c.cpf, c.telefone, COUNT(*) AS parcelas, SUM(p.valor) AS total,
+          `SELECT c.id, c.nome, c.cpf, c.telefone, c.foto_versao, COUNT(*) AS parcelas, SUM(p.valor) AS total,
              MIN(p.criado_em) AS desde, MAX(p.pago_em) AS quitado_em,
              COUNT(DISTINCT COALESCE(p.venda_id, -p.id)) AS compras
            FROM crediario_parcelas p JOIN clientes c ON c.id = p.cliente_id
@@ -229,7 +229,7 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
     const lista = planos(
       db
         .prepare(
-          `SELECT c.id, c.nome, c.cpf, c.telefone, c.limite_credito,
+          `SELECT c.id, c.nome, c.cpf, c.telefone, c.limite_credito, c.foto_versao,
              SUM(p.valor - p.valor_pago) AS saldo,
              COALESCE(SUM(CASE WHEN p.vencimento < ? THEN p.valor - p.valor_pago END),0) AS vencido,
              MIN(p.vencimento) AS proximo_vencimento,

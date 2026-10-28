@@ -1373,7 +1373,7 @@ Telas.pdv = (() => {
     const corpo = abrirModal(`Venda nº ${venda.id} concluída`, `
       <div class="vc vc2 ${venda.troco ? 'com-troco' : ''}">
         <div class="vc-ico">${Icone('check')}</div>
-        <div class="vc-obrigada">${cliente ? `Obrigada, <b>${esc(String(cliente.nome).split(' ')[0])}</b>!` : 'Venda concluída!'}</div>
+        <div class="vc-obrigada"><span>${cliente ? `Obrigada, <b>${esc(String(cliente.nome).split(' ')[0])}</b>!` : 'Venda concluída!'}</span></div>
         ${venda.troco
     ? `<div class="vc-rotulo">Devolva de troco</div><div class="vc-valor">${brl(venda.troco)}</div>
            <div class="vc-det">Recebido ${brl(venda.total + venda.troco)} · total ${brl(venda.total)}</div>`
@@ -1384,9 +1384,9 @@ Telas.pdv = (() => {
           <small>${pecasVc} ${pecasVc === 1 ? 'peça' : 'peças'}</small></div>` : ''}
         ${venda.taxas || venda.acrescimo ? `<div class="vc-liquido">${Icone('carteira')} Cai na conta <b>${brl(venda.liquido)}</b>
           <small>${venda.acrescimo ? `juros da cliente ${brl(venda.acrescimo)} · ` : ''}taxas ${brl(venda.taxas)}</small></div>` : ''}
+        ${cred.length ? `<div class="vc-cred">${Icone('caderno')}<span>${cred.length}x · ${cred.slice(0, 4).map((p) =>
+    `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} <b>${brl(p.valor)}</b>`).join(' · ')}${cred.length > 4 ? ' …' : ''}</span></div>` : ''}
       </div>
-      ${cred.length ? `<div class="info-cred">${Icone('caderno')} Crediário em ${cred.length}x — ${cred.map((p) =>
-    `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}</div>` : ''}
       ${automatica ? `<div class="status-impressao" id="st-imp">${Icone('impressora')} Imprimindo o cupom…</div>` : ''}
       <div class="vc2-acoes">
         <button class="btn vc2-btn" id="imp">${Icone('impressora')}<span>${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</span></button>
@@ -1399,7 +1399,15 @@ Telas.pdv = (() => {
     if (cliente && cliente.id) {
       (async () => {
         let tel = cliente.telefone;
-        if (!tel) { try { tel = (await api(`/api/clientes/${cliente.id}`)).telefone; } catch { /* sem telefone */ } }
+        try {
+          const cad = await api(`/api/clientes/${cliente.id}`);
+          tel = tel || cad.telefone;
+          // Com foto cadastrada, ela aparece ao lado do "Obrigada".
+          const ola = corpo.querySelector('.vc-obrigada');
+          if (cad.foto_versao && ola && ola.isConnected) {
+            ola.insertAdjacentHTML('afterbegin', `<img class="vc-cli-foto" src="/api/clientes/${cad.id}/foto?v=${cad.foto_versao}" alt="">`);
+          }
+        } catch { /* cliente apagada: segue sem foto e sem WhatsApp */ }
         const nomes = itensVc.map((it) => `${it.quantidade > 1 ? `${it.quantidade}x ` : ''}${it.nome}`).join(', ');
         const at = Zap.attrs(tel, 'compra', { nome: cliente.nome, pecas: nomes || `${pecasVc} peça(s)`, total: brl(venda.total) });
         const link = corpo.querySelector('#vc-zap');

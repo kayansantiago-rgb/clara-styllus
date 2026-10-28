@@ -3348,3 +3348,33 @@ button.cl2-kpi:hover { transform: translateY(-2px); border-color: var(--rosa-bor
 .rl-comp-grade { gap: 8px; }
 .rl-comp-grade > div { padding: 12px; }
 .rl-comp-grade b { font-size: 18px; }
+
+/* Venda concluída: sempre cabe na tela (título fixo, conteúdo compacto) */
+.modal.modal-concluida { display: flex; flex-direction: column; max-height: calc(100vh - 24px); }
+.modal.modal-concluida > header { flex-shrink: 0; }
+.modal.modal-concluida #modal-corpo { overflow: auto; padding: 16px 20px 18px; }
+.modal-concluida .vc2 { padding: 18px 16px 16px; }
+.modal-concluida .vc2 .vc-ico { width: 64px; height: 64px; }
+.modal-concluida .vc2 .vc-ico .i { width: 30px; height: 30px; }
+.vc2 .vc-obrigada { font-size: 22px; margin: 4px 0 2px; }
+.modal-concluida .vc2 .vc-valor { font-size: 52px; line-height: 1.05; }
+.vc2 .vc-pecas { margin-top: 10px; }
+.vc-cred { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 13px; color: var(--rosa-escuro); background: var(--rosa-claro); border-radius: 999px; padding: 5px 12px; }
+.vc-cred .i { width: 15px; height: 15px; flex-shrink: 0; }
+.modal-concluida .status-impressao { margin: 8px 0 0; text-align: center; }
+.vc2-acoes { margin: 12px 0 10px; }
+.vc2-btn { min-height: 64px; }
+@media (max-height: 720px) {
+  .modal-concluida .vc2 { padding: 12px 14px; }
+  .modal-concluida .vc2 .vc-ico { width: 48px; height: 48px; border-width: 3px; }
+  .modal-concluida .vc2 .vc-ico .i { width: 24px; height: 24px; }
+  .vc2 .vc-obrigada { font-size: 19px; }
+  .modal-concluida .vc2 .vc-valor { font-size: 42px; }
+  .vc-peca { width: 40px; height: 40px; }
+  .vc2-btn { min-height: 56px; gap: 3px; font-size: 13px; }
+  .vc2-btn .i { width: 19px; height: 19px; }
+  .modal-concluida .vc-nova { min-height: 50px; }
+}
+.vc2 .vc-obrigada { display: inline-flex; align-items: center; gap: 10px; }
+.vc-cli-foto { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid var(--ouro-vivo); box-shadow: 0 4px 10px rgba(77,49,57,.18); animation: vc-pulo .45s cubic-bezier(.34,1.56,.64,1) both; }
+.cr-linha.cr-v2 img.avatar { object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(77,49,57,.18); }
