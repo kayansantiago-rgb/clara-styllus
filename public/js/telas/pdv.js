@@ -139,6 +139,7 @@ Telas.pdv = (() => {
             <small>Total a pagar</small>
             <b id="t-total"></b>
             <div class="p4-total-det"><span><b id="t-pecas"></b> peça(s)</span><span>Subtotal <b id="t-sub"></b></span><span>Desconto <b id="t-desc"></b></span></div>
+            <div class="p6-economia" id="t-economia" hidden></div>
           </div>
           <div class="p4-ajustes">
             <button id="btn-desconto">${Icone('etiqueta')}<span id="desconto-txt">Desconto</span><kbd>F7</kbd></button>
@@ -276,11 +277,37 @@ Telas.pdv = (() => {
     } catch { /* cliente apagado: ignora */ }
   }
 
+  // Peças que mais vendem, para tocar e colocar na venda quando o caixa está vazio.
+  let populares = null;
+  async function desenharVitrineRapida() {
+    const el = raiz && raiz.querySelector('#vit-rapida');
+    if (!el) return;
+    if (!populares) {
+      try { populares = await api('/api/produtos/populares?limite=12'); } catch { populares = []; }
+    }
+    const alvo = raiz && raiz.querySelector('#vit-rapida');
+    if (!alvo) return;
+    alvo.innerHTML = populares.length ? `<small class="p6-vit-tit">${Icone('raio')} Mais vendidas e novidades — toque para vender</small>
+      <div class="p6-vit-grade">${populares.map((p, i) => `<button type="button" class="p6-peca" data-pop="${i}" title="${esc(p.nome)}">
+        ${U.miniatura(p, 'p6-peca-foto')}
+        <span class="p6-peca-txt"><b>${esc(p.nome)}</b><small>${esc([p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small></span>
+        <span class="p6-peca-preco">${brl(p.preco_venda)}</span></button>`).join('')}</div>` : '';
+  }
+
   function desenharCliente() {
     const info = raiz.querySelector('#cliente-info');
+    const ico = raiz.querySelector('.pdv-cliente-ico');
+    const botao = raiz.querySelector('#btn-cliente');
     if (!carrinho.cliente) {
       info.innerHTML = '<b>Identificar cliente</b><small>Opcional · obrigatório no crediário</small>';
+      if (ico) ico.innerHTML = Icone('usuario');
+      if (botao) botao.classList.remove('com-cliente', 'deve');
       return;
+    }
+    if (ico) ico.textContent = String(carrinho.cliente.nome || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+    if (botao) {
+      botao.classList.add('com-cliente');
+      botao.classList.toggle('deve', !!(saldoCliente && saldoCliente.vencido > 0));
     }
     const s = saldoCliente;
     const deve = s && s.aberto > 0
@@ -311,17 +338,17 @@ Telas.pdv = (() => {
           <button class="p4-remover" data-acao="remover" title="Tirar da venda">${Icone('lixeira')}</button>
         </div>`;
       }).join('')
-      : `<div class="p4-vazio">
-          ${Ilustracao.svg('sacola', 150)}
-          <b>Caixa livre</b>
-          <p>Bipe a etiqueta da peça com o leitor — ela aparece aqui.</p>
-          <div class="p4-vazio-passos">
-            <span><i>1</i>Bipe as peças</span><span><i>2</i>Confira o total</span><span><i>3</i>Escolha a forma de pagamento</span>
+      : `<div class="p4-vazio p6-vazio">
+          <div class="p6-vazio-cab">
+            <span class="p6-vazio-ico">${Icone('sacola')}</span>
+            <div><b>Caixa livre</b><p>Bipe a etiqueta com o leitor ou toque numa peça abaixo para colocar na venda.</p></div>
           </div>
-          <div class="pdv-vazio-dicas"><span><kbd>3*</kbd>código = 3 peças iguais</span><span><kbd>F8</kbd> tira a última peça</span></div>
+          <div class="p6-vit" id="vit-rapida"></div>
+          <div class="pdv-vazio-dicas"><span><kbd>3*</kbd>código = 3 peças iguais</span><span><kbd>F8</kbd> tira a última peça</span><span><kbd>F3</kbd> vendas em espera</span></div>
         </div>`;
     const recente = lista.querySelector('.recente');
     if (recente) recente.scrollIntoView({ block: 'nearest' });
+    if (!carrinho.itens.length) desenharVitrineRapida();
 
     const ult = carrinho.itens[carrinho.itens.length - 1];
     const ultEl = raiz.querySelector('#ultimo');
@@ -393,6 +420,14 @@ Telas.pdv = (() => {
     raiz.querySelector('#t-sub').textContent = brl(t.bruto);
     raiz.querySelector('#t-desc').textContent = brl(t.bruto - t.total);
     raiz.querySelector('#t-total').textContent = brl(t.total);
+    // Quanto a cliente está economizando (liquidação + descontos).
+    const liq = carrinho.itens.reduce((a, it) => a + (it.produto.preco_anterior > it.produto.preco_venda ? (it.produto.preco_anterior - it.produto.preco_venda) * it.quantidade : 0), 0);
+    const economia = liq + (t.bruto - t.total);
+    const eco = raiz.querySelector('#t-economia');
+    if (eco) {
+      eco.hidden = economia <= 0;
+      eco.innerHTML = economia > 0 ? `${Icone('presente')} ${carrinho.cliente ? `${esc(carrinho.cliente.nome.split(' ')[0])} está economizando` : 'A cliente está economizando'} <b>${brl(economia)}</b>` : '';
+    }
     const temDesc = !!String(carrinho.desconto || '').trim();
     raiz.querySelector('#desconto-txt').textContent = temDesc ? `Desconto: ${carrinho.desconto}` : 'Desconto';
     raiz.querySelector('#btn-desconto').classList.toggle('ativo', temDesc);
@@ -658,6 +693,12 @@ Telas.pdv = (() => {
 
   // -------------------------------------------------------------- itens
   async function cliqueItem(ev) {
+    const pop = ev.target.closest('[data-pop]');
+    if (pop && populares) {
+      const p = populares[Number(pop.dataset.pop)];
+      if (p) adicionar(p, 1);
+      return;
+    }
     const esp = ev.target.closest('[data-espera]');
     if (esp) {
       const it = carrinho.itens.find((x) => x.produto.id === Number(esp.dataset.espera));

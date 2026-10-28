@@ -2954,3 +2954,55 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .pr-card-acoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 2px; }
 .pr-card-acoes .btn-ico { padding: 6px 0; width: 100%; min-width: 0; }
 .pr-card-acoes .btn-ico .i { width: 17px; height: 17px; }
+
+/* ===== PDV v6 — acabamento ===== */
+.pdv5 .p4-venda { background:
+  radial-gradient(900px 380px at 0% 0%, rgba(149,89,104,.07), transparent 60%),
+  radial-gradient(700px 300px at 100% 100%, rgba(212,162,74,.07), transparent 60%); }
+.p5-ultimo.vazio-ult { display: none; }
+.pdv5 .p4-tags small { color: #c6bac0; font-size: 11px; letter-spacing: .3px; }
+.pdv5 .p4-item { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.pdv5 .p4-item:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(77,49,57,.09); }
+.pdv5 .p4-item-total { font-size: 19px; font-variant-numeric: tabular-nums; }
+
+/* Caixa livre com vitrine rápida */
+.pdv5 .p6-vazio { justify-content: flex-start; align-items: stretch; text-align: left; padding: 22px; gap: 16px; border: 1px solid var(--borda);
+  background: linear-gradient(180deg, #fff, #fdfafb); box-shadow: var(--sombra-1); overflow: auto; }
+.p6-vazio-cab { display: flex; align-items: center; gap: 16px; }
+.p6-vazio-cab p { margin: 3px 0 0; font-size: 14.5px; }
+.p6-vazio-cab b { font-family: var(--fonte-marca); font-size: 26px; font-weight: 600; }
+.p6-vazio-ico { width: 62px; height: 62px; border-radius: 20px; flex-shrink: 0; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(140deg, var(--rosa), #5c3a45); box-shadow: 0 10px 22px rgba(92,58,69,.28); }
+.p6-vazio-ico .i { width: 28px; height: 28px; }
+.p6-vit:empty { display: none; }
+.p6-vit-tit { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--ouro); margin-bottom: 10px; }
+.p6-vit-tit .i { width: 15px; height: 15px; }
+.p6-vit-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.p6-peca { display: flex; flex-direction: column; text-align: left; padding: 0; border: 1px solid var(--borda); border-radius: 16px; background: #fff; overflow: hidden;
+  cursor: pointer; font: inherit; color: var(--texto); position: relative; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.p6-peca:hover { transform: translateY(-3px); border-color: var(--rosa-borda); box-shadow: 0 12px 24px rgba(77,49,57,.13); }
+.p6-peca:active { transform: scale(.97); }
+.p6-peca-foto { width: 100%; aspect-ratio: 16 / 11; object-fit: cover; display: grid; place-items: center; background: var(--rosa-claro); color: #c6a2ab; }
+.p6-peca-foto .i { width: 30px; height: 30px; }
+.p6-peca-txt { display: flex; flex-direction: column; padding: 8px 10px 0; min-width: 0; }
+.p6-peca-txt b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p6-peca-txt small { font-size: 11.5px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p6-peca-preco { padding: 4px 10px 9px; font-weight: 800; color: var(--rosa-escuro); font-size: 15px; font-variant-numeric: tabular-nums; }
+.p6-peca::after { content: '+'; position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.92); color: var(--rosa);
+  display: grid; place-items: center; font-weight: 800; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.12); opacity: 0; transition: opacity .15s; }
+.p6-peca:hover::after { opacity: 1; }
+.pdv5 .p6-vazio .pdv-vazio-dicas { margin-top: auto; padding-top: 6px; }
+
+/* Cliente com iniciais */
+.pdv5 #btn-cliente .pdv-cliente-ico { width: 42px; height: 42px; font-weight: 800; font-size: 15px; letter-spacing: .5px; }
+.pdv5 #btn-cliente.com-cliente { background: linear-gradient(135deg, #fff, var(--rosa-claro)); border-color: var(--rosa-borda); }
+.pdv5 #btn-cliente.com-cliente .pdv-cliente-ico { background: linear-gradient(140deg, var(--rosa), #5c3a45); color: #fff; border: 2px solid var(--ouro-vivo); }
+.pdv5 #btn-cliente.deve { background: linear-gradient(135deg, #fff, #fdeeee); border-color: #e3b3b3; }
+.pdv5 #btn-cliente.deve .pdv-cliente-ico { background: linear-gradient(140deg, #c25555, #8a3434); border-color: #f0c9c9; }
+
+/* Economia no total */
+.p6-economia { display: flex; align-items: center; gap: 7px; margin: 10px 0 2px; padding: 7px 12px; border-radius: 12px; font-size: 13px; color: #f5e3bd;
+  background: rgba(212,162,74,.16); border: 1px solid rgba(212,162,74,.35); }
+.p6-economia b { color: #ffd88a; }
+.p6-economia .i { width: 16px; height: 16px; color: #ffd88a; flex-shrink: 0; }
+.p6-economia[hidden] { display: none; }

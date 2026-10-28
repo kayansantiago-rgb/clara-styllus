@@ -239,3 +239,18 @@ test('vendas em espera: guarda a venda (F3), atende outra e retoma a primeira', 
     await sis.fechar();
   }
 });
+
+test('caixa livre mostra a vitrine rápida: tocar na peça coloca na venda e mostra a economia da liquidação', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    await sis.api(`/api/produtos/${d.vestido.id}`, { metodo: 'PUT', corpo: { preco_anterior: d.vestido.preco_venda + 5000 } });
+    await sis.ir('pdv');
+    await sis.pagina.waitForSelector('.p6-peca');
+    assert.match(await sis.pagina.textContent('#itens'), /Caixa livre/);
+    await sis.pagina.locator('.p6-peca', { hasText: 'Vestido' }).first().click();
+    await sis.pagina.waitForSelector('.p4-item');
+    assert.equal(await sis.pagina.locator('.p4-item').count(), 1);
+    assert.match(await sis.pagina.textContent('#t-economia'), /economizando[\s\S]*50,00/);
+  } finally { await sis.fechar(); }
+});

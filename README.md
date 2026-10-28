@@ -9,6 +9,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Caixa ainda mais bonito**: com o caixa livre aparece uma **vitrine rápida** com as peças mais vendidas e as
+  novidades (um toque coloca na venda), a cliente aparece com as **iniciais** (em vermelho se tem parcela
+  atrasada), o total mostra **quanto a cliente está economizando** com liquidação e descontos, e o cartão de
+  "último item" só aparece quando tem peça na sacola.
+
 - **Caixa remodelado**: barra de cima na cor da marca, leitor grande, "último item" com foto para conferir o
   que bipou, sacola em cartões, total em destaque, formas de pagamento com cores próprias e a lista de atalhos
   de teclado sempre visível. Telas de **pagamento** e de **venda concluída** no mesmo estilo (formas coloridas,
