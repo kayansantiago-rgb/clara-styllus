@@ -6,7 +6,6 @@ Telas.vendas = (() => {
   let periodo = 'hoje';
   let filtroForma = '';
 
-  const ICONE_FORMA = { dinheiro: 'dinheiro', pix: 'pix', debito: 'cartao', credito: 'cartao', crediario: 'caderno', vale: 'vale', outro: 'carteira' };
   const FILTROS_FORMA = [['', 'Todas'], ['dinheiro', 'Dinheiro'], ['pix', 'PIX'], ['cartao', 'Cartão'], ['crediario', 'Crediário'], ['vale', 'Vale-troca']];
   const PERIODOS = [['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7d', '7 dias'], ['mes', 'Este mês'], ['outro', 'Escolher datas']];
 
@@ -27,7 +26,7 @@ Telas.vendas = (() => {
   const formasDe = (v) => (v.formas || '').split(',').filter(Boolean);
 
   function chipForma(forma, extra = '') {
-    return `<span class="chip-forma forma-${esc(forma)}">${Icone(ICONE_FORMA[forma] || 'carteira')}${esc(nomeForma(forma))}${extra}</span>`;
+    return `<span class="chip-forma forma-${esc(forma)}">${Icone.pag(forma)}${esc(nomeForma(forma))}${extra}</span>`;
   }
 
   async function abrir(el) {
@@ -58,7 +57,7 @@ Telas.vendas = (() => {
 
       <div class="vd-barra-filtros">
         <div class="chips-filtro" id="formas">
-          ${FILTROS_FORMA.map(([k, t]) => `<button class="chip-filtro ${k === filtroForma ? 'sel' : ''}" data-forma="${k}">${k ? Icone(ICONE_FORMA[k] || 'cartao') : ''}${t}</button>`).join('')}
+          ${FILTROS_FORMA.map(([k, t]) => `<button class="chip-filtro ${k === filtroForma ? 'sel' : ''}" data-forma="${k}">${k ? Icone.pag(k) : ''}${t}</button>`).join('')}
         </div>
         <label class="interruptor vd-canceladas"><input type="checkbox" id="canceladas" checked><span class="trilho"></span>
           <span class="txt"><b>Mostrar canceladas</b></span></label>

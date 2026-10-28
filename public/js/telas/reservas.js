@@ -103,8 +103,8 @@ Telas.reservas = (() => {
   function camposPagamento(prefixo, valor) {
     return `
       <label>Valor<div class="campo-moeda"><span>R$</span><input id="${prefixo}-valor" inputmode="decimal" value="${valor ? U.num(valor) : ''}"></div></label>
-      <div class="rs-formas" id="${prefixo}-formas">${FORMAS_SINAL.map(([k, ico, n], i) =>
-    `<button type="button" class="rs-forma ${i === 0 ? 'sel' : ''}" data-f="${k}">${Icone(ico)}<span>${n}</span></button>`).join('')}</div>
+      <div class="rs-formas" id="${prefixo}-formas">${FORMAS_SINAL.map(([k, , n], i) =>
+    `<button type="button" class="rs-forma ${i === 0 ? 'sel' : ''}" data-f="${k}">${Icone.pag(k)}<span>${n}</span></button>`).join('')}</div>
       <div class="rs-band" id="${prefixo}-band" hidden><div class="segmentos">${Object.entries(U.BANDEIRAS).map(([k, n], i) =>
     `<button type="button" class="segmento ${i === 0 ? 'sel' : ''}" data-b="${k}">${n}</button>`).join('')}</div></div>`;
   }

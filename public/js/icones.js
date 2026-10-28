@@ -71,6 +71,55 @@ const Icone = (() => {
       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   }
 
+
+  /*
+   * Ícones coloridos das formas de pagamento (cédula, símbolo do Pix, cartões com chip…).
+   * Uso: Icone.pag('pix') → <svg class="pgi pgi-pix">. Cores fixas, sem gradientes com id
+   * (assim funcionam mesmo repetidos várias vezes na página).
+   */
+  const chip = (x, y) => `<rect x="${x}" y="${y}" width="8" height="6.4" rx="1.4" fill="#f3cf72"/><path d="M${x} ${y + 3.2}h8M${x + 2.7} ${y}v6.4M${x + 5.3} ${y}v6.4" stroke="#c99a3e" stroke-width=".7"/>`;
+  const cartao = (cor, escura, nome) => `
+    <rect x="2" y="3" width="44" height="28" rx="4.5" fill="${cor}"/>
+    <path d="M2 21C14 15 30 25 46 12v14.5A4.5 4.5 0 0 1 41.5 31h-35A4.5 4.5 0 0 1 2 26.5Z" fill="${escura}" opacity=".55"/>
+    <path d="M24 3h17.5A4.5 4.5 0 0 1 46 7.5V9C38 5 30 6 24 3Z" fill="#fff" opacity=".12"/>
+    ${chip(7, 10)}
+    <path d="M19.5 11.2a4 4 0 0 1 0 5.6M22 9.6a6.4 6.4 0 0 1 0 8.8" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".85"/>
+    <g fill="#fff" opacity=".9"><rect x="7" y="22" width="6" height="2" rx="1"/><rect x="15" y="22" width="6" height="2" rx="1"/><rect x="23" y="22" width="6" height="2" rx="1"/><rect x="31" y="22" width="6" height="2" rx="1"/></g>
+    <text x="42" y="10.5" text-anchor="end" font-family="Arial, sans-serif" font-size="4.6" font-weight="800" letter-spacing=".3" fill="#fff" opacity=".9">${nome}</text>`;
+  const PAG = {
+    dinheiro: `
+      <rect x="7" y="2" width="39" height="21" rx="3" fill="#8fd1ad" transform="rotate(-6 26 12)"/>
+      <rect x="2" y="8" width="42" height="22" rx="3" fill="#2f9e6a"/>
+      <rect x="4.5" y="10.5" width="37" height="17" rx="2" fill="none" stroke="#c9ecd8" stroke-width=".8" opacity=".8"/>
+      <ellipse cx="32" cy="19" rx="7" ry="7.2" fill="#d9f3e4"/>
+      <circle cx="32" cy="17" r="2.6" fill="#2f9e6a"/><path d="M27 25a5 4.2 0 0 1 10 0Z" fill="#2f9e6a"/>
+      <text x="8" y="17.5" font-family="Arial, sans-serif" font-size="6.5" font-weight="800" fill="#e6f8ee">100</text>
+      <text x="8" y="25.5" font-family="Arial, sans-serif" font-size="4.6" font-weight="700" fill="#c9ecd8">REAIS</text>`,
+    pix: `<g transform="translate(9 1) scale(1.25)" fill="#32bcad"><path d="M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156"/></g>`,
+    debito: cartao('#2f5fa8', '#1d3f78', 'DÉBITO'),
+    credito: cartao('#3a2a4e', '#1b1226', 'CRÉDITO'),
+    crediario: `
+      <rect x="9" y="2" width="31" height="29" rx="3" fill="#b06d80"/>
+      <rect x="36" y="4" width="5" height="25" rx="1.5" fill="#f4e6ea"/>
+      <rect x="9" y="2" width="6" height="29" rx="2" fill="#8e5063"/>
+      <g fill="#f4e6ea"><circle cx="9" cy="8" r="1.5"/><circle cx="9" cy="14" r="1.5"/><circle cx="9" cy="20" r="1.5"/><circle cx="9" cy="26" r="1.5"/></g>
+      <rect x="19" y="8" width="14" height="8" rx="1.5" fill="#fff"/>
+      <path d="M21.5 11h9M21.5 13.5h6" stroke="#b06d80" stroke-width="1.1" stroke-linecap="round"/>
+      <path d="M19 21h14M19 25h10" stroke="#f4e6ea" stroke-width="1.3" stroke-linecap="round" opacity=".8"/>`,
+    vale: `
+      <path d="M3 7a3 3 0 0 1 3-3h36a3 3 0 0 1 3 3v6a3.5 3.5 0 0 0 0 7v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-6a3.5 3.5 0 0 0 0-7Z" fill="#d4a24a"/>
+      <path d="M32 6v22" stroke="#fff4dc" stroke-width="1.2" stroke-dasharray="2 2"/>
+      <path d="M3 13a3.5 3.5 0 0 1 0 7" fill="none"/>
+      <path d="m17.5 9.5 1.9 3.9 4.3.6-3.1 3 .7 4.3-3.8-2-3.8 2 .7-4.3-3.1-3 4.3-.6Z" fill="#fff8e6"/>
+      <path d="M36 11.5h5M36 16.5h5M36 21.5h4" stroke="#fff4dc" stroke-width="1.3" stroke-linecap="round"/>`,
+    outro: `
+      <rect x="4" y="6" width="38" height="24" rx="4" fill="#7a5a48"/>
+      <path d="M4 10a4 4 0 0 1 4-4h28l-2-3.5a1.5 1.5 0 0 0-2-.6L8 9" fill="#5e4334"/>
+      <rect x="30" y="13" width="14" height="10" rx="3" fill="#5e4334"/><circle cx="35" cy="18" r="2" fill="#f3cf72"/>`,
+  };
+  PAG.cartao = PAG.debito;
+  Icone.pag = (forma, classe = '') => `<svg class="pgi pgi-${forma} ${classe}" viewBox="0 0 48 32" aria-hidden="true">${PAG[forma] || PAG.outro}</svg>`;
+
   /** Troca <i data-icone="nome"></i> pelo SVG (usado no HTML fixo da página). */
   Icone.aplicar = (raiz = document) => {
     raiz.querySelectorAll('i[data-icone]').forEach((el) => { if (el.parentNode) el.outerHTML = Icone(el.dataset.icone, el.className); });

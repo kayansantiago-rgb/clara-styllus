@@ -147,7 +147,7 @@ Telas.pdv = (() => {
           </div>
           <div class="p4-passo">Pagamento</div>
           <div class="pdv-pagar p4-formas">
-            ${[...FORMAS_RAPIDAS, ['vale', 'vale', 'Vale-troca']].map(([k, ico, nome]) => `<button class="pdv-forma" data-forma="${k}">${Icone(ico)}<span>${nome}</span></button>`).join('')}
+            ${[...FORMAS_RAPIDAS, ['vale', 'vale', 'Vale-troca']].map(([k, ico, nome]) => `<button class="pdv-forma" data-forma="${k}">${Icone.pag(k)}<span>${nome}</span></button>`).join('')}
           </div>
           <div class="p4-rodape-pagar">
             <button class="link" id="btn-finalizar">${Icone('mais')} Dividir <kbd>F4</kbd></button>
@@ -857,7 +857,6 @@ Telas.pdv = (() => {
     let dividir = !!opcoes.dividir || !!valeCodigo || formaInicial === 'vale';
     const formas = Object.entries(U.FORMAS);
 
-    const ICONES_PAG = { dinheiro: 'dinheiro', pix: 'pix', debito: 'cartao', credito: 'cartao', crediario: 'caderno', vale: 'vale', outro: 'carteira' };
     const NOMES_PAG = { debito: 'Débito', credito: 'Crédito' };
     const pecasPag = carrinho.itens.reduce((a, it) => a + it.quantidade, 0);
     const corpo = abrirModal('Pagamento', `
@@ -866,7 +865,7 @@ Telas.pdv = (() => {
           <div class="pag2-rotulo">Forma de pagamento</div>
           <div class="formas formas-7">
             ${formas.map(([k, v], i) =>
-    `<button class="forma pag3-f-${k} ${k === forma ? 'sel' : ''}" data-forma="${k}" title="Atalho: Alt + ${i + 1}">${Icone(ICONES_PAG[k] || 'carteira')}<span>${NOMES_PAG[k] || v}</span></button>`).join('')}
+    `<button class="forma pag3-f-${k} ${k === forma ? 'sel' : ''}" data-forma="${k}" title="Atalho: Alt + ${i + 1}">${Icone.pag(k)}<span>${NOMES_PAG[k] || v}</span></button>`).join('')}
           </div>
           <form id="f-pag" class="pag2-form">
             <label class="pag2-valor"><span id="pag-rotulo">Recebido</span><div class="campo-moeda"><span>R$</span><input id="pag-valor" inputmode="decimal" autocomplete="off" autofocus></div></label>
@@ -1117,7 +1116,7 @@ Telas.pdv = (() => {
     const atualizar = () => {
       if (!dividir) return atualizarDireto();
       corpo.querySelector('#lista-pag').innerHTML = pagamentos.length ? pagamentos.map((p, i) => `
-        <div class="pag2-item">${Icone(ICONES_PAG[p.forma] || 'carteira')}<span><b>${NOMES_PAG[p.forma] || U.FORMAS[p.forma]}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</b>${
+        <div class="pag2-item">${Icone.pag(p.forma)}<span><b>${NOMES_PAG[p.forma] || U.FORMAS[p.forma]}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</b>${
   p.codigo ? `<small>${esc(p.codigo)}</small>` : ''}${p.bandeira ? `<small>${U.BANDEIRAS[p.bandeira]}</small>` : ''}${
   jurosDe(p) ? `<small class="txt-perigo">+ ${brl(jurosDe(p))} de juros</small>` : ''}${p.forma === 'crediario' ? `<small>1º venc. ${p.primeiro_vencimento.split('-').reverse().join('/')}</small>` : ''}</span>
         <b>${brl(p.valor)}</b><button class="mini perigo" data-rm="${i}" title="Tirar">${Icone('fechar')}</button></div>`).join('')
