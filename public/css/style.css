@@ -3558,3 +3558,71 @@ body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
 .usuario-txt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-rodape .menu-recolher { white-space: nowrap; padding: 8px 10px; }
 .menu-tema { background: transparent; }
+
+/* =================== PDV v8: voo, busca em cartões, grade de tamanhos, sacola, atalhos =================== */
+/* Peça voando até a sacola */
+.pdv-voo { position: fixed; z-index: 3500; width: 64px; height: 64px; pointer-events: none; will-change: transform; }
+.pdv-voo-img { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; display: grid; place-items: center; background: var(--rosa-claro); color: #bd96a0;
+  box-shadow: 0 14px 30px rgba(77,49,57,.35), 0 0 0 3px #fff; }
+.pdv-voo-img .i { width: 26px; height: 26px; }
+.p4-item-foto.pousou { animation: pousou .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pousou { from { transform: scale(.7); } to { transform: none; } }
+#t-total.pulo { animation: total-pulo .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes total-pulo { 40% { transform: scale(1.06); color: #f3d48a; } }
+#t-total { display: block; width: fit-content; transform-origin: left center; }
+
+/* Busca em cartões com foto */
+.sugestoes.sug2 { padding: 10px; max-height: min(460px, 62vh); overflow: auto; border-radius: 20px; box-shadow: 0 24px 50px -16px rgba(43,35,38,.35); }
+.sug2-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.sug2-card.sugestao { display: flex; flex-direction: column; gap: 0; padding: 0; border: 1px solid var(--borda); border-radius: 16px; overflow: hidden; background: #fff; cursor: pointer;
+  transition: transform .12s, border-color .12s, box-shadow .12s; grid-template-columns: none; }
+.sug2-card.sugestao:hover, .sug2-card.sugestao.sel { border-color: var(--rosa); box-shadow: 0 0 0 3px rgba(149,89,104,.16); transform: translateY(-2px); background: #fff; }
+.sug2-foto { position: relative; }
+.sug2-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: grid; place-items: center; background: var(--rosa-claro); color: #c6a2ab; border-radius: 0; }
+.sug2-img .i { width: 30px; height: 30px; }
+.sug2-liq { position: absolute; left: 8px; top: 8px; background: #c2372b; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
+.sug2-txt { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px 0; min-width: 0; }
+.sug2-txt b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sug2-txt small { font-size: 11.5px; color: var(--suave); }
+.sug2-tams { display: flex; gap: 4px; flex-wrap: wrap; }
+.sug2-tams i, .sug2-tams em { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 7px; background: #f3eef0; color: var(--texto); }
+.sug2-pe { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; padding: 6px 10px 10px; }
+.sug2-pe b { color: var(--rosa-escuro); font-size: 15px; font-variant-numeric: tabular-nums; }
+.sug2-pe small { font-size: 11px; color: var(--suave); white-space: nowrap; }
+
+/* Grade de tamanhos */
+.gr2-cab { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.gr2-foto { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; display: grid; place-items: center; background: var(--rosa-claro); color: #bd96a0; flex-shrink: 0; }
+.gr2-cab div { display: flex; flex-direction: column; }
+.gr2-cab b { font-size: 18px; } .gr2-cab small { color: var(--suave); }
+.gr2-tabela { display: grid; grid-template-columns: auto repeat(var(--cols), minmax(76px, 1fr)); gap: 8px; align-items: center; }
+.gr2-tabela.sem-cor { grid-template-columns: repeat(var(--cols), minmax(76px, 1fr)); }
+.gr2-th { text-align: center; font-size: 11px; font-weight: 700; color: var(--suave); text-transform: uppercase; letter-spacing: 1px; }
+.gr2-cor { font-size: 13px; font-weight: 650; padding-right: 6px; white-space: nowrap; }
+.gr2-cel { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px; border-radius: 16px; border: 1.5px solid var(--borda); background: #fff; cursor: pointer; font: inherit; color: var(--texto);
+  transition: transform .12s, border-color .12s, box-shadow .12s, background .12s; }
+.gr2-cel b { font-size: 20px; font-weight: 800; }
+.gr2-cel small { font-size: 11.5px; color: #1d7a4e; font-weight: 600; }
+.gr2-cel:hover, .gr2-cel:focus-visible { border-color: var(--rosa); background: var(--rosa-claro); transform: translateY(-2px); box-shadow: 0 8px 18px -8px rgba(149,89,104,.5); outline: none; }
+.gr2-cel.pouco small { color: #b4651a; }
+.gr2-cel.sem { opacity: .5; } .gr2-cel.sem small { color: #b3372c; }
+.gr2-vazio { min-height: 20px; }
+.gr2-dica { margin: 14px 0 0; font-size: 12.5px; color: var(--suave); text-align: center; }
+
+/* Sacola animada do caixa livre */
+.p6-vazio-ico.p7-sacola { width: 76px; height: 76px; border-radius: 24px; padding: 6px; box-sizing: border-box; animation: sacola-respira 3.2s ease-in-out infinite; }
+.p7-sacola svg { width: 100%; height: 100%; overflow: visible; }
+.p7-alca { transform-origin: 40px 30px; animation: alca-balanca 3.2s ease-in-out infinite; }
+.p7-brilho path { transform-box: fill-box; transform-origin: center; animation: brilho-pisca 2.4s ease-in-out infinite; }
+.p7-brilho path:nth-child(2) { animation-delay: 1.2s; }
+@keyframes sacola-respira { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.04); box-shadow: 0 16px 30px rgba(92,58,69,.32); } }
+@keyframes alca-balanca { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-5deg); } 75% { transform: rotate(5deg); } }
+@keyframes brilho-pisca { 0%, 100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .p7-sacola, .p7-alca, .p7-brilho path { animation: none; } }
+
+/* Atalhos do topo do caixa com ícone colorido */
+.pdv5 .p4-acao .i { padding: 5px; border-radius: 9px; box-sizing: content-box; color: #fff; background: var(--c, rgba(255,255,255,.18)); }
+.pdv5 #t-espera { --c: #d4a24a; } .pdv5 #t-troca { --c: #16a596; } .pdv5 #t-condicional { --c: #d06b8a; }
+.pdv5 #t-reservar { --c: #e08a3a; } .pdv5 #t-crediario { --c: #b8798a; } .pdv5 #t-mais { --c: #2f9e6a; }
+.pdv5 .p4-acao:hover .i { transform: scale(1.08); }
+@media (max-width: 1500px) { .pdv5 .p4-acao .i { width: 15px; height: 15px; padding: 4px; } }

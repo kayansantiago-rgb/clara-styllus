@@ -254,3 +254,26 @@ test('caixa livre mostra a vitrine rápida: tocar na peça coloca na venda e mos
     assert.match(await sis.pagina.textContent('#t-economia'), /economizando[\s\S]*50,00/);
   } finally { await sis.fechar(); }
 });
+
+test('busca pelo nome mostra cartões com foto; modelo com vários tamanhos abre a grade para escolher', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    await dadosBasicos(sis);
+    await sis.pagina.evaluate(() => U.api('/api/produtos/grade', { metodo: 'POST', corpo: { nome: 'Saia Midi Plissada', preco_venda: 12990, variantes: [{ tamanho: 'P', cor: 'Rosa', quantidade: 2 }, { tamanho: 'M', cor: 'Rosa', quantidade: 3 }, { tamanho: 'G', cor: 'Rosa', quantidade: 0 }] } }));
+    await sis.ir('pdv');
+    await sis.pagina.fill('#busca', 'Saia Midi');
+    await sis.pagina.waitForSelector('.sug2-card');
+    assert.equal(await sis.pagina.locator('.sug2-card').count(), 1); // as 3 variações viram um cartão só
+    assert.match(await sis.pagina.textContent('.sug2-card'), /P[\s\S]*M[\s\S]*G/);
+    await sis.pagina.keyboard.press('Enter');
+    await sis.pagina.waitForSelector('.gr2-cel');
+    assert.equal(await sis.pagina.locator('.gr2-cel').count(), 3);
+    assert.match(await sis.pagina.textContent('.gr2-tabela'), /sem estoque/);
+    await sis.pagina.click('.gr2-cel:has-text("M")');
+    await sis.pagina.waitForSelector('.p4-item');
+    assert.match(await sis.pagina.textContent('#itens'), /Saia Midi Plissada[\s\S]*Tam M/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

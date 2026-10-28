@@ -9,6 +9,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Caixa ainda mais esperto**: a foto da peça "voa" até a sacola quando entra na venda; a busca pelo nome mostra
+  cartões com foto (as variações do mesmo modelo juntas); se o modelo tem vários tamanhos/cores, abre a **grade**
+  com o estoque de cada um para tocar no certo; sacola animada no caixa livre e atalhos do topo com ícones coloridos.
+
 - **Mais capricho visual**:
   - **Menu** com ícone colorido para cada tela e **bolinhas de aviso** (crediário atrasado, condicional para devolver,
     reserva vencida e peça da lista de espera que chegou).

@@ -354,7 +354,13 @@ Telas.pdv = (() => {
       }).join('')
       : `<div class="p4-vazio p6-vazio">
           <div class="p6-vazio-cab">
-            <span class="p6-vazio-ico">${Icone('sacola')}</span>
+            <span class="p6-vazio-ico p7-sacola" aria-hidden="true"><svg viewBox="0 0 80 80">
+              <path class="p7-alca" d="M28 30v-6a12 12 0 0 1 24 0v6" fill="none" stroke="#d4a24a" stroke-width="4" stroke-linecap="round"/>
+              <path d="M16 30h48l-4 38a6 6 0 0 1-6 5H26a6 6 0 0 1-6-5Z" fill="#fff"/>
+              <path d="M16 30h48l-1 9H17Z" fill="#f3d48a" opacity=".55"/>
+              <text x="40" y="60" text-anchor="middle" font-family="Playfair Display, Georgia, serif" font-size="17" font-weight="700" fill="#955968">CS</text>
+              <g class="p7-brilho" fill="#f3cf72"><path d="M66 14l2 5 5 2-5 2-2 5-2-5-5-2 5-2Z"/><path d="M12 18l1.3 3 3 1.3-3 1.3-1.3 3-1.3-3-3-1.3 3-1.3Z"/></g>
+            </svg></span>
             <div><b>Caixa livre</b><p>Bipe a etiqueta com o leitor ou toque numa peça abaixo para colocar na venda.</p></div>
           </div>
           <div class="p6-vit" id="vit-rapida"></div>
@@ -575,7 +581,40 @@ Telas.pdv = (() => {
     } catch { aviso('Use a tecla F11 para tela cheia.', 'alerta'); }
   }
 
-  function adicionar(produto, quantidade = 1, preco) {
+  /** A foto da peça "voa" de onde ela veio (leitor, sugestão, vitrine) até a sacola, e o total dá um pulinho. */
+  function voar(produto, origem) {
+    if (!raiz || Animacoes.reduzir()) return;
+    const de = origem || raiz.querySelector('.p4-busca .pdv-busca-ico') || raiz.querySelector('#busca');
+    const alvo = raiz.querySelector('.p4-item.recente .p4-item-foto') || [...raiz.querySelectorAll('.p4-item-foto')].pop();
+    const total = raiz.querySelector('#t-total');
+    if (total) { total.classList.remove('pulo'); void total.offsetWidth; total.classList.add('pulo'); }
+    if (!de || !alvo) return;
+    const a = de.getBoundingClientRect ? de.getBoundingClientRect() : de;
+    const b = alvo.getBoundingClientRect();
+    const lado = 64;
+    const voo = document.createElement('div');
+    voo.className = 'pdv-voo';
+    voo.innerHTML = U.miniatura(produto, 'pdv-voo-img');
+    voo.style.left = `${a.left + a.width / 2 - lado / 2}px`;
+    voo.style.top = `${a.top + a.height / 2 - lado / 2}px`;
+    document.body.appendChild(voo);
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    const fim = b.width / lado;
+    const anim = voo.animate([
+      { transform: 'translate(0, 0) scale(.6)', opacity: 0 },
+      { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 70}px) scale(1.15)`, opacity: 1, offset: 0.35 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${fim})`, opacity: 1 },
+    ], { duration: 560, easing: 'cubic-bezier(.4,.1,.3,1)' });
+    alvo.style.visibility = 'hidden';
+    const terminar = () => { voo.remove(); alvo.style.visibility = ''; alvo.classList.add('pousou'); };
+    anim.onfinish = terminar;
+    anim.oncancel = terminar;
+  }
+
+  function adicionar(produto, quantidade = 1, preco, origem) {
+    // Lê a posição antes de redesenhar (a vitrine/sugestão some quando a sacola muda).
+    const rectOrigem = origem && origem.getBoundingClientRect ? origem.getBoundingClientRect() : origem;
     const existente = carrinho.itens.find((it) => it.produto.id === produto.id && !it.desconto && (it.preco ?? null) === (preco ?? null));
     const jaNoCarrinho = carrinho.itens.filter((it) => it.produto.id === produto.id)
       .reduce((a, it) => a + it.quantidade, 0);
@@ -589,6 +628,7 @@ Telas.pdv = (() => {
     U.som(!produto.servico && jaNoCarrinho + quantidade > produto.estoque ? 'erro' : 'ok');
     salvar();
     desenhar(); // a peça adicionada vai para o fim da lista e fica visível
+    voar(produto, rectOrigem);
   }
 
   async function lerEntrada(valor) {
@@ -645,26 +685,114 @@ Telas.pdv = (() => {
     } catch { esconderSugestoes(); }
   }
 
+  // Ordem dos tamanhos na grade: letras (PP…XGG), depois números.
+  const ORDEM_TAM = ['RN', 'PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'EG', 'EGG', 'G1', 'G2', 'G3', 'G4', 'U', 'UN', 'ÚNICO', 'UNICO'];
+  const pesoTam = (t) => {
+    const x = String(t || '').toUpperCase();
+    const i = ORDEM_TAM.indexOf(x);
+    if (i >= 0) return i;
+    const n = parseFloat(x.replace(',', '.'));
+    return Number.isFinite(n) ? 100 + n : 1000;
+  };
+  const chaveModelo = (p) => `${String(p.nome).trim().toLowerCase()}|${p.referencia || ''}`;
+  /** Junta as variações (tamanho/cor) do mesmo modelo num cartão só. */
+  function agrupar(lista) {
+    const m = new Map();
+    for (const p of lista) {
+      const k = chaveModelo(p);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(p);
+    }
+    return [...m.values()];
+  }
+
   function mostrarSugestoes(lista) {
     if (!raiz) return;
-    sugestoes = lista;
-    selecionada = lista.length ? 0 : -1;
+    sugestoes = agrupar(lista);
+    selecionada = sugestoes.length ? 0 : -1;
     const box = raiz.querySelector('#sugestoes');
-    if (!lista.length) return esconderSugestoes();
+    if (!sugestoes.length) return esconderSugestoes();
     box.hidden = false;
-    box.innerHTML = lista.map((p, i) => `
-      <div class="sugestao ${i === selecionada ? 'sel' : ''}" data-i="${i}">
-        ${U.miniatura(p)}
-        <span class="sugestao-txt"><b>${esc(p.nome)}</b> ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}
-          <small>${esc(p.codigo)}</small></span>
-        <span>${p.preco_anterior > p.preco_venda ? `<small class="preco-de">${brl(p.preco_anterior)}</small> ` : ''}${brl(p.preco_venda)} <small class="${p.estoque <= 0 ? 'txt-perigo' : ''}">est. ${p.estoque}</small></span>
-      </div>`).join('');
+    box.classList.add('sug2');
+    box.innerHTML = `<div class="sug2-grade">${sugestoes.map((g, i) => {
+      const p = g.find((x) => x.foto_versao) || g[0];
+      const tams = [...new Set(g.map((x) => x.tamanho).filter(Boolean))].sort((x, y) => pesoTam(x) - pesoTam(y));
+      const cores = [...new Set(g.map((x) => x.cor).filter(Boolean))];
+      const precos = g.map((x) => x.preco_venda);
+      const min = Math.min(...precos);
+      const max = Math.max(...precos);
+      const est = g.reduce((a, x) => a + Math.max(0, x.estoque), 0);
+      const liq = g.some((x) => x.preco_anterior > x.preco_venda);
+      return `<div class="sugestao sug2-card ${i === selecionada ? 'sel' : ''}" data-i="${i}">
+        <div class="sug2-foto">${U.miniatura(p, 'sug2-img')}${liq ? '<span class="sug2-liq">Liquidação</span>' : ''}</div>
+        <div class="sug2-txt"><b>${esc(p.nome)}</b>
+          <span class="sug2-tams">${tams.slice(0, 6).map((t) => `<i>${esc(t)}</i>`).join('')}${tams.length > 6 ? '<i>…</i>' : ''}${!tams.length && cores.length ? `<em>${esc(cores[0])}</em>` : ''}</span>
+          ${cores.length > 1 ? `<small>${cores.length} cores</small>` : ''}</div>
+        <div class="sug2-pe"><b>${min === max ? brl(min) : `${brl(min)}+`}</b><small class="${est <= 0 ? 'txt-perigo' : ''}">${est <= 0 ? 'sem estoque' : `${est} em estoque`}</small></div>
+      </div>`;
+    }).join('')}</div>`;
     box.onmousedown = (ev) => {
       const d = ev.target.closest('[data-i]');
       if (!d) return;
       ev.preventDefault();
-      adicionar(sugestoes[Number(d.dataset.i)]);
+      const origem = d.getBoundingClientRect();
+      const g = sugestoes[Number(d.dataset.i)];
       limparBusca();
+      escolherVariacao(g, origem);
+    };
+  }
+
+  /**
+   * Peça escolhida pelo nome: se o modelo tem mais de um tamanho/cor, abre a grade para tocar no certo
+   * (com o estoque de cada um); se só tem um, já vai para a sacola.
+   */
+  async function escolherVariacao(grupo, origem, buscarTodos = true) {
+    let vars = grupo;
+    if (buscarTodos) {
+      try {
+        const k = chaveModelo(grupo[0]);
+        const todos = (await api(`/api/produtos?q=${encodeURIComponent(grupo[0].nome)}&limite=100`)).filter((x) => chaveModelo(x) === k);
+        if (todos.length) vars = todos;
+      } catch { /* fica com o que veio */ }
+    }
+    if (vars.length <= 1) return adicionar(vars[0] || grupo[0], 1, undefined, origem);
+    const tams = [...new Set(vars.map((x) => x.tamanho || '—'))].sort((x, y) => pesoTam(x) - pesoTam(y));
+    const cores = [...new Set(vars.map((x) => x.cor || '—'))];
+    const cel = (cor, tam) => vars.find((x) => (x.cor || '—') === cor && (x.tamanho || '—') === tam);
+    const p0 = vars.find((x) => x.foto_versao) || vars[0];
+    const corpo = abrirModal('Qual tamanho?', `
+      <div class="gr2">
+        <div class="gr2-cab">${U.miniatura(p0, 'gr2-foto')}<div><b>${esc(p0.nome)}</b><small>${brl(p0.preco_venda)}${p0.referencia ? ` · ref ${esc(p0.referencia)}` : ''}</small></div></div>
+        <div class="gr2-tabela" style="--cols:${tams.length}">
+          ${cores.length > 1 || cores[0] !== '—' ? '<span></span>' : ''}${tams.map((t) => `<span class="gr2-th">${esc(t)}</span>`).join('')}
+          ${cores.map((c) => `${cores.length > 1 || c !== '—' ? `<span class="gr2-cor">${esc(c)}</span>` : ''}${tams.map((t) => {
+    const v = cel(c, t);
+    if (!v) return '<span class="gr2-vazio"></span>';
+    return `<button type="button" class="gr2-cel ${v.estoque <= 0 ? 'sem' : v.estoque <= 1 ? 'pouco' : ''}" data-id="${v.id}" title="${esc([v.tamanho, v.cor].filter(Boolean).join(' · '))}">
+              <b>${esc(t)}</b><small>${v.estoque <= 0 ? 'sem estoque' : `${v.estoque} un.`}</small></button>`;
+  }).join('')}`).join('')}
+        </div>
+        <p class="gr2-dica">Toque no tamanho (ou use as setas e Enter).</p>
+      </div>`, { largura: `${Math.min(760, 240 + tams.length * 96)}px`, classe: 'modal-grade' });
+    if (cores.length <= 1 && cores[0] === '—') corpo.querySelector('.gr2-tabela').classList.add('sem-cor');
+    const botoes = [...corpo.querySelectorAll('.gr2-cel')];
+    (botoes.find((b) => !b.classList.contains('sem')) || botoes[0]).focus();
+    corpo.querySelector('.gr2-tabela').onclick = (ev) => {
+      const b = ev.target.closest('[data-id]');
+      if (!b) return;
+      const v = vars.find((x) => x.id === Number(b.dataset.id));
+      const origemCel = b.getBoundingClientRect();
+      fecharModal();
+      adicionar(v, 1, undefined, origemCel);
+      if (raiz) raiz.querySelector('#busca').focus();
+    };
+    corpo.querySelector('.gr2-tabela').onkeydown = (ev) => {
+      const i = botoes.indexOf(document.activeElement);
+      if (i < 0) return;
+      const passo = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: tams.length, ArrowUp: -tams.length }[ev.key];
+      if (!passo) return;
+      ev.preventDefault();
+      (botoes[i + passo] || botoes[i]).focus();
     };
   }
 
@@ -694,8 +822,11 @@ Telas.pdv = (() => {
     ev.preventDefault();
     const valor = ev.target.value;
     if (sugestoes.length && selecionada >= 0 && !/^\d+$/.test(valor.trim())) {
-      adicionar(sugestoes[selecionada]);
-      return limparBusca();
+      const g = sugestoes[selecionada];
+      const card = raiz.querySelectorAll('.sugestao')[selecionada];
+      const origem = card && card.getBoundingClientRect();
+      limparBusca();
+      return escolherVariacao(g, origem);
     }
     // Código bipado: limpa o campo na hora, para o próximo bipe (rápido) não se misturar com este.
     const codigo = /^(\d{1,3}\s*[*xX]\s*)?[A-Za-z]{0,2}\d{3,}$/.test(valor.trim());
@@ -710,7 +841,7 @@ Telas.pdv = (() => {
     const pop = ev.target.closest('[data-pop]');
     if (pop && populares) {
       const p = populares[Number(pop.dataset.pop)];
-      if (p) adicionar(p, 1);
+      if (p) adicionar(p, 1, undefined, pop.querySelector('.p6-peca-foto') || pop);
       return;
     }
     const esp = ev.target.closest('[data-espera]');
