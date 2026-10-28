@@ -14,7 +14,7 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
     e botões de WhatsApp e Vender; a ficha tem cabeçalho com as ações e **linha do tempo** das compras com as fotos das peças.
   - **Venda concluída** com confete, "Obrigada, Ana!", as fotos das peças e o botão **Enviar no WhatsApp** com
     mensagem de agradecimento pronta (o texto pode ser mudado em Configurações).
-  - **Foto da cliente** (quando cadastrada) no Crediário e no "Obrigada" da venda concluída.
+  - **Foto da cliente** (quando cadastrada) no caixa (PDV), na tela de pagamento, no Crediário e no "Obrigada" da venda concluída.
   - **Crediário** com barra de quanto já pagou e as parcelas em bolinhas (paga, vencida, a vencer).
   - **Fechar o caixa** com o desenho de cada nota (nas cores do Real) e de cada moeda.
   - **Login** com "Bom dia/Boa tarde/Boa noite" e o nome de quem entrou por último, brilhos dourados no fundo.

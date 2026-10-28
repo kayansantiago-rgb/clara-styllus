@@ -243,13 +243,12 @@ Telas.pdv = (() => {
         <div id="lista-deve" class="ec-lista"></div>
       </div>`, { largura: '640px' });
     const lista = corpo.querySelector('#lista-deve');
-    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
     let encontrados = [];
     const buscar = async (q) => {
       try { encontrados = await api(`/api/crediario?q=${encodeURIComponent(q)}`); } catch (e) { return erro(e); }
       lista.innerHTML = encontrados.slice(0, 40).map((c, i) => `
         <button class="ec-item" data-i="${i}">
-          <span class="avatar">${esc(iniciais(c.nome))}</span>
+          ${fotoCli(c)}
           <span class="ec-txt"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></span>
           <span class="ec-info"><b>${brl(c.saldo)}</b><small>${c.parcelas} parcela(s) em aberto</small></span>
           ${c.vencido > 0 ? `<span class="selo perigo">${brl(c.vencido)} vencido</span>` : '<span class="selo ok">em dia</span>'}
@@ -273,6 +272,11 @@ Telas.pdv = (() => {
     try {
       const c = await api(`/api/clientes/${carrinho.cliente.id}`);
       saldoCliente = c.crediario;
+      // Guarda a foto (a cliente pode ter vindo da condicional, da reserva ou da ficha sem ela).
+      if (carrinho.cliente && carrinho.cliente.id === c.id && (c.foto_versao || null) !== (carrinho.cliente.foto_versao || null)) {
+        carrinho.cliente.foto_versao = c.foto_versao || null;
+        salvar();
+      }
       if (raiz) { desenharCliente(); desenharAlertas(); }
     } catch { /* cliente apagado: ignora */ }
   }
@@ -294,6 +298,12 @@ Telas.pdv = (() => {
         <span class="p6-peca-preco">${brl(p.preco_venda)}</span></button>`).join('')}</div>` : '';
   }
 
+  const iniciaisDe = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+  /** Foto da cliente (quando cadastrada) ou as iniciais. */
+  const fotoCli = (c, classe = 'avatar') => (c && c.foto_versao
+    ? `<img class="${classe} cli-foto" src="/api/clientes/${c.id}/foto?v=${c.foto_versao}" alt="">`
+    : `<span class="${classe}">${esc(iniciaisDe(c && c.nome))}</span>`);
+
   function desenharCliente() {
     const info = raiz.querySelector('#cliente-info');
     const ico = raiz.querySelector('.pdv-cliente-ico');
@@ -304,7 +314,11 @@ Telas.pdv = (() => {
       if (botao) botao.classList.remove('com-cliente', 'deve');
       return;
     }
-    if (ico) ico.textContent = String(carrinho.cliente.nome || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+    if (ico) {
+      ico.classList.toggle('com-foto', !!carrinho.cliente.foto_versao);
+      ico.innerHTML = carrinho.cliente.foto_versao
+        ? `<img src="/api/clientes/${carrinho.cliente.id}/foto?v=${carrinho.cliente.foto_versao}" alt="">` : esc(iniciaisDe(carrinho.cliente.nome));
+    }
     if (botao) {
       botao.classList.add('com-cliente');
       botao.classList.toggle('deve', !!(saldoCliente && saldoCliente.vencido > 0));
@@ -755,12 +769,11 @@ Telas.pdv = (() => {
       </div>`, { largura: '640px' });
     const lista = corpo.querySelector('#lista-cli');
     let encontrados = [];
-    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
     const buscar = async (q) => {
       encontrados = await api(`/api/clientes?q=${encodeURIComponent(q)}${q ? '' : '&ordem=recentes'}`);
       lista.innerHTML = encontrados.slice(0, 40).map((c, i) => `
         <button class="ec-item ${carrinho.cliente && carrinho.cliente.id === c.id ? 'atual' : ''}" data-i="${i}">
-          <span class="avatar">${esc(iniciais(c.nome))}</span>
+          ${fotoCli(c)}
           <span class="ec-txt"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></span>
           <span class="ec-info">${c.compras ? `<b>${brl(c.total_comprado)}</b><small>${c.compras} compra(s)</small>` : '<small>ainda não comprou</small>'}</span>
           ${c.deve > 0 ? `<span class="selo perigo">deve ${brl(c.deve)}</span>` : ''}
@@ -769,7 +782,7 @@ Telas.pdv = (() => {
       if (!q && encontrados.length) lista.insertAdjacentHTML('afterbegin', '<small class="ec-dica">Últimas clientes que compraram</small>');
     };
     const usar = (c) => {
-      carrinho.cliente = { id: c.id, nome: c.nome, cpf: c.cpf };
+      carrinho.cliente = { id: c.id, nome: c.nome, cpf: c.cpf, foto_versao: c.foto_versao || null };
       if (c.cpf && !carrinho.cpf_nota) carrinho.cpf_nota = U.cpf(c.cpf);
       salvar();
       fecharModal();
@@ -887,7 +900,7 @@ Telas.pdv = (() => {
           <div class="pag2-total" id="pag-total"></div>
           <div class="pag3-sacola" title="${pecasPag} ${pecasPag === 1 ? 'peça' : 'peças'} nesta venda">
             <div class="pag3-fotos">${carrinho.itens.slice(0, 6).map((it) => U.miniatura(it.produto, 'pag3-foto')).join('')}${carrinho.itens.length > 6 ? `<span class="pag3-mais">+${carrinho.itens.length - 6}</span>` : ''}</div>
-            ${carrinho.cliente ? `<span class="pag3-cli"><i>${esc(String(carrinho.cliente.nome).trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase())}</i>${esc(carrinho.cliente.nome.split(' ')[0])}</span>` : ''}
+            ${carrinho.cliente ? `<span class="pag3-cli">${carrinho.cliente.foto_versao ? `<img src="/api/clientes/${carrinho.cliente.id}/foto?v=${carrinho.cliente.foto_versao}" alt="">` : `<i>${esc(iniciaisDe(carrinho.cliente.nome))}</i>`}${esc(carrinho.cliente.nome.split(' ')[0])}</span>` : ''}
           </div>
           <div id="lista-pag" class="lista-pag"></div>
           <div class="pag-resumo" id="pag-resumo"></div>
