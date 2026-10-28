@@ -767,7 +767,9 @@ function criarApi(db, opcoes = {}) {
     (SELECT COUNT(*) FROM vendas v WHERE v.cliente_id = clientes.id AND v.status = 'concluida') AS compras,
     (SELECT COALESCE(SUM(total),0) FROM vendas v WHERE v.cliente_id = clientes.id AND v.status = 'concluida') AS total_comprado,
     (SELECT MAX(criado_em) FROM vendas v WHERE v.cliente_id = clientes.id AND v.status = 'concluida') AS ultima_compra,
-    (SELECT COALESCE(SUM(valor - valor_pago),0) FROM crediario_parcelas p WHERE p.cliente_id = clientes.id AND p.status = 'aberta') AS deve`;
+    (SELECT COALESCE(SUM(valor - valor_pago),0) FROM crediario_parcelas p WHERE p.cliente_id = clientes.id AND p.status = 'aberta') AS deve,
+    (SELECT COALESCE(SUM(valor - valor_pago),0) FROM crediario_parcelas p WHERE p.cliente_id = clientes.id AND p.status = 'aberta'
+       AND p.vencimento < date('now','localtime')) AS vencido`;
 
   rota('GET', '/api/clientes', ({ query }) => {
     const q = texto(query.get('q'));
@@ -844,7 +846,7 @@ function criarApi(db, opcoes = {}) {
     const c = plano(db.prepare('SELECT * FROM clientes WHERE id = ?').get(params.id));
     if (!c) throw erro(404, 'Cliente não encontrado.');
     c.crediario = crediario.saldo(c.id);
-    c.compras = planos(
+    c.historico = planos(
       db
         .prepare(
           `SELECT v.id, v.total, v.status, v.criado_em, v.vendedor,
@@ -868,9 +870,9 @@ function criarApi(db, opcoes = {}) {
     c.categorias = preferidos('categoria', 'p');
     c.pecas_compradas = planos(
       db.prepare(
-        `SELECT i.produto_id, i.nome, i.tamanho, i.cor, i.quantidade, i.total, v.criado_em, p.foto_versao
+        `SELECT i.produto_id, i.venda_id, i.nome, i.tamanho, i.cor, i.quantidade, i.total, v.criado_em, p.foto_versao
          FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
-         WHERE v.cliente_id = ? AND v.status = 'concluida' ORDER BY v.criado_em DESC, i.id DESC LIMIT 12`
+         WHERE v.cliente_id = ? AND v.status = 'concluida' ORDER BY v.criado_em DESC, i.id DESC LIMIT 60`
       ).all(params.id)
     );
     c.vales = planos(db.prepare(`SELECT codigo, saldo, validade FROM vales WHERE cliente_id = ? AND status = 'ativo' AND saldo > 0`).all(params.id));
@@ -1519,8 +1521,8 @@ function criarApi(db, opcoes = {}) {
     const topProdutos = planos(
       db
         .prepare(
-          `SELECT i.nome, i.tamanho, i.cor, SUM(i.quantidade) AS quantidade, SUM(i.total) AS total
-           FROM venda_itens i JOIN vendas v ON v.id = i.venda_id
+          `SELECT i.produto_id AS id, i.nome, i.tamanho, i.cor, SUM(i.quantidade) AS quantidade, SUM(i.total) AS total, p.foto_versao
+           FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
            WHERE ${filtro} GROUP BY i.produto_id ORDER BY quantidade DESC, total DESC LIMIT 20`
         )
         .all(de, ate)
@@ -1634,6 +1636,10 @@ function criarApi(db, opcoes = {}) {
     const anterior = plano(db.prepare(
       `SELECT COUNT(*) AS vendas, COALESCE(SUM(total),0) AS faturamento FROM vendas v WHERE ${filtro}`
     ).get(desloca(de, -dias), desloca(de, -1)));
+    anterior.pecas = db.prepare(
+      `SELECT COALESCE(SUM(i.quantidade),0) AS n FROM venda_itens i JOIN vendas v ON v.id = i.venda_id WHERE ${filtro}`
+    ).get(desloca(de, -dias), desloca(de, -1)).n;
+    anterior.ticket_medio = anterior.vendas ? Math.round(anterior.faturamento / anterior.vendas) : 0;
     anterior.de = desloca(de, -dias);
     anterior.ate = desloca(de, -1);
     return {

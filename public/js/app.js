@@ -92,6 +92,7 @@
       <div class="login-tela">
         <section class="login-arte">
           <span class="login-selo">Ponto de venda</span>
+          <div class="login-brilhos" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 100}%;animation-delay:${(i % 8) * 0.9}s;animation-duration:${7 + (i % 5)}s"></i>`).join('')}</div>
           <div class="login-arte-meio">
             <img class="login-logo" src="/img/logo.png" alt="${esc(s.loja_nome || 'Clara Styllus')}">
             <p>Ponto de venda da loja: vendas, estoque, crediário e caixa no mesmo lugar.</p>
@@ -112,13 +113,17 @@
     return conteudo.querySelector('form');
   }
 
+  const saudacao = () => { const h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; };
+
   function telaLogin(s) {
     const ultimo = U.local.ler('ultimo_login', '');
+    const ultimoNome = ultimo ? U.local.ler('ultimo_nome', '') : '';
     const form = moldeLogin(s, `
       <form class="login" id="f-login" autocomplete="off">
-        <div>
-          <h2>Entrar</h2>
-          <p class="dica">Use o seu usuário e senha para abrir o caixa.</p>
+        <div class="login-ola">
+          ${ultimoNome ? `<span class="avatar login-avatar">${esc(iniciais(ultimoNome))}</span>` : `<span class="login-avatar login-avatar-ico">${Icone('usuario')}</span>`}
+          <h2>${saudacao()}${ultimoNome ? `, ${esc(ultimoNome.split(' ')[0])}` : ''}!</h2>
+          <p class="dica">${ultimoNome ? 'Digite sua senha para abrir o caixa.' : 'Entre com seu usuário e senha.'}</p>
         </div>
         <div class="login-erro" id="login-erro" hidden></div>
         <label>Usuário
@@ -140,7 +145,9 @@
       try {
         const r = await api('/api/login', { metodo: 'POST', corpo: dados });
         U.local.gravar('ultimo_login', r.usuario.login);
+        U.local.gravar('ultimo_nome', r.usuario.nome);
         entrar(r.usuario);
+        U.aviso(`${saudacao()}, ${r.usuario.nome.split(' ')[0]}! Boas vendas hoje.`);
       } catch (e) {
         caixaErro.textContent = e.message;
         caixaErro.hidden = false;

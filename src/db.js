@@ -208,6 +208,7 @@ const CONFIG_PADRAO = {
   msg_reserva: '',
   msg_espera: '',
   msg_aniversario: '',
+  msg_compra: '',
   cobranca_dias_antes: '0', // fila de cobrança: avisar também quem vence nos próximos N dias
   impressao_automatica: '1',
   // Impressão direta (sem o diálogo do navegador)

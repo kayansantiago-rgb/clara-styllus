@@ -1221,12 +1221,13 @@ Telas.pdv = (() => {
             reserva_id: carrinho.reserva_id || undefined,
           },
         });
+        const levou = { produtos: carrinho.itens.map((it) => it.produto), cliente: carrinho.cliente };
         carrinho = novoCarrinho();
         saldoCliente = null;
         salvar();
         local.gravar('pdv_vale_pendente', null); // usado ou não, o vale "para usar agora" era desta venda
         fecharModal();
-        vendaConcluida(venda);
+        vendaConcluida(venda, levou);
       } catch (e) {
         enviando = false;
         if (!dividir) pagamentos.length = 0;
@@ -1339,34 +1340,73 @@ Telas.pdv = (() => {
     if (raiz) { carrinho = c; abrir(raiz); }
   }
 
-  async function vendaConcluida(venda) {
+  /** Chuva de confete rápida quando a venda fecha (some sozinha; nada de clique). */
+  function confete() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cores = ['#d4a24a', '#955968', '#f3cf72', '#2f9e6a', '#e8b4c0', '#7a49a6'];
+    const caixa = document.createElement('div');
+    caixa.className = 'confete';
+    caixa.innerHTML = Array.from({ length: 70 }, () => {
+      const x = Math.random() * 100;
+      const d = 1.6 + Math.random() * 1.4;
+      const atraso = Math.random() * 0.35;
+      const giro = Math.round(Math.random() * 720 - 360);
+      const lado = Math.round(Math.random() * 160 - 80);
+      return `<i style="left:${x}%;background:${cores[Math.floor(Math.random() * cores.length)]};animation-duration:${d}s;animation-delay:${atraso}s;--giro:${giro}deg;--lado:${lado}px;${Math.random() > 0.5 ? 'border-radius:50%;' : ''}"></i>`;
+    }).join('');
+    document.body.appendChild(caixa);
+    setTimeout(() => caixa.remove(), 3600);
+  }
+
+  async function vendaConcluida(venda, levou = {}) {
     const cfg = await U.config();
     U.som('sucesso');
+    confete();
     const automatica = cfg.impressao_automatica === '1';
     const impressao = automatica ? Impressao.cupom(venda) : null;
     const cred = venda.crediario || [];
     const nomesPag = { debito: 'Débito', credito: 'Crédito' };
-    const pecasVc = (venda.itens || []).reduce((a, it) => a + it.quantidade, 0);
+    const itensVc = venda.itens || [];
+    const pecasVc = itensVc.reduce((a, it) => a + it.quantidade, 0);
+    const produtos = levou.produtos || [];
+    const cliente = levou.cliente || (venda.cliente_id ? { id: venda.cliente_id, nome: venda.cliente_nome } : null);
     const corpo = abrirModal(`Venda nº ${venda.id} concluída`, `
-      <div class="vc ${venda.troco ? 'com-troco' : ''}">
+      <div class="vc vc2 ${venda.troco ? 'com-troco' : ''}">
         <div class="vc-ico">${Icone('check')}</div>
-        <div class="vc-obrigada">Venda concluída${venda.cliente_nome ? ` · <b>${esc(venda.cliente_nome)}</b>` : ''}${pecasVc ? ` · ${pecasVc} ${pecasVc === 1 ? 'peça' : 'peças'}` : ''}</div>
+        <div class="vc-obrigada">${cliente ? `Obrigada, <b>${esc(String(cliente.nome).split(' ')[0])}</b>!` : 'Venda concluída!'}</div>
         ${venda.troco
     ? `<div class="vc-rotulo">Devolva de troco</div><div class="vc-valor">${brl(venda.troco)}</div>
            <div class="vc-det">Recebido ${brl(venda.total + venda.troco)} · total ${brl(venda.total)}</div>`
-    : `<div class="vc-rotulo">Venda registrada</div><div class="vc-valor">${brl(venda.total)}</div>
-           <div class="vc-det">${venda.pagamentos.map((p) => esc(nomesPag[p.forma] || U.FORMAS[p.forma]) + (p.parcelas > 1 ? ` ${p.parcelas}x` : '')).join(' + ')}</div>`}
+    : `<div class="vc-rotulo">Total da venda</div><div class="vc-valor">${brl(venda.total)}</div>
+           <div class="vc-det vc-formas">${venda.pagamentos.map((p) => `<span>${Icone.pag(p.forma)}${esc(nomesPag[p.forma] || U.FORMAS[p.forma])}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}</span>`).join('')}</div>`}
+        ${produtos.length ? `<div class="vc-pecas" title="${pecasVc} ${pecasVc === 1 ? 'peça' : 'peças'}">
+          ${produtos.slice(0, 6).map((pr) => U.miniatura(pr, 'vc-peca')).join('')}${produtos.length > 6 ? `<span class="vc-mais">+${produtos.length - 6}</span>` : ''}
+          <small>${pecasVc} ${pecasVc === 1 ? 'peça' : 'peças'}</small></div>` : ''}
         ${venda.taxas || venda.acrescimo ? `<div class="vc-liquido">${Icone('carteira')} Cai na conta <b>${brl(venda.liquido)}</b>
-          <small>${venda.acrescimo ? `juros da cliente ${brl(venda.acrescimo)} · ` : ''}taxas da maquininha ${brl(venda.taxas)}</small></div>` : ''}
+          <small>${venda.acrescimo ? `juros da cliente ${brl(venda.acrescimo)} · ` : ''}taxas ${brl(venda.taxas)}</small></div>` : ''}
       </div>
       ${cred.length ? `<div class="info-cred">${Icone('caderno')} Crediário em ${cred.length}x — ${cred.map((p) =>
     `${p.vencimento.split('-').reverse().slice(0, 2).join('/')} ${brl(p.valor)}`).join(' · ')}</div>` : ''}
       ${automatica ? `<div class="status-impressao" id="st-imp">${Icone('impressora')} Imprimindo o cupom…</div>` : ''}
-      <div class="vc-acoes">
-        <button class="btn" id="imp">${Icone('impressora')} ${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</button>
-        <button class="btn" id="troca">${Icone('presente')} Cupom de troca</button>
-        <button class="btn btn-primario btn-grande vc-nova" data-fechar autofocus>${Icone('sacola')} Próxima venda <kbd>Enter</kbd></button>
-      </div>`, { largura: '580px', classe: 'modal-concluida', aoFechar: () => raiz && abrir(raiz) });
+      <div class="vc2-acoes">
+        <button class="btn vc2-btn" id="imp">${Icone('impressora')}<span>${automatica ? 'Imprimir de novo' : 'Imprimir cupom'}</span></button>
+        <a class="btn vc2-btn vc2-zap" id="vc-zap" hidden>${Icone('whatsapp')}<span>Enviar no WhatsApp</span></a>
+        <button class="btn vc2-btn" id="troca">${Icone('presente')}<span>Cupom de troca</span></button>
+      </div>
+      <button class="btn btn-primario btn-grande vc-nova" data-fechar autofocus>${Icone('sacola')} Próxima venda <kbd>Enter</kbd></button>`,
+    { largura: '600px', classe: 'modal-concluida', aoFechar: () => raiz && abrir(raiz) });
+    // WhatsApp de agradecimento: só aparece quando a cliente tem telefone.
+    if (cliente && cliente.id) {
+      (async () => {
+        let tel = cliente.telefone;
+        if (!tel) { try { tel = (await api(`/api/clientes/${cliente.id}`)).telefone; } catch { /* sem telefone */ } }
+        const nomes = itensVc.map((it) => `${it.quantidade > 1 ? `${it.quantidade}x ` : ''}${it.nome}`).join(', ');
+        const at = Zap.attrs(tel, 'compra', { nome: cliente.nome, pecas: nomes || `${pecasVc} peça(s)`, total: brl(venda.total) });
+        const link = corpo.querySelector('#vc-zap');
+        if (!at || !link || !link.isConnected) return;
+        link.outerHTML = `<a class="btn vc2-btn vc2-zap" id="vc-zap" ${at}>${Icone('whatsapp')}<span>Enviar no WhatsApp</span></a>`;
+      })();
+    }
     corpo.querySelector('#imp').onclick = () => Impressao.cupom(venda, { gaveta: false });
     corpo.querySelector('#troca').onclick = () => Impressao.cupomTroca(venda);
     if (impressao) {

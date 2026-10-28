@@ -173,11 +173,15 @@ Telas.crediario = (() => {
     raiz.querySelector('#lista').innerHTML = lista.map((c, i) => {
       const sem = semaforo(c.vencido, c.proximo_vencimento, c.dias_atraso);
       return `
-      <div class="cr-linha cr-${sem.cor}" data-i="${i}" tabindex="0">
+      <div class="cr-linha cr-v2 cr-${sem.cor}" data-i="${i}" tabindex="0">
         <span class="avatar">${esc(iniciais(c.nome))}</span>
         <div class="cr-nome"><b>${esc(c.nome)}</b><small>${esc([c.telefone, c.cpf && U.cpf(c.cpf)].filter(Boolean).join(' · ') || 'sem contato')}</small></div>
         <div>${selo(sem)}</div>
-        <div class="cr-num"><small>Próx. vencimento</small><b>${dataBr(c.proximo_vencimento) || '—'}</b><small>${c.parcelas} parcela(s)</small></div>
+        <div class="cr-prog">
+          <div class="cr-prog-cab"><small>Pagou <b>${brl(c.pago_carne || 0)}</b> de ${brl(c.total_carne || c.saldo)}</small><small>próx. ${dataBr(c.proximo_vencimento) || '—'}</small></div>
+          <div class="cr-barra"><i style="width:${c.total_carne ? Math.round((c.pago_carne / c.total_carne) * 100) : 0}%"></i></div>
+          <div class="cr-bolinhas" title="Parcelas: verde paga, vermelha vencida, cinza a vencer">${(c.mapa || []).slice(0, 18).map((m) => `<i class="b-${m}"></i>`).join('')}${(c.mapa || []).length > 18 ? '<small>…</small>' : ''}</div>
+        </div>
         <div class="cr-num r"><small>Vencido</small><b class="${c.vencido ? 'txt-perigo' : ''}">${c.vencido ? brl(c.vencido) : '—'}</b></div>
         <div class="cr-num r"><small>Deve</small><b class="cr-saldo">${brl(c.saldo)}</b></div>
         <button class="btn btn-primario" data-receber>${Icone('dinheiro')} Receber</button>
@@ -220,7 +224,7 @@ Telas.crediario = (() => {
       ${(d.cobrancas || []).length ? `<p class="dica cr-cobrancas">${Icone('whatsapp')} Cobrada pelo WhatsApp: ${d.cobrancas.slice(0, 5).map((x) => `${dataBr(x.criado_em.slice(0, 10))}${x.usuario ? ` (${esc(x.usuario.split(' ')[0])})` : ''}`).join(' · ')}</p>` : ''}
       <div class="cr-det">
         <div><h4>Parcelas em aberto</h4>
-          <div class="cr-linha-tempo" id="parc">${abertas.map(linhaParcela).join('') || '<div class="vazio">Nenhuma parcela em aberto.</div>'}</div>
+          <div class="cr-linha-tempo" id="parc">${abertas.map(linhaParcela).join('') || U.vazio({ ilu: 'caderno', compacto: true, titulo: 'Tudo pago', texto: 'Nenhuma parcela em aberto.' })}</div>
           ${pagas.length ? `<details ${abertas.length ? '' : 'open'}><summary>Parcelas já pagas (${pagas.length})</summary><div class="cr-linha-tempo">${pagas.map(linhaParcela).join('')}</div></details>` : ''}
         </div>
         <div><h4>Recebimentos</h4>
@@ -230,7 +234,7 @@ Telas.crediario = (() => {
               <div><b>${brl(r.valor)}</b>${r.status === 'estornado' ? ' <span class="selo perigo">estornado</span>' : ''}<small>${dataHora(r.criado_em)} · ${U.FORMAS[r.forma] || r.forma}${r.operador ? ' · ' + esc(r.operador) : ''}</small></div>
               <span class="nowrap"><button class="btn-ico" data-recibo="${r.id}" title="Imprimir recibo">${Icone('impressora')}</button>
               ${r.status === 'ok' ? `<button class="btn-ico perigo so-admin" data-estornar="${r.id}" title="Estornar">${Icone('troca')}</button>` : ''}</span>
-            </div>`).join('') || '<div class="vazio">Nenhum recebimento ainda.</div>'}</div>
+            </div>`).join('') || U.vazio({ ilu: 'recibo', compacto: true, texto: 'Nenhum recebimento ainda.' })}</div>
         </div>
       </div>`,
     { largura: '900px' });
@@ -339,7 +343,7 @@ Telas.crediario = (() => {
     const buscar = async (q) => {
       encontrados = await api(`/api/clientes?q=${encodeURIComponent(q)}`);
       listaEl.innerHTML = encontrados.map((c, i) => `<button class="item-escolha" data-i="${i}"><b>${esc(c.nome)}</b>
-        <small>${esc(U.cpf(c.cpf))} ${esc(c.telefone || '')}</small></button>`).join('') || '<div class="vazio">Nenhum cliente.</div>';
+        <small>${esc(U.cpf(c.cpf))} ${esc(c.telefone || '')}</small></button>`).join('') || U.vazio({ ilu: 'clientes', compacto: true, texto: 'Nenhuma cliente encontrada.' });
     };
     corpo.querySelector('#q-cli').addEventListener('input', U.debounce((e) => buscar(e.target.value).catch(erro)));
     listaEl.onclick = (e) => {

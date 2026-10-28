@@ -95,7 +95,7 @@ Telas.despesas = (() => {
               <span class="dp-cat-txt"><b>${esc(c.categoria)}</b><small>${c.qtd} lançamento(s)</small></span>
               <span class="dp-cat-valor"><b>${brl(c.valor)}</b><small>${r.total ? Math.round((c.valor / r.total) * 100) : 0}%</small></span>
               <span class="dp-cat-barra"><i style="width:${(c.valor / r.por_categoria[0].valor) * 100}%"></i></span>
-            </button>`).join('')}</div>` : '<div class="vazio">Nada lançado no período.</div>'}
+            </button>`).join('')}</div>` : U.vazio({ ilu: 'recibo', titulo: 'Nada lançado no período', texto: 'Lance aluguel, luz, embalagens e compras para ver o lucro de verdade.' })}
           ${r.meses.some((m) => m.valor) ? `<h4 class="dp-sub">Últimos 6 meses</h4>
             ${Graficos.colunas(r.meses.map((m) => ({ rotulo: MESES[Number(m.mes.slice(5)) - 1], valor: m.valor,
     dica: `${MESES[Number(m.mes.slice(5)) - 1]}/${m.mes.slice(0, 4)}: ${brl(m.valor)}` })), { altura: 120 })}` : ''}

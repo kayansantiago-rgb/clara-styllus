@@ -241,6 +241,24 @@ function instalarCrediario({ db, rota, erro, inteiro, texto, plano, planos, tran
         )
         .all(...args)
     );
+    // Mapa das parcelas de cada carnê em aberto (pagas e a pagar) para a barra e as bolinhas da lista.
+    if (lista.length) {
+      const ids = lista.map((c) => c.id);
+      const parcelas = db.prepare(
+        `SELECT cliente_id, status, vencimento, valor, valor_pago FROM crediario_parcelas
+         WHERE cliente_id IN (${ids.map(() => '?').join(',')}) AND status IN ('aberta','paga')
+           AND (status = 'aberta' OR venda_id IN (SELECT venda_id FROM crediario_parcelas WHERE status = 'aberta' AND venda_id IS NOT NULL))
+         ORDER BY vencimento, numero`
+      ).all(...ids);
+      const porCliente = new Map(lista.map((c) => [c.id, c]));
+      for (const c of lista) { c.mapa = []; c.total_carne = 0; c.pago_carne = 0; }
+      for (const p of parcelas) {
+        const c = porCliente.get(p.cliente_id);
+        c.total_carne += p.valor;
+        c.pago_carne += p.status === 'paga' ? p.valor : p.valor_pago;
+        c.mapa.push(p.status === 'paga' ? 'p' : p.vencimento < h ? 'v' : 'a');
+      }
+    }
     return soAtraso ? lista.filter((c) => c.vencido > 0) : lista;
   });
 

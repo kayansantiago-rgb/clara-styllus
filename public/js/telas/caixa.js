@@ -151,9 +151,28 @@ Telas.caixa = (() => {
     const NOTAS = [20000, 10000, 5000, 2000, 1000, 500, 200];
     const MOEDAS = [100, 50, 25, 10, 5];
     const nomeValor = (v) => (v >= 100 ? `R$ ${v / 100}` : `R$ 0,${String(v).padStart(2, '0')}`);
+    // Desenho de cada nota (nas cores do Real) e de cada moeda, para achar na gaveta sem pensar.
+    const COR_NOTA = { 20000: ['#a8957f', '#7d6a55'], 10000: ['#4f7fb8', '#2f5a8c'], 5000: ['#d9893a', '#a8601f'], 2000: ['#e2b23c', '#b5841a'],
+      1000: ['#c9533f', '#992f22'], 500: ['#8c5fae', '#653d86'], 200: ['#4f8db0', '#2d6788'] };
+    const COR_MOEDA = { 100: ['#d9dde2', '#d4a24a'], 50: ['#cfd4da', '#9aa3ad'], 25: ['#e3c160', '#b8902c'], 10: ['#e3c160', '#b8902c'], 5: ['#c98a5c', '#9a5f35'] };
+    const desenho = (v) => {
+      if (v >= 200) {
+        const [c, e] = COR_NOTA[v];
+        return `<svg class="fc-nota" viewBox="0 0 64 32" aria-hidden="true"><rect x="1" y="1" width="62" height="30" rx="3.5" fill="${c}"/>
+          <rect x="3.5" y="3.5" width="57" height="25" rx="2" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width=".8"/>
+          <ellipse cx="16" cy="16" rx="9" ry="10" fill="#fff" fill-opacity=".28"/><circle cx="16" cy="13.5" r="3.2" fill="${e}" fill-opacity=".55"/>
+          <path d="M10 23a6 4.5 0 0 1 12 0Z" fill="${e}" fill-opacity=".55"/>
+          <text x="58" y="21" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="#fff">${v / 100}</text>
+          <text x="58" y="27.5" text-anchor="end" font-family="Arial, sans-serif" font-size="4.5" font-weight="700" fill="#fff" fill-opacity=".85">REAIS</text></svg>`;
+      }
+      const [miolo, aro] = COR_MOEDA[v];
+      return `<svg class="fc-moeda" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="${aro}"/><circle cx="16" cy="16" r="${v === 100 ? 10.5 : 12.5}" fill="${miolo}"/>
+        <circle cx="16" cy="16" r="${v === 100 ? 10.5 : 12.5}" fill="none" stroke="#000" stroke-opacity=".12"/>
+        <text x="16" y="${v === 100 ? 20 : 19.5}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${v === 100 ? 10 : 9}" font-weight="800" fill="#3b332f" fill-opacity=".8">${v === 100 ? '1' : v}</text></svg>`;
+    };
     const linhaContagem = (v) => `
       <div class="fc-linha ${v < 200 ? 'moeda' : ''}">
-        <span class="fc-valor">${nomeValor(v)}</span>
+        <span class="fc-valor" title="${nomeValor(v)}">${desenho(v)}${v < 200 ? `<small>${nomeValor(v).replace('R$ ', '')}</small>` : ''}</span>
         <div class="fc-passo">
           <button type="button" class="fc-mm" data-menos="${v}" tabindex="-1" aria-label="menos">−</button>
           <input type="text" inputmode="numeric" maxlength="4" data-v="${v}" placeholder="0" aria-label="Quantidade de ${nomeValor(v)}">
@@ -178,7 +197,7 @@ Telas.caixa = (() => {
       <form class="fc fc2">
         <div class="fc-contar">
           <div class="p4-passo"><span>1</span>Conte o dinheiro da gaveta</div>
-          <p class="dica">Digite quantas notas e moedas tem de cada valor (Enter passa para a próxima). O sistema soma.</p>
+          <p class="dica">Quantas tem de cada uma? O sistema soma sozinho.</p>
           <div class="fc-colunas">
             <div class="fc-lista"><h4>Notas</h4>${NOTAS.map(linhaContagem).join('')}</div>
             <div class="fc-lista"><h4>Moedas</h4>${MOEDAS.map(linhaContagem).join('')}

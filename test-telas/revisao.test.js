@@ -121,3 +121,33 @@ test('preço que mudou depois de a peça entrar no caixa é atualizado antes de 
     await sis.fechar();
   }
 });
+
+test('clientes em cartões com selos e filtros; ficha com linha do tempo; venda concluída com WhatsApp', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    await sis.pagina.evaluate((x) => U.api('/api/vendas', { metodo: 'POST', corpo: { cliente_id: x.ana.id, itens: [{ produto_id: x.blusa.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 8990, parcelas: 2 }] } }), d);
+    await sis.ir('clientes');
+    await sis.pagina.waitForSelector('.cl2-card');
+    assert.match(await sis.pagina.textContent('.cl2-card'), /Ana Paula Souza[\s\S]*Crediário/);
+    await sis.pagina.click('.chip-filtro[data-filtro=devendo]');
+    assert.equal(await sis.pagina.locator('.cl2-card').count(), 1);
+    await sis.pagina.click('.cl2-card .cl2-nome');
+    await sis.pagina.waitForSelector('.cl3-evento');
+    assert.match(await sis.pagina.textContent('.cl3-tempo'), /Blusa/);
+    await sis.pagina.keyboard.press('Escape');
+
+    // Venda para ela: tela de concluída com fotos das peças e botão do WhatsApp.
+    await sis.pagina.click('.cl2-card [data-vender]');
+    await sis.pagina.waitForSelector('#busca');
+    await bipar(sis, d.vestido.codigo);
+    await pagar(sis, 'pix');
+    await confirmar(sis);
+    await sis.pagina.waitForSelector('.vc2 .vc-peca');
+    await sis.pagina.waitForSelector('#vc-zap[href^="https://wa.me/"]');
+    assert.match(await sis.pagina.textContent('.vc-obrigada'), /Obrigada, Ana/);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

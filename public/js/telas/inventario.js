@@ -51,7 +51,7 @@ Telas.inventario = (() => {
                 <td class="r">${i.ajustados ?? ''}</td>
                 <td class="r txt-perigo">${i.valor_falta ? brl(i.valor_falta) : ''}</td>
                 <td class="r">${i.valor_sobra ? brl(i.valor_sobra) : ''}</td>
-              </tr>`).join('') || '<tr><td colspan="6" class="vazio">Nenhum inventário ainda.</td></tr>'}</tbody>
+              </tr>`).join('') || `<tr><td colspan="6">${U.vazio({ ilu: 'prancheta', compacto: true, titulo: 'Nenhum inventário ainda', texto: 'Conte o estoque de vez em quando para achar peças sumidas.' })}</td></tr>`}</tbody>
           </table>
         </div>
       </div>`;
@@ -200,7 +200,7 @@ Telas.inventario = (() => {
       <div class="inv-dif-num"><small>contado</small><b>${i.contado}</b></div>
       <span class="inv-dif-selo ${i.diferenca < 0 ? 'falta' : 'sobra'}">${i.diferenca > 0 ? '+' : ''}${i.diferenca}<small>${brl(Math.abs(i.diferenca) * (i.preco_custo || 0))}</small></span>
     </div>`;
-    const tabela = (lista, vazio) => `<div class="inv-difs">${lista.map(linha).join('') || `<div class="vazio">${vazio}</div>`}</div>`;
+    const tabela = (lista, vazio) => `<div class="inv-difs">${lista.map(linha).join('') || U.vazio({ ilu: 'prancheta', compacto: true, texto: vazio })}</div>`;
 
     const corpo = abrirModal(`${somenteVer ? 'Resultado do' : 'Conferência do'} inventário nº ${id}`, `
       <div class="inv-res">

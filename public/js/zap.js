@@ -31,6 +31,11 @@ const Zap = (() => {
       padrao: 'Oi, {nome}! Aqui é da {loja} 💕 Chegou {peca}{preco} que você pediu! Quer que eu separe para você?',
       vars: { nome: 'primeiro nome', loja: 'nome da loja', peca: 'a peça', preco: '" (R$ …)" quando tem preço' },
     },
+    compra: {
+      titulo: 'Obrigada pela compra',
+      padrao: 'Oi, {nome}! Obrigada pela compra na {loja} 💕 Você levou: {pecas}. Total: {total}. Qualquer coisa é só chamar!',
+      vars: { nome: 'primeiro nome', loja: 'nome da loja', pecas: 'as peças da compra', total: 'valor da compra' },
+    },
     aniversario: {
       titulo: 'Aniversário',
       padrao: 'Feliz aniversário, {nome}! 🎉 A {loja} deseja um dia lindo. Passa aqui na loja que temos um presente para você!',

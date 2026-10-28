@@ -89,6 +89,43 @@ Telas.relatorios = (() => {
     return `<span class="var ${pct >= 0 ? 'sobe' : 'desce'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)}%</span>`;
   }
 
+  /** Pílula colorida com seta: subiu (verde) ou caiu (vermelho) em relação ao período anterior. */
+  function seta(atual, antes) {
+    if (!antes) return atual ? '<span class="rl-seta sobe">novo</span>' : '<span class="rl-seta igual">—</span>';
+    const pct = Math.round(((atual - antes) / antes) * 100);
+    if (!pct) return '<span class="rl-seta igual">= igual</span>';
+    return `<span class="rl-seta ${pct > 0 ? 'sobe' : 'desce'}"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="${pct > 0 ? 'M6 2 10 7H7.5v3h-3V7H2Z' : 'M6 10 2 5h2.5V2h3v3H10Z'}" fill="currentColor"/></svg>${Math.abs(pct)}%</span>`;
+  }
+
+  /** Meta do mês em anel: quanto já vendeu, quanto falta e para onde o ritmo leva. */
+  function anelMeta(feito, meta) {
+    const hoje = new Date();
+    const diasMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+    const pct = meta ? Math.min(1, feito / meta) : 0;
+    const raio = 52;
+    const volta = 2 * Math.PI * raio;
+    const previsao = Math.round((feito / Math.max(1, hoje.getDate())) * diasMes);
+    const falta = Math.max(0, meta - feito);
+    const diasRestam = diasMes - hoje.getDate() + 1;
+    return `<div class="cartao rl-meta">
+      <svg class="rl-anel" viewBox="0 0 130 130" aria-hidden="true">
+        <circle cx="65" cy="65" r="${raio}" fill="none" stroke="#f0e7ea" stroke-width="13"/>
+        <circle cx="65" cy="65" r="${raio}" fill="none" stroke="${pct >= 1 ? '#2f9e6a' : 'var(--ouro-vivo)'}" stroke-width="13" stroke-linecap="round"
+          stroke-dasharray="${(volta * pct).toFixed(1)} ${volta.toFixed(1)}" transform="rotate(-90 65 65)" class="rl-anel-arco" style="--volta:${volta.toFixed(1)}"/>
+        <text x="65" y="63" text-anchor="middle" font-size="26" font-weight="800" fill="var(--texto)">${Math.round(pct * 100)}%</text>
+        <text x="65" y="82" text-anchor="middle" font-size="10.5" fill="var(--suave)">da meta</text>
+      </svg>
+      <div class="rl-meta-txt">
+        <small>Meta do mês</small>
+        <b>${brl(feito)}</b><span class="rl-meta-de">de ${brl(meta)}</span>
+        ${pct >= 1 ? `<p class="rl-meta-ok">${Icone('estrela')} Meta batida! Parabéns à equipe.</p>`
+    : `<p>Faltam <b>${brl(falta)}</b> · ${brl(Math.ceil(falta / diasRestam))} por dia nos ${diasRestam} dia(s) que restam.</p>`}
+        <p class="rl-meta-prev">No ritmo atual o mês fecha em <b>${brl(previsao)}</b> ${previsao >= meta ? '<span class="rl-seta sobe">bate a meta</span>' : '<span class="rl-seta desce">abaixo da meta</span>'}</p>
+      </div>
+    </div>`;
+  }
+
+
   async function carregar() {
     let r;
     let baixo;
@@ -127,7 +164,28 @@ Telas.relatorios = (() => {
     for (let h = h0; h <= h1; h++) horasCalor.push({ chave: h, rotulo: `${h}h` });
     const melhores = (r.por_semana_hora || []).slice().sort((a, b) => b.faturamento - a.faturamento).slice(0, 3)
       .map((c) => `${SEMANA_LONGO[c.dia]} ${c.hora}h–${c.hora + 1}h`);
+    const cfg = await U.config().catch(() => ({}));
+    const meta = Number(cfg.meta_mensal) || 0;
+    const a = r.anterior;
+    const comparar = [
+      ['Faturamento', brl(t.faturamento), brl(a.faturamento), seta(t.faturamento, a.faturamento)],
+      ['Vendas', t.vendas, a.vendas, seta(t.vendas, a.vendas)],
+      ['Peças', t.pecas, a.pecas, seta(t.pecas, a.pecas)],
+      ['Ticket médio', brl(t.ticket_medio), brl(a.ticket_medio), seta(t.ticket_medio, a.ticket_medio)],
+    ];
+    const dataCurta = (d) => d.split('-').reverse().slice(0, 2).join('/');
     raiz.querySelector('#rel').innerHTML = `
+      <div class="rl-hero ${periodo === 'mes' ? '' : 'sem-meta'}">
+        ${periodo === 'mes' ? (meta ? anelMeta(t.faturamento, meta) : `<div class="cartao rl-meta rl-meta-vazia">
+          <svg class="rl-anel" viewBox="0 0 130 130" aria-hidden="true"><circle cx="65" cy="65" r="52" fill="none" stroke="#f0e7ea" stroke-width="13" stroke-dasharray="6 8"/></svg>
+          <div class="rl-meta-txt"><small>Meta do mês</small><b>Sem meta definida</b>
+            <p>Coloque uma meta de vendas e acompanhe aqui quanto falta.</p>
+            ${U.sessao.ehAdmin() ? '<a class="btn btn-claro btn-peq" href="#/config?aba=vendas">Definir meta</a>' : ''}</div></div>`) : ''}
+        <div class="cartao rl-comp">
+          <h3 class="titulo-ico">${Icone('grafico')} Comparado com o período anterior <small>${dataCurta(a.de)} a ${dataCurta(a.ate)}</small></h3>
+          <div class="rl-comp-grade">${comparar.map(([n, v, ant, s]) => `<div><small>${n}</small><b>${v}</b><span>${s}<em>antes ${ant}</em></span></div>`).join('')}</div>
+        </div>
+      </div>
       <div class="vd-kpis rl-kpis">
         <div class="vd-kpi destaque"><span>${Icone('carteira')} Faturamento</span><b>${brl(t.faturamento)}</b>
           <small>${variacao(t.faturamento, r.anterior.faturamento)} vs. ${brl(r.anterior.faturamento)} no período anterior</small></div>
@@ -198,7 +256,7 @@ Telas.relatorios = (() => {
           <tfoot><tr><th colspan="3">Total</th><th class="r">${brl(r.taxas.bruto)}</th><th class="r txt-perigo">− ${brl(r.taxas.total)}</th><th class="r">${brl(r.taxas.bruto - r.taxas.total)}</th></tr></tfoot>
         </table>
         ${r.taxas.total ? '' : '<p class="dica">Cadastre as taxas da sua maquininha em <a href="#/config?aba=vendas">Configurações → Vendas</a>.</p>'}`
-    : '<div class="vazio">Nenhuma venda em cartão ou PIX no período.</div>'}
+    : U.vazio({ ilu: 'recibo', compacto: true, texto: 'Nenhuma venda em cartão ou PIX no período.' })}
       </div>
       <div class="cards">
         <div class="card"><small>Crediário: recebido no período</small><b>${brl(r.crediario.recebido)}</b></div>
@@ -209,9 +267,13 @@ Telas.relatorios = (() => {
       <div class="duas-colunas">
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('estrela')} Mais vendidos</h3>
-          <table class="tabela"><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Total</th></tr></thead>
-          <tbody>${r.top_produtos.map((p) => `<tr><td>${esc(p.nome)} ${esc([p.tamanho, p.cor].filter(Boolean).join(' · '))}</td>
-            <td class="r">${p.quantidade}</td><td class="r">${brl(p.total)}</td></tr>`).join('') || '<tr><td class="vazio" colspan="3">—</td></tr>'}</tbody></table>
+          ${r.top_produtos.length ? `<div class="rl-top">${r.top_produtos.slice(0, 10).map((p, i) => `<div class="rl-top-item">
+            <span class="rl-pos rl-pos-${i + 1}">${i + 1}º</span>
+            ${U.miniatura(p, 'rl-top-foto')}
+            <div class="rl-top-txt"><b>${esc(p.nome)}</b><small>${esc([p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small>
+              <div class="rl-top-barra"><i style="width:${Math.round((p.quantidade / r.top_produtos[0].quantidade) * 100)}%"></i></div></div>
+            <div class="rl-top-num"><b>${p.quantidade}</b><small>${brl(p.total)}</small></div>
+          </div>`).join('')}</div>` : U.vazio({ ilu: 'cabide', compacto: true, texto: 'Sem vendas no período.' })}
         </div>
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('alerta')} Estoque baixo (repor)</h3>
@@ -247,7 +309,7 @@ Telas.relatorios = (() => {
     const pct = (x) => (r.total ? Math.round((x / r.total) * 100) : 0);
     el.innerHTML = `
       <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('grafico')} Curva ABC</h3><small class="dica">Modelos (todas as cores e tamanhos juntos) pelo faturamento do período.</small></div>
-      ${!r.modelos.length ? '<div class="vazio">Sem vendas no período.</div>' : `
+      ${!r.modelos.length ? U.vazio({ ilu: 'grafico', compacto: true, texto: 'Sem vendas no período.' }) : `
       <div class="abc-resumo">${r.resumo.map((x) => `
         <div class="abc-bloco abc-${x.classe}">
           <span class="abc-letra">${x.classe}</span>
@@ -279,7 +341,7 @@ Telas.relatorios = (() => {
     el.innerHTML = `
       <div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3>
         <label class="pp-dias">Sem vender há <select id="pp-dias">${[30, 60, 90, 120, 180].map((n) => `<option value="${n}" ${n === diasParado ? 'selected' : ''}>${n} dias</option>`).join('')}</select></label></div>
-      ${!r.modelos.length ? `<div class="vazio">Nenhuma peça parada há mais de ${r.dias} dias. Estoque girando bem.</div>` : `
+      ${!r.modelos.length ? U.vazio({ ilu: 'cabide', compacto: true, titulo: 'Estoque girando bem', texto: `Nenhuma peça parada há mais de ${r.dias} dias.` }) : `
       <div class="pp-resumo">
         <div><small>Modelos parados</small><b>${r.modelos.length}</b></div>
         <div><small>Peças</small><b>${r.pecas}</b></div>
@@ -329,7 +391,7 @@ Telas.relatorios = (() => {
           <span class="dp-cat-txt"><b>${esc(c.categoria)}</b><small>${c.qtd} lançamento(s)</small></span>
           <span class="dp-cat-valor"><b>${brl(c.valor)}</b><small>${r.total ? Math.round((c.valor / r.total) * 100) : 0}%</small></span>
           <span class="dp-cat-barra"><i style="width:${r.total ? (c.valor / r.por_categoria[0].valor) * 100 : 0}%"></i></span>
-        </button>`).join('')}</div>` : '<div class="vazio">Nenhuma despesa lançada no período. Use <b>Lançar despesa</b> para aluguel, luz, embalagens…</div>'}
+        </button>`).join('')}</div>` : U.vazio({ ilu: 'recibo', compacto: true, titulo: 'Nenhuma despesa no período', texto: 'Use <b>Lançar despesa</b> para aluguel, luz, embalagens…' })}
       ${r.meses.some((m) => m.valor) ? `<h4 class="dp-sub">Últimos 6 meses</h4>
         ${Graficos.colunas(r.meses.map((m) => ({ rotulo: MESES_CURTOS[Number(m.mes.slice(5)) - 1], valor: m.valor, dica: `${MESES_CURTOS[Number(m.mes.slice(5)) - 1]}/${m.mes.slice(0, 4)}: ${brl(m.valor)}`, destaque: m.mes === ate.slice(0, 7) })), { altura: 120 })}` : ''}`;
     const lanc = r.lancamentos.filter((d) => !filtroCategoria || (d.categoria || 'Outras') === filtroCategoria);
@@ -342,7 +404,7 @@ Telas.relatorios = (() => {
           <td><span class="dp-chip">${esc(d.categoria || 'Outras')}</span></td><td><small>${esc(d.usuario || '—')}</small></td>
           <td class="r"><b>${brl(d.valor)}</b></td><td class="r"><button class="btn-ico" data-del="${d.id}" title="Apagar lançamento">${Icone('lixeira')}</button></td></tr>`).join('')}</tbody>
         <tfoot><tr><th colspan="4">Total${filtroCategoria ? ` em ${esc(filtroCategoria)}` : ''}</th><th class="r">${brl(lanc.reduce((a, d) => a + d.valor, 0))}</th><th></th></tr></tfoot>
-      </table>` : '<div class="vazio">Nenhum lançamento no período.</div>'}
+      </table>` : U.vazio({ ilu: 'recibo', compacto: true, texto: 'Nenhum lançamento no período.' })}
       ${r.sangrias.length ? `
       <h4 class="dp-sub">Retiradas do caixa (sangrias) no período</h4>
       <p class="dica">Dinheiro que saiu da gaveta. Não entra no lucro como despesa; se alguma foi para pagar conta da loja, clique em <b>Lançar como despesa</b>.</p>

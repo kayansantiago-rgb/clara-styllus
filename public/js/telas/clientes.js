@@ -45,37 +45,79 @@ Telas.clientes = (() => {
     });
   }
 
+  let filtro = '';
+  const mesAtual = () => new Date().getMonth() + 1;
+  const diasDesde = (dt) => (dt ? Math.floor((Date.now() - new Date(dt.replace(' ', 'T')).getTime()) / 864e5) : null);
+  /** Selos da cliente: VIP, nova, sumida, devendo, aniversário no mês. */
+  function selos(c) {
+    const s = [];
+    if (c.vencido > 0) s.push(['atrasada', 'Atrasada']);
+    else if (c.deve > 0) s.push(['devendo', 'Crediário']);
+    if (c.compras >= 5 || c.total_comprado >= 150000) s.push(['vip', 'VIP']);
+    if (diasDesde(c.criado_em) !== null && diasDesde(c.criado_em) <= 30) s.push(['nova', 'Nova']);
+    const d = diasDesde(c.ultima_compra);
+    if (c.compras && d !== null && d > 60) s.push(['sumida', 'Sumida']);
+    if (c.aniversario && Number(c.aniversario.split('-')[1]) === mesAtual()) s.push(['niver', 'Aniversário']);
+    return s;
+  }
+  const seloHtml = (s) => s.map(([k, t]) => `<span class="cl-selo cl-selo-${k}">${k === 'vip' ? Icone('estrela') : k === 'niver' ? Icone('bolo') : ''}${t}</span>`).join('');
+
   async function abrir(el) {
     raiz = el;
     raiz.innerHTML = `
       <div class="cabecalho-tela">
-        <div><h1>Clientes</h1><p class="subtitulo">Ficha de cada cliente: o que compra, tamanhos, crediário e contato.</p></div>
+        <div><h1>Clientes</h1><p class="subtitulo">Quem compra na loja, o que gosta e como falar com ela.</p></div>
         <div class="ferramentas">
           <div class="busca-ico">${Icone('busca')}<input id="q" type="search" placeholder="Nome, CPF ou telefone" autofocus autocomplete="off"></div>
           <button class="btn btn-primario" id="novo">${Icone('mais')} Nova cliente</button>
         </div>
       </div>
-      <div class="vd-barra-filtros">
+      <div class="cl2-kpis" id="kpis"></div>
+      <div class="vd-barra-filtros cl2-barra">
+        <div class="cl2-filtros" id="filtros"></div>
         <div class="segmentos" id="ordem">
-          ${[['nome', 'A–Z'], ['recentes', 'Compraram por último'], ['valor', 'Que mais compram']].map(([k, t]) =>
+          ${[['nome', 'A–Z'], ['recentes', 'Recentes'], ['valor', 'Que mais compram']].map(([k, t]) =>
     `<button class="segmento ${k === ordem ? 'sel' : ''}" data-ordem="${k}">${t}</button>`).join('')}
         </div>
-        <span class="subtitulo" id="contagem"></span>
       </div>
-      <div class="cl-lista" id="lista"></div>`;
+      <div class="cl2-grade" id="lista"></div>`;
     raiz.querySelector('#q').addEventListener('input', U.debounce(carregar));
     raiz.querySelector('#novo').onclick = () => formulario(null, () => carregar());
     raiz.querySelector('#ordem').onclick = (ev) => {
       const b = ev.target.closest('[data-ordem]');
       if (!b) return;
       ordem = b.dataset.ordem;
-      raiz.querySelectorAll('.segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      raiz.querySelectorAll('#ordem .segmento').forEach((x) => x.classList.toggle('sel', x === b));
       carregar();
+    };
+    raiz.querySelector('#filtros').onclick = (ev) => {
+      const b = ev.target.closest('[data-filtro]');
+      if (!b) return;
+      filtro = b.dataset.filtro;
+      desenhar();
+    };
+    raiz.querySelector('#kpis').onclick = (ev) => {
+      const b = ev.target.closest('[data-filtro]');
+      if (!b) return;
+      filtro = b.dataset.filtro;
+      desenhar();
     };
     raiz.querySelector('#lista').onclick = (ev) => {
       if (ev.target.closest('a')) return; // link do WhatsApp
+      const vender = ev.target.closest('[data-vender]');
       const linha = ev.target.closest('[data-i]');
-      if (linha) ficha(lista[Number(linha.dataset.i)].id);
+      if (!linha) return;
+      const c = lista[Number(linha.dataset.i)];
+      if (vender) {
+        Telas.pdv.usarCliente({ id: c.id, nome: c.nome, cpf: c.cpf });
+        location.hash = '#/pdv';
+        return;
+      }
+      ficha(c.id);
+    };
+    raiz.querySelector('#lista').onkeydown = (ev) => {
+      const linha = ev.target.closest('[data-i]');
+      if (linha && ev.key === 'Enter') ficha(lista[Number(linha.dataset.i)].id);
     };
     await carregar();
   }
@@ -85,19 +127,44 @@ Telas.clientes = (() => {
     try {
       lista = await api(`/api/clientes?q=${encodeURIComponent(raiz.querySelector('#q').value)}&ordem=${ordem}`);
     } catch (e) { return erro(e); }
-    raiz.querySelector('#contagem').textContent = `${lista.length} cliente(s)`;
-    raiz.querySelector('#lista').innerHTML = lista.length ? lista.map((c, i) => {
+    lista.forEach((c) => { c.selos = selos(c); });
+    desenhar();
+  }
+
+  function desenhar() {
+    const conta = (k) => lista.filter((c) => c.selos.some(([s]) => s === k || (k === 'devendo' && s === 'atrasada'))).length;
+    const doMes = lista.filter((c) => diasDesde(c.ultima_compra) !== null && diasDesde(c.ultima_compra) <= 30).length;
+    raiz.querySelector('#kpis').innerHTML = `
+      <button class="cl2-kpi ${filtro === '' ? 'sel' : ''}" data-filtro=""><span class="cl2-kpi-ico">${Icone('clientes')}</span><div><b>${lista.length}</b><small>clientes</small></div></button>
+      <div class="cl2-kpi"><span class="cl2-kpi-ico ok">${Icone('sacola')}</span><div><b>${doMes}</b><small>compraram em 30 dias</small></div></div>
+      <button class="cl2-kpi ${filtro === 'niver' ? 'sel' : ''}" data-filtro="niver"><span class="cl2-kpi-ico ouro">${Icone('bolo')}</span><div><b>${conta('niver')}</b><small>fazem aniversário este mês</small></div></button>
+      <button class="cl2-kpi ${filtro === 'devendo' ? 'sel' : ''}" data-filtro="devendo"><span class="cl2-kpi-ico perigo">${Icone('caderno')}</span><div><b>${conta('devendo')}</b><small>com crediário aberto</small></div></button>`;
+    const FILTROS = [['', 'Todas'], ['vip', 'VIP'], ['nova', 'Novas'], ['sumida', 'Sumidas'], ['devendo', 'Crediário'], ['niver', 'Aniversário']];
+    raiz.querySelector('#filtros').innerHTML = FILTROS.map(([k, t]) =>
+      `<button class="chip-filtro ${k === filtro ? 'sel' : ''}" data-filtro="${k}">${t}${k ? ` <small>${conta(k)}</small>` : ''}</button>`).join('');
+    const mostrar = lista.map((c, i) => [c, i]).filter(([c]) => !filtro || c.selos.some(([s]) => s === filtro || (filtro === 'devendo' && s === 'atrasada')));
+    raiz.querySelector('#lista').innerHTML = mostrar.length ? mostrar.map(([c, i]) => {
       const w = zap(c.telefone);
-      return `<div class="cl-linha" data-i="${i}" data-id="${c.id}" tabindex="0">
-        ${avatar(c, 'cl-avatar')}
-        <div class="cl-nome"><b>${esc(c.nome)}</b>
-          <small>${[c.telefone, c.aniversario && `aniversário ${aniversarioTxt(c.aniversario)}`].filter(Boolean).map(esc).join(' · ') || 'sem contato'}</small></div>
-        <div class="cl-num"><small>Comprou</small><b>${brl(c.total_comprado)}</b><small>${c.compras} compra(s)</small></div>
-        <div class="cl-num"><small>Última compra</small><b>${c.ultima_compra ? haQuanto(c.ultima_compra) : '—'}</b></div>
-        <div class="cl-tags">${c.deve > 0 ? `<span class="selo perigo">deve ${brl(c.deve)}</span>` : ''}</div>
-        ${w ? `<a class="btn-ico cl-zap" href="${w}" target="_blank" rel="noopener" title="Conversar no WhatsApp">${Icone('whatsapp')}</a>` : '<span></span>'}
+      return `<div class="cl-linha cl2-card ${c.vencido > 0 ? 'atrasada' : ''}" data-i="${i}" data-id="${c.id}" tabindex="0">
+        <div class="cl2-topo">
+          ${avatar(c, 'cl-avatar cl2-avatar')}
+          <div class="cl2-nome"><b>${esc(c.nome)}</b>
+            <small>${esc(c.telefone || 'sem telefone')}${c.aniversario ? ` · ${Icone('bolo')} ${aniversarioTxt(c.aniversario)}` : ''}</small></div>
+        </div>
+        <div class="cl2-selos">${seloHtml(c.selos)}</div>
+        <div class="cl2-nums">
+          <div><small>Já comprou</small><b>${brl(c.total_comprado)}</b></div>
+          <div><small>Compras</small><b>${c.compras}</b></div>
+          <div><small>Última</small><b>${c.ultima_compra ? haQuanto(c.ultima_compra) : '—'}</b></div>
+        </div>
+        ${c.deve > 0 ? `<div class="cl2-deve">${Icone('caderno')} Deve <b>${brl(c.deve)}</b>${c.vencido > 0 ? ` · <b>${brl(c.vencido)}</b> atrasado` : ''}</div>` : ''}
+        <div class="cl2-acoes">
+          ${w ? `<a class="btn cl2-zap" href="${w}" target="_blank" rel="noopener" title="Conversar no WhatsApp">${Icone('whatsapp')} WhatsApp</a>` : '<span></span>'}
+          <button class="btn btn-claro" data-vender title="Abrir o caixa com ela">${Icone('sacola')} Vender</button>
+        </div>
       </div>`;
-    }).join('') : `<div class="vd-vazio">${Ilustracao.svg('clientes', 150)}<b>Nenhuma cliente encontrada</b></div>`;
+    }).join('') : `<div class="vd-vazio cl2-vazio">${Ilustracao.svg('clientes', 150)}<b>${filtro ? 'Nenhuma cliente neste filtro' : 'Nenhuma cliente encontrada'}</b>
+        <p>${filtro ? 'Escolha outro filtro acima.' : 'Cadastre a primeira cliente para acompanhar o que ela compra.'}</p></div>`;
   }
 
   /** Ficha completa da cliente. */
@@ -109,11 +176,16 @@ Telas.clientes = (() => {
     const chips = (arr, vazio) => (arr.length
       ? arr.map((x) => `<span class="cl-chip">${esc(x.nome)}<small>${x.pecas}</small></span>`).join('') : `<small>${vazio}</small>`);
     const cr = c.crediario || {};
+    const sel = selos(c);
+    // Linha do tempo: cada compra com as fotos das peças.
+    const porVenda = {};
+    for (const p of c.pecas_compradas) (porVenda[p.venda_id] = porVenda[p.venda_id] || []).push(p);
     const corpo = abrirModal('Ficha da cliente', `
-      <div class="cl-ficha-topo">
-        ${avatar(c, 'cl-avatar-g')}
-        <div class="cl-ficha-nome">
+      <div class="cl3-hero">
+        ${avatar(c, 'cl-avatar-g cl3-avatar')}
+        <div class="cl3-nome">
           <h2>${esc(c.nome)}</h2>
+          <div class="cl2-selos">${seloHtml(sel)}</div>
           <div class="cl-contatos">
             ${c.telefone ? `<span>${Icone('telefone')}${esc(c.telefone)}</span>` : ''}
             ${c.aniversario ? `<span>${Icone('bolo')}${aniversarioTxt(c.aniversario)}</span>` : ''}
@@ -121,10 +193,13 @@ Telas.clientes = (() => {
             <span>cliente desde ${new Date(c.criado_em.replace(' ', 'T')).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</span>
           </div>
         </div>
-        ${w ? `<a class="btn cl-btn-zap" href="${w}" target="_blank" rel="noopener">${Icone('whatsapp')} WhatsApp</a>` : ''}
+        <div class="cl3-hero-acoes">
+          ${w ? `<a class="btn cl2-zap" href="${w}" target="_blank" rel="noopener">${Icone('whatsapp')} WhatsApp</a>` : ''}
+          <button class="btn btn-primario" id="vender">${Icone('sacola')} Vender para ela</button>
+        </div>
       </div>
 
-      <div class="cl-kpis">
+      <div class="cl-kpis cl3-kpis">
         <div><small>Total comprado</small><b>${brl(c.total_comprado)}</b></div>
         <div><small>Compras</small><b>${c.compras}</b></div>
         <div><small>Ticket médio</small><b>${brl(ticket)}</b></div>
@@ -144,23 +219,23 @@ Telas.clientes = (() => {
       </div>
       ${c.observacao ? `<div class="cl-obs">${Icone('lapis')}<span>${esc(c.observacao)}</span></div>` : ''}
 
-      ${c.pecas_compradas.length ? `<h4>Últimas peças compradas</h4>
-        <div class="cl-pecas">${c.pecas_compradas.map((p) => `<div class="cl-peca">
-          ${U.miniatura({ id: p.produto_id, foto_versao: p.foto_versao }, 'cl-peca-foto')}
-          <b>${esc(p.nome)}</b><small>${esc([p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small>
-          <small>${new Date(p.criado_em.replace(' ', 'T')).toLocaleDateString('pt-BR')}</small></div>`).join('')}</div>` : ''}
-
-      ${c.compras.length ? `<h4>Compras</h4><div class="cl-compras">${c.compras.slice(0, 10).map((v) => `
-        <div class="cl-compra ${v.status === 'cancelada' ? 'cancelada' : ''}" data-venda="${v.id}">
-          <span>${dataHora(v.criado_em)}</span><span>nº ${v.id} · ${v.pecas || 0} peça(s)${v.vendedor ? ` · ${esc(v.vendedor)}` : ''}</span>
-          <b>${brl(v.total)}</b></div>`).join('')}</div>` : ''}
+      ${c.historico.length ? `<h4>Linha do tempo</h4><div class="cl3-tempo">${c.historico.slice(0, 10).map((v) => {
+    const pecas = porVenda[v.id] || [];
+    return `<div class="cl3-evento ${v.status === 'cancelada' ? 'cancelada' : ''}" data-venda="${v.id}">
+          <span class="cl3-ponto"></span>
+          <div class="cl3-ev-cab"><b>${new Date(v.criado_em.replace(' ', 'T')).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</b>
+            <small>${haQuanto(v.criado_em)} · nº ${v.id} · ${v.pecas || 0} peça(s)${v.vendedor ? ` · ${esc(v.vendedor)}` : ''}${v.status === 'cancelada' ? ' · cancelada' : ''}</small>
+            <span class="cl3-ev-total">${brl(v.total)}</span></div>
+          ${pecas.length ? `<div class="cl3-pecas">${pecas.slice(0, 6).map((p) => `<div class="cl3-peca" title="${esc(p.nome)}">
+            ${U.miniatura({ id: p.produto_id, foto_versao: p.foto_versao }, 'cl3-peca-foto')}
+            <span><b>${esc(p.nome)}</b><small>${esc([p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small></span></div>`).join('')}</div>` : ''}
+        </div>`;
+  }).join('')}</div>` : `<div class="cl3-sem">${Icone('sacola')} Ainda não comprou. Que tal mandar uma mensagem com as novidades?</div>`}
 
       <div class="acoes vd-det-acoes">
         <button class="btn btn-fantasma" id="editar">${Icone('lapis')} Editar dados</button>
         ${U.sessao.ehAdmin() ? `<button class="btn btn-fantasma btn-perigo-claro" id="excluir">${Icone('lixeira')} Excluir cliente</button>` : ''}
-        <span class="espaco"></span>
-        <button class="btn btn-primario" id="vender">${Icone('sacola')} Vender para ela</button>
-      </div>`, { largura: '860px' });
+      </div>`, { largura: '880px', classe: 'modal-ficha' });
     corpo.querySelector('#editar').onclick = () => formulario(c, () => { carregar(); ficha(c.id); });
     const bExcluir = corpo.querySelector('#excluir');
     if (bExcluir) {

@@ -870,7 +870,7 @@ Telas.produtos = (() => {
         <td class="r">${p.estoque}</td>
         <td class="c"><input type="number" min="0" class="qtd-input" data-id="${p.id}" value="${quantidade}"></td>
         <td><button class="mini perigo" data-rm="${p.id}">×</button></td></tr>`).join('')
-        || '<tr><td colspan="5" class="vazio">Nenhuma peça bipada ainda.</td></tr>';
+        || `<tr><td colspan="5">${U.vazio({ ilu: 'etiqueta', compacto: true, texto: 'Nenhuma peça bipada ainda.' })}</td></tr>`;
       const pecas = lista.reduce((a, x) => a + x.quantidade, 0);
       corpo.querySelector('#ent-total').innerHTML = `<b>${pecas}</b> peça(s) de <b>${lista.length}</b> produto(s)`;
       corpo.querySelector('#ent-ok').disabled = !pecas;

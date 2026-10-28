@@ -9,6 +9,18 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Visual caprichado no sistema todo**:
+  - **Clientes** em cartões com selos (VIP, Nova, Sumida, Crediário/Atrasada, Aniversário), números no topo, filtros
+    e botões de WhatsApp e Vender; a ficha tem cabeçalho com as ações e **linha do tempo** das compras com as fotos das peças.
+  - **Venda concluída** com confete, "Obrigada, Ana!", as fotos das peças e o botão **Enviar no WhatsApp** com
+    mensagem de agradecimento pronta (o texto pode ser mudado em Configurações).
+  - **Crediário** com barra de quanto já pagou e as parcelas em bolinhas (paga, vencida, a vencer).
+  - **Fechar o caixa** com o desenho de cada nota (nas cores do Real) e de cada moeda.
+  - **Login** com "Bom dia/Boa tarde/Boa noite" e o nome de quem entrou por último, brilhos dourados no fundo.
+  - **Telas vazias** com ilustração e uma frase do que fazer.
+  - **Relatórios** com a meta do mês em anel (quanto falta por dia e previsão do mês), comparação com o período
+    anterior em setas coloridas e ranking das mais vendidas com foto e medalhas.
+
 - **Ícones de pagamento de verdade**: símbolo oficial do Pix, cédula de real, cartões de débito e crédito com
   chip, caderninho do crediário e vale-troca, no caixa, na tela de pagamento, nas vendas e nas reservas.
 

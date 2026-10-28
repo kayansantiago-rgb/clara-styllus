@@ -125,3 +125,24 @@ test('débito manual (caderno antigo), atraso bloqueia nova venda fiada', () => 
   assert.equal(resumo.a_receber, 5000);
   assert.equal(resumo.clientes_atraso, 1);
 });
+
+test('lista do crediário traz o mapa das parcelas (pagas, vencidas, a vencer) e a ficha traz o histórico', () => {
+  const { chamar, produto, cliente } = preparar();
+  const v = chamar('POST', '/api/vendas', {
+    cliente_id: cliente.id,
+    itens: [{ produto_id: produto.id, quantidade: 1 }],
+    pagamentos: [{ forma: 'crediario', valor: 30000, parcelas: 3, primeiro_vencimento: '2020-01-10' }],
+  });
+  assert.equal(v.status, 200, JSON.stringify(v.corpo));
+  chamar('POST', `/api/crediario/clientes/${cliente.id}/receber`, { valor: 10000, forma: 'pix' });
+  const [c] = chamar('GET', '/api/crediario').corpo;
+  assert.deepEqual(c.mapa, ['p', 'v', 'v']);
+  assert.equal(c.total_carne, 30000);
+  assert.equal(c.pago_carne, 10000);
+  const lista = chamar('GET', '/api/clientes').corpo.find((x) => x.id === cliente.id);
+  assert.equal(lista.vencido, 20000);
+  const ficha = chamar('GET', `/api/clientes/${cliente.id}`).corpo;
+  assert.equal(ficha.compras, 1);
+  assert.equal(ficha.historico.length, 1);
+  assert.equal(ficha.pecas_compradas[0].venda_id, v.corpo.id);
+});
