@@ -3006,3 +3006,99 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .p6-economia b { color: #ffd88a; }
 .p6-economia .i { width: 16px; height: 16px; color: #ffd88a; flex-shrink: 0; }
 .p6-economia[hidden] { display: none; }
+
+/* ===== PDV v7 — selo do caixa, painel de pagar e tela de pagamento ===== */
+.pdv5 .p4-caixa { height: 34px; padding: 0 11px 0 9px; border-radius: 999px; gap: 6px; }
+.pdv5 .p4-caixa b { font-size: 12.5px; font-weight: 650; }
+.pdv5 .p4-caixa small { font-size: 11.5px; margin-left: 0; }
+.pdv5 .p4-caixa .ponto { width: 7px; height: 7px; box-shadow: 0 0 0 3px rgba(79,209,147,.22); }
+
+/* Cor de cada forma de pagamento */
+.pdv-forma[data-forma="dinheiro"], .pag3 .pag3-f-dinheiro { --c: #2f9e6a; --c2: #e3f5ec; }
+.pdv-forma[data-forma="pix"], .pag3 .pag3-f-pix { --c: #16a596; --c2: #dff5f3; }
+.pdv-forma[data-forma="debito"], .pag3 .pag3-f-debito { --c: #2f5fa8; --c2: #e3ecfb; }
+.pdv-forma[data-forma="credito"], .pag3 .pag3-f-credito { --c: #7a49a6; --c2: #efe6fb; }
+.pdv-forma[data-forma="crediario"], .pag3 .pag3-f-crediario { --c: #b06d80; --c2: #f7e9ed; }
+.pdv-forma[data-forma="vale"], .pag3 .pag3-f-vale { --c: #c99a3e; --c2: #f8eedb; }
+.pag3 .pag3-f-outro { --c: #6f6368; --c2: #efeaec; }
+
+/* Painel de pagar (lado direito do caixa) */
+.pdv5 .p4-formas .pdv-forma, .pdv5 .p4-formas .pdv-forma[data-forma="dinheiro"] { position: relative; overflow: hidden; min-height: 92px; gap: 9px;
+  background: #fff; border: 1px solid var(--borda); border-radius: 18px; color: var(--texto); font-weight: 650;
+  box-shadow: 0 1px 2px rgba(43,35,38,.05); transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease, border-color .15s ease; }
+.pdv5 .p4-formas .pdv-forma::after { content: ''; position: absolute; left: 18px; right: 18px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--c); opacity: .85; }
+.pdv5 .p4-formas .pdv-forma .i { width: 22px; height: 22px; padding: 10px; border-radius: 14px; background: var(--c2); color: var(--c); transition: inherit; }
+.pdv5 .p4-formas .pdv-forma:hover, .pdv5 .p4-formas .pdv-forma[data-forma="dinheiro"]:hover { background: var(--c); border-color: var(--c); color: #fff;
+  transform: translateY(-3px); box-shadow: 0 14px 26px -8px var(--c); }
+.pdv5 .p4-formas .pdv-forma:hover .i { background: rgba(255,255,255,.2); color: #fff; }
+.pdv5 .p4-formas .pdv-forma:hover::after { opacity: 0; }
+.pdv5 .p4-formas .pdv-forma:active { transform: scale(.97); }
+.pdv5 .p4-rodape-pagar { border-top: 1px solid var(--borda); padding-top: 12px; }
+.pdv5 .p4-rodape-pagar .link .i { width: 15px; height: 15px; }
+.pdv5 .p4-rodape-pagar .link kbd { font-size: 10px; }
+
+/* Tela de pagamento */
+.modal.modal-pagamento { max-width: min(920px, calc(100vw - 32px)); }
+.modal.modal-pagamento > header { padding: 14px 22px; }
+.modal.modal-pagamento > header h2 { font-size: 22px; }
+.pag3.pag2 { grid-template-columns: minmax(0, 1fr) 310px; gap: 22px; }
+.pag3 .pag2-esq { gap: 14px; }
+.pag3 .pag2-rotulo { font-size: 11px; letter-spacing: 1.4px; color: var(--suave); margin-bottom: -4px; }
+.pag3 .formas { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pag3 .forma, .pag3 .forma.sel { position: relative; min-height: 76px; padding: 12px 6px 10px; gap: 7px; border-radius: 16px; border: 1px solid var(--borda); background: #fff;
+  color: var(--texto); font-size: 13.5px; font-weight: 650; box-shadow: 0 1px 2px rgba(43,35,38,.05); transition: background .15s, color .15s, border-color .15s, box-shadow .15s, transform .15s; }
+.pag3 .forma .i, .pag3 .forma.sel .i { width: 20px; height: 20px; padding: 8px; border-radius: 12px; background: var(--c2); color: var(--c); }
+.pag3 .forma:hover { border-color: var(--c); transform: translateY(-1px); }
+.pag3 .forma.sel, .pag3 .forma.sel:hover { background: var(--c); border-color: var(--c); color: #fff; box-shadow: 0 12px 22px -10px var(--c); transform: none; }
+.pag3 .forma.sel .i { background: rgba(255,255,255,.2); color: #fff; }
+.pag3 .forma.sel::after { content: ''; position: absolute; top: 8px; right: 8px; width: 16px; height: 16px; border-radius: 50%; background: #fff
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232b2326' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center / 10px no-repeat; }
+.pag3 .pag2-valor > span { font-size: 11px; text-transform: uppercase; letter-spacing: 1.4px; font-weight: 700; color: var(--suave); }
+.pag3 .pag2-valor .campo-moeda input { min-height: 72px; font-size: 34px; font-weight: 750; letter-spacing: -.5px; border-radius: 18px; background: #fbf9fa; }
+.pag3 .pag2-valor .campo-moeda input:focus { background: #fff; }
+.pag3 .valores-rapidos { display: flex; flex-wrap: wrap; gap: 8px; }
+.pag3 .valor-rapido { min-height: 46px; border-radius: 999px; padding: 0 18px; font-size: 15px; background: #fff; border: 1px solid var(--borda); box-shadow: none; }
+.pag3 .valor-rapido:hover { border-color: var(--rosa); color: var(--rosa-escuro); }
+.pag3 .valor-rapido.exato { background: #2f9e6a; border-color: #2f9e6a; color: #fff; display: inline-flex; align-items: center; gap: 8px; }
+.pag3 .valor-rapido.exato small { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; opacity: .85; }
+.pag3 .pag2-modo { align-self: flex-start; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+  color: var(--rosa-escuro); background: var(--rosa-claro); border-radius: 999px; padding: 7px 14px 7px 10px; }
+.pag3 .pag2-modo .i { width: 15px; height: 15px; }
+.pag3 .pag2-modo:hover { background: #f1dfe4; }
+.pag3 .pag2-taxa { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; font-size: 12.5px; color: var(--suave);
+  background: #f6f3f4; border: 0; border-radius: 999px; padding: 6px 12px; }
+.pag3 .pag2-taxa .i { width: 15px; height: 15px; }
+.pag3 .pag2-taxa.com-juros { background: #fff4e3; color: #8a5a10; }
+
+/* Lado direito */
+.pag3 .pag2-dir { background: linear-gradient(180deg, #f8f4f5, #f3eef0); border-radius: 22px; padding: 12px; gap: 10px; }
+.pag3 .pag2-total { padding: 18px 18px 16px; border-radius: 18px; gap: 2px; }
+.pag3 .pag2-total small { font-size: 10.5px; letter-spacing: 1.8px; }
+.pag3 .pag2-total b { font-size: 42px; letter-spacing: -1.2px; }
+.pag3 .pag2-total > span { font-size: 12.5px; }
+.pag3 .pag2-total.com-juros { background: radial-gradient(90% 120% at 100% 0%, rgba(255,214,140,.35) 0%, transparent 55%), linear-gradient(140deg, #6e4a1c, #3a2a18); }
+.pag3-sacola { background: transparent; border: 0; padding: 0 4px; }
+.pag3-foto { width: 36px; height: 36px; border-radius: 50%; }
+.pag3-cli { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; color: var(--rosa-escuro); }
+.pag3-cli i { font-style: normal; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff;
+  background: linear-gradient(140deg, var(--rosa), #5c3a45); border: 2px solid var(--ouro-vivo); }
+.pag3 .pag2-troco, .pag3 .pag2-falta { border-radius: 16px; padding: 14px 16px; }
+.pag3 .pag2-troco > span, .pag3 .pag2-falta > span { font-size: 11px; text-transform: uppercase; letter-spacing: 1.4px; font-weight: 700; }
+.pag3 .pag2-troco.tem { flex-direction: column; align-items: flex-start; gap: 2px; background: #2f9e6a; border-color: #2f9e6a; color: #fff; box-shadow: 0 12px 24px -12px #2f9e6a; }
+.pag3 .pag2-troco.tem > span { color: rgba(255,255,255,.85); }
+.pag3 .pag2-troco.tem > b { font-size: 40px; letter-spacing: -1px; line-height: 1.05; }
+.pag3 .pag2-troco.certo { justify-content: center; }
+.pag3 .pag2-troco.certo > span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; letter-spacing: .6px; }
+.pag3 .pag2-troco.certo .i { width: 18px; height: 18px; }
+.pag3 .pag2-liquido { margin-top: 0; }
+.pag3 .pag2-liquido .linha { background: transparent; padding: 2px 6px; font-size: 13px; color: var(--suave); }
+.pag3 .pag2-liquido .linha.cai { background: transparent; color: var(--suave); font-weight: 500; }
+.pag3 .pag2-liquido .linha.cai b { font-size: 14px; color: #1d6e4a; }
+.pag3 .pag2-concluir { min-height: 60px; margin-top: auto; border-radius: 16px; font-size: 17px; background: linear-gradient(135deg, #2f9e6a, #227a51); box-shadow: 0 14px 26px -12px #227a51; }
+.pag3 .pag2-concluir:disabled { background: #ddd5d8; border-color: transparent; color: #fff; box-shadow: none; opacity: 1; }
+.pag3 .pag2-concluir kbd { background: rgba(255,255,255,.2); color: #fff; border-color: transparent; }
+.pag3-voltar { color: var(--suave); }
+.pag3 .pag2-nada { font-size: 12.5px; color: var(--suave); text-align: center; padding: 6px; }
+.pag3 .valor-rapido.exato small { color: inherit; }
+.pag3 .pag2-modo { order: 10; margin-top: 2px; }
+.pag3 .pag2-total.com-juros { background: radial-gradient(90% 120% at 100% 0%, rgba(212,162,74,.28) 0%, transparent 55%), linear-gradient(140deg, #6a4294, #2f2240); }

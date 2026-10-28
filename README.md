@@ -9,6 +9,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Pagamento mais profissional**: selo do caixa menor no topo, formas de pagamento com a cor de cada uma
+  (acendem ao passar o mouse) e tela de pagamento enxuta: a forma escolhida fica colorida, troco em destaque
+  verde, botões "Exato" e notas rápidas, e sem textos de explicação sobrando.
+
 - **Caixa ainda mais bonito**: com o caixa livre aparece uma **vitrine rápida** com as peças mais vendidas e as
   novidades (um toque coloca na venda), a cliente aparece com as **iniciais** (em vermelho se tem parcela
   atrasada), o total mostra **quanto a cliente está economizando** com liquidação e descontos, e o cartão de
