@@ -12,7 +12,7 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 - **Mais capricho visual**:
   - **Menu** com ícone colorido para cada tela e **bolinhas de aviso** (crediário atrasado, condicional para devolver,
     reserva vencida e peça da lista de espera que chegou).
-  - **Modo escuro**: botão de lua/sol ao lado do seu nome (fica guardado no computador).
+  - **Modo escuro**: botão "Escuro/Claro" no rodapé do menu, ao lado de "Recolher" (fica guardado no computador).
   - **Abertura** com a logo ao ligar o sistema e **transição suave** entre as telas, com barrinha dourada enquanto carrega.
   - **Condicional e Reservas**: foto da cliente, barra do prazo que vai ficando vermelha e botão de WhatsApp no cartão.
   - **Vendas**: fotinhas das peças e foto da cliente em cada venda; o detalhe parece um cupom de verdade.

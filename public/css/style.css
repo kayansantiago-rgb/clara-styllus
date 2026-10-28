@@ -3544,3 +3544,17 @@ html.escuro .marca-logo, html.escuro .login-arte, html.escuro .rl-pos-1, html.es
 html.escuro .in2-hero img, html.escuro .p4-topo img, html.escuro .login-arte img, html.escuro .marca-logo img,
 html.escuro .modal-pagamento > header img, html.escuro .pag2-total img { filter: none; }
 html.escuro .menu-bolinha, html.escuro .es2-fita { filter: invert(1) contrast(1.25) hue-rotate(180deg); }
+
+/* Rodapé do menu: recolher + modo escuro na mesma linha */
+.menu-rodape { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.menu-rodape .menu-recolher { margin-top: 0; flex: 1; width: auto; }
+.menu-tema { font: inherit; font-size: 12.5px; color: #9b8d95; background: none; border: 0; border-radius: 9px; padding: 8px 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+.menu-tema:hover { background: #f6f3f4; color: var(--rosa-escuro); }
+.menu-tema .i { width: 17px; height: 17px; }
+body.menu-recolhido .menu-rodape { flex-direction: column; }
+body.menu-recolhido .menu-tema span, body.modo-pdv .menu:not(:hover) .menu-tema span { display: none; }
+body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
+.usuario-txt b { text-transform: capitalize; }
+.usuario-txt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-rodape .menu-recolher { white-space: nowrap; padding: 8px 10px; }
+.menu-tema { background: transparent; }

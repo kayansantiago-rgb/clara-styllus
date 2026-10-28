@@ -28,24 +28,32 @@
     document.body.classList.toggle('admin', usuario.perfil === 'admin');
     document.getElementById('usuario-box').innerHTML = `
       <span class="avatar" title="${esc(usuario.nome)}">${esc(iniciais(usuario.nome))}</span>
-      <span class="usuario-txt"><b>${esc(usuario.nome)}</b><small>${usuario.perfil === 'admin' ? 'Administrador(a)' : 'Vendedor(a)'}</small></span>
+      <span class="usuario-txt" title="${esc(usuario.nome)}"><b>${esc(String(usuario.nome).trim().split(/\s+/)[0])}</b><small>${usuario.perfil === 'admin' ? 'Admin' : 'Vendedor(a)'}</small></span>
       <span class="usuario-acoes">
-        <button class="btn-ico" id="tema" title="Modo escuro / claro">${Icone(document.documentElement.classList.contains('escuro') ? 'sol' : 'lua')}</button>
         <button class="btn-ico" id="minha-senha" title="Trocar minha senha">${Icone('chave')}</button>
         <button class="btn-ico perigo" id="trocar" title="Sair / trocar usuário">${Icone('sair')}</button>
       </span>`;
     document.getElementById('trocar').onclick = sair;
     document.getElementById('minha-senha').onclick = trocarSenha;
-    document.getElementById('tema').onclick = (ev) => {
-      const escuro = document.documentElement.classList.toggle('escuro');
-      try { localStorage.setItem('tema', escuro ? 'escuro' : 'claro'); } catch { /* só nesta sessão */ }
-      ev.currentTarget.innerHTML = Icone(escuro ? 'sol' : 'lua');
-    };
+
     U.config().then((cfg) => {
       // Primeira vez do administrador: abre o assistente de boas-vindas.
       if (usuario.perfil === 'admin' && cfg.boas_vindas_ok !== '1') location.hash = '#/boas-vindas';
     }).catch(() => {}).finally(navegar);
   }
+
+  // Modo escuro / claro (fica guardado neste computador).
+  const botaoTema = document.getElementById('tema');
+  const desenharTema = () => {
+    const escuro = document.documentElement.classList.contains('escuro');
+    botaoTema.innerHTML = `${Icone(escuro ? 'sol' : 'lua')}<span>${escuro ? 'Claro' : 'Escuro'}</span>`;
+  };
+  botaoTema.onclick = () => {
+    const escuro = document.documentElement.classList.toggle('escuro');
+    try { localStorage.setItem('tema', escuro ? 'escuro' : 'claro'); } catch { /* só nesta sessão */ }
+    desenharTema();
+  };
+  desenharTema();
 
   async function sair() {
     try { await api('/api/logout', { metodo: 'POST' }); } catch { /* já está fora */ }
@@ -370,7 +378,7 @@
     const dica = document.getElementById('menu-dica');
     const aplicar = (sim) => {
       document.body.classList.toggle('menu-recolhido', sim);
-      botao.querySelector('span').textContent = sim ? 'Abrir menu' : 'Recolher menu';
+      botao.querySelector('span').textContent = sim ? 'Abrir' : 'Recolher';
       botao.title = sim ? 'Abrir menu' : 'Recolher menu (só ícones)';
     };
     aplicar(!!U.local.ler('menu_recolhido', false));
