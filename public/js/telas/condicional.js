@@ -37,6 +37,7 @@ Telas.condicional = (() => {
       carregar(status);
     };
     raiz.querySelector('#lista').onclick = (ev) => {
+      if (ev.target.closest('[data-zap]')) return; // o WhatsApp cuida
       const card = ev.target.closest('[data-i]');
       if (card) detalhe(lista[Number(card.dataset.i)].id);
     };
@@ -46,7 +47,6 @@ Telas.condicional = (() => {
   async function carregar(status = 'aberta') {
     if (!raiz) return;
     try { lista = await api(`/api/condicionais?status=${status}`); } catch (e) { return erro(e); }
-    const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
     raiz.querySelector('#lista').innerHTML = lista.map((c, i) => {
       const n = diasAte(c.prazo);
       const st = c.status !== 'aberta' ? 'encerrada' : n < 0 ? 'atrasada' : n <= 1 ? 'perto' : 'ok';
@@ -54,13 +54,16 @@ Telas.condicional = (() => {
         : n < 0 ? `Atrasada ${-n} dia(s)` : n === 0 ? 'Devolve hoje' : n === 1 ? 'Devolve amanhã' : `Faltam ${n} dias`;
       const fotos = c.itens.slice(0, 5);
       return `<div class="cd-card cd-${st}" data-i="${i}" tabindex="0">
-        <div class="cd-topo"><span class="avatar">${esc(iniciais(c.cliente_nome))}</span>
+        <div class="cd-topo">${U.avatarCliente(c.cliente_id, c.cliente_nome, c.cliente_foto)}
           <div><b>${esc(c.cliente_nome)}</b><small>nº ${c.id} · saiu ${dataHora(c.criado_em).split(' ')[0]}</small></div>
           <span class="cd-prazo">${prazo}<small>até ${c.prazo.split('-').reverse().join('/')}</small></span></div>
+        ${c.status === 'aberta' ? `<div class="cd-tempo" title="Tempo até o prazo"><i style="width:${U.pctPrazo(c.criado_em, c.prazo)}%"></i></div>` : ''}
         <div class="cd-fotos">${fotos.map((it) => U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao }, 'cd-foto')).join('')}
           ${c.itens.length > 5 ? `<span class="cd-mais">+${c.itens.length - 5}</span>` : ''}</div>
         <div class="cd-rodape"><span><b>${c.pecas}</b> peça(s) · <b>${brl(c.valor)}</b></span>
-          ${c.status === 'aberta' ? `<button class="btn btn-primario btn-peq">${Icone('check')} Fechar</button>` : ''}</div>
+          <span class="cd-acoes">${c.status === 'aberta' && Zap.attrs(c.cliente_telefone, 'condicional', { nome: c.cliente_nome, prazo: c.prazo.split('-').reverse().join('/') })
+    ? `<a class="btn-ico cd-zap" title="Lembrar no WhatsApp" ${Zap.attrs(c.cliente_telefone, 'condicional', { nome: c.cliente_nome, prazo: c.prazo.split('-').reverse().join('/') })}>${Icone('whatsapp')}</a>` : ''}
+          ${c.status === 'aberta' ? `<button class="btn btn-primario btn-peq">${Icone('check')} Fechar</button>` : ''}</span></div>
       </div>`;
     }).join('') || `<div class="vd-vazio cd-vazio">${Ilustracao.svg('bolsa', 150)}<b>Nenhuma condicional ${status === 'aberta' ? 'aberta' : ''}</b><br><small>Crie pelo caixa: bipe as peças, escolha a cliente e clique em Condicional.</small></div>`;
   }

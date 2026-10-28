@@ -395,6 +395,17 @@ const U = (() => {
   const fotoUrl = (p) => (p && p.foto_versao ? `/api/produtos/${p.id}/foto?v=${p.foto_versao}` : null);
 
   /** Miniatura da peça (ou um ícone quando não tem foto). */
+  /** Foto da cliente (quando cadastrada) ou as iniciais, no formato de avatar redondo. */
+  const avatarCliente = (id, nome, fotoVersao, classe = 'avatar') => (fotoVersao
+    ? `<img class="${classe} cli-foto" src="/api/clientes/${id}/foto?v=${fotoVersao}" alt="" loading="lazy">`
+    : `<span class="${classe}">${esc(String(nome || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase())}</span>`);
+  /** Barra do prazo: quanto do tempo entre a saída e o prazo já passou (0 a 100). */
+  const pctPrazo = (desde, prazo) => {
+    const ini = Date.parse(String(desde).slice(0, 10) + 'T00:00');
+    const fim = Date.parse(prazo + 'T23:59');
+    if (!(fim > ini)) return 100;
+    return Math.max(4, Math.min(100, Math.round(((Date.now() - ini) / (fim - ini)) * 100)));
+  };
   const miniatura = (p, classe = 'mini-foto') => {
     const url = fotoUrl(p);
     return url ? `<img class="${classe}" src="${url}" alt="" loading="lazy">` : `<span class="${classe} sem-foto">${Icone('roupa')}</span>`;
@@ -422,7 +433,7 @@ const U = (() => {
   }
 
   return {
-    som, fotoUrl, miniatura, reduzirImagem,
+    som, fotoUrl, miniatura, avatarCliente, pctPrazo, reduzirImagem,
     sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, avisoAcao, desfazivel, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,

@@ -21,7 +21,6 @@ Telas.vendas = (() => {
     return [dia(0), dia(0)];
   }
 
-  const iniciais = (nome) => String(nome || '').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
   const hora = (dt) => (dt.split(' ')[1] || '').slice(0, 5);
   const formasDe = (v) => (v.formas || '').split(',').filter(Boolean);
 
@@ -193,9 +192,10 @@ Telas.vendas = (() => {
     return `<div class="vd-venda ${cancelada ? 'cancelada' : ''}" data-id="${v.id}" tabindex="0">
       <div class="vd-hora"><b>${hora(v.criado_em)}</b><small>nº ${v.id}</small></div>
       <div class="vd-cliente">
-        <span class="avatar ${v.cliente_nome ? '' : 'avatar-vazio'}">${v.cliente_nome ? esc(iniciais(v.cliente_nome)) : Icone('usuario')}</span>
+        ${v.cliente_nome ? U.avatarCliente(v.cliente_id, v.cliente_nome, v.cliente_foto) : `<span class="avatar avatar-vazio">${Icone('usuario')}</span>`}
         <span><b>${esc(v.cliente_nome || 'Cliente não identificada')}</b><small>por ${esc(v.vendedor || '—')}</small></span>
       </div>
+      <div class="vd-fotos">${(v.fotos || []).map((f) => U.miniatura(f, 'vd-foto')).join('')}${v.pecas > (v.fotos || []).length && (v.fotos || []).length >= 4 ? `<span class="vd-foto-mais">+${v.pecas - 4}</span>` : ''}</div>
       <div class="vd-formas">${formasDe(v).map((f) => chipForma(f)).join('')}</div>
       <div class="vd-pecas">${v.pecas || 0} <small>peça${v.pecas === 1 ? '' : 's'}</small></div>
       <div class="vd-total">${cancelada ? '<span class="selo perigo">Cancelada</span>' : ''}<b>${brl(v.total)}</b></div>
@@ -212,6 +212,7 @@ Telas.vendas = (() => {
     const pecas = v.itens.reduce((a, it) => a + it.quantidade, 0);
     const corpo = abrirModal(`Venda nº ${v.id}`, `
       <div class="vd-det-topo ${cancelada ? 'cancelada' : ''}">
+        ${v.cliente_id ? U.avatarCliente(v.cliente_id, v.cliente_nome, v.cliente_foto, 'avatar vd-det-avatar') : ''}
         <div>
           <small>${dataHora(v.criado_em)}</small>
           <b>${brl(v.total)}</b>
@@ -225,6 +226,8 @@ Telas.vendas = (() => {
         <div><small>Vendedor(a)</small><b>${esc(v.vendedor || '—')}</b></div>
         <div><small>CPF/CNPJ no cupom</small><b>${esc(U.cpf(v.cpf_nota) || '—')}</b></div>
       </div>
+      <div class="vd-recibo">
+      <div class="vd-recibo-cab"><img src="/img/logo-cupom.png" alt="" onerror="this.remove()"><small>Venda nº ${v.id} · ${dataHora(v.criado_em)}</small></div>
       <div class="vd-det-itens">
         ${v.itens.map((it) => `<div class="vd-item">
           ${U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao })}
@@ -242,6 +245,8 @@ Telas.vendas = (() => {
         ${v.troco ? `<div class="linha"><span>Troco</span><span>${brl(v.troco)}</span></div>` : ''}
         <div class="linha total"><span>Total</span><span>${brl(v.total)}</span></div>
         ${v.taxas ? `<div class="linha vd-cai"><span>${Icone('carteira')} Cai na conta (sem as taxas)</span><b>${brl(v.liquido)}</b></div>` : ''}
+      </div>
+      <div class="vd-recibo-pe">Obrigada pela preferência!</div>
       </div>
       ${v.crediario && v.crediario.length ? `<h3 class="titulo-ico">${Icone('caderno')} Parcelas do crediário</h3>
         <div class="vd-parcelas">${v.crediario.map((p) => `<div class="linha"><span>${p.numero}/${p.total_parcelas} · venc. ${p.vencimento.split('-').reverse().join('/')}</span>

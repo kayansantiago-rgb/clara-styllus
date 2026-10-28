@@ -337,6 +337,17 @@ function criarApi(db, opcoes = {}) {
   }, 'admin');
 
   /** Outros computadores da loja: se está liberado e o endereço deste computador na rede. */
+  /** Números das bolinhas do menu: o que pede atenção hoje em cada tela. */
+  rota('GET', '/api/sistema/avisos', () => {
+    const hoje = new Date().toLocaleDateString('sv-SE');
+    const n = (sql, ...a) => db.prepare(sql).get(...a).n;
+    return {
+      crediario: n(`SELECT COUNT(DISTINCT cliente_id) AS n FROM crediario_parcelas WHERE status = 'aberta' AND vencimento < ?`, hoje),
+      condicional: n(`SELECT COUNT(*) AS n FROM condicionais WHERE status = 'aberta' AND prazo <= ?`, hoje),
+      reservas: n(`SELECT COUNT(*) AS n FROM reservas WHERE status = 'aberta' AND prazo < ?`, hoje),
+    };
+  });
+
   rota('GET', '/api/sistema/rede', async () => ({
     liberado: config().rede_computadores === '1',
     enderecos: await enderecosLocais(),
@@ -1030,7 +1041,7 @@ function criarApi(db, opcoes = {}) {
     const v = plano(
       db
         .prepare(
-          `SELECT v.*, c.nome AS cliente_nome, c.cpf AS cliente_cpf
+          `SELECT v.*, c.nome AS cliente_nome, c.cpf AS cliente_cpf, c.foto_versao AS cliente_foto
            FROM vendas v LEFT JOIN clientes c ON c.id = v.cliente_id WHERE v.id = ?`
         )
         .get(id)
@@ -1233,10 +1244,10 @@ function criarApi(db, opcoes = {}) {
     if (de) where.push('date(v.criado_em) >= ?'), args.push(de);
     if (ate) where.push('date(v.criado_em) <= ?'), args.push(ate);
     if (caixaId) where.push('v.caixa_id = ?'), args.push(caixaId);
-    return planos(
+    const vendas = planos(
       db
         .prepare(
-          `SELECT v.*, c.nome AS cliente_nome,
+          `SELECT v.*, c.nome AS cliente_nome, c.foto_versao AS cliente_foto,
              (SELECT SUM(quantidade) FROM venda_itens i WHERE i.venda_id = v.id) AS pecas,
              (SELECT GROUP_CONCAT(DISTINCT forma) FROM venda_pagamentos p WHERE p.venda_id = v.id) AS formas,
              v.total - COALESCE((SELECT SUM(taxa) FROM venda_pagamentos p WHERE p.venda_id = v.id), 0) AS liquido
@@ -1246,6 +1257,20 @@ function criarApi(db, opcoes = {}) {
         )
         .all(...args)
     );
+    // Até 4 fotinhas das peças de cada venda, para a lista.
+    if (vendas.length) {
+      const fotos = db.prepare(
+        `SELECT i.venda_id, i.produto_id, p.foto_versao FROM venda_itens i LEFT JOIN produtos p ON p.id = i.produto_id
+         WHERE i.venda_id IN (${vendas.map(() => '?').join(',')}) ORDER BY i.id`
+      ).all(...vendas.map((v) => v.id));
+      const porVenda = new Map(vendas.map((v) => [v.id, v]));
+      for (const v of vendas) v.fotos = [];
+      for (const f of fotos) {
+        const v = porVenda.get(f.venda_id);
+        if (v.fotos.length < 4) v.fotos.push({ id: f.produto_id, foto_versao: f.foto_versao });
+      }
+    }
+    return vendas;
   });
 
   rota('GET', '/api/vendas/:id', ({ params }) => buscarVenda(params.id));
@@ -1744,7 +1769,7 @@ function criarApi(db, opcoes = {}) {
     // Aniversariantes de hoje até 7 dias (comparando só mês-dia).
     const proximos = new Map(Array.from({ length: 8 }, (_, i) => [dia(i).slice(5), i]));
     const aniversariantes = planos(
-      db.prepare(`SELECT id, nome, telefone, aniversario FROM clientes WHERE excluido_em IS NULL AND aniversario IS NOT NULL AND aniversario <> ''`).all()
+      db.prepare(`SELECT id, nome, telefone, aniversario, foto_versao FROM clientes WHERE excluido_em IS NULL AND aniversario IS NOT NULL AND aniversario <> ''`).all()
     )
       .filter((c) => proximos.has(c.aniversario.slice(5)))
       .map((c) => ({ ...c, em_dias: proximos.get(c.aniversario.slice(5)) }))
@@ -1752,7 +1777,7 @@ function criarApi(db, opcoes = {}) {
     const vencendoHoje = planos(
       db
         .prepare(
-          `SELECT c.id, c.nome, c.telefone, SUM(p.valor - p.valor_pago) AS valor
+          `SELECT c.id, c.nome, c.telefone, c.foto_versao, SUM(p.valor - p.valor_pago) AS valor
            FROM crediario_parcelas p JOIN clientes c ON c.id = p.cliente_id
            WHERE p.status = 'aberta' AND p.vencimento = ? GROUP BY c.id ORDER BY c.nome`
         )

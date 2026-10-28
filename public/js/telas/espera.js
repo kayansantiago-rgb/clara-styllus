@@ -64,28 +64,30 @@ Telas.espera = (() => {
       const p = e.chegou;
       const link = whats(e);
       const dias = diasDesde(e.criado_em);
-      return `<div class="es-card ${p && e.status !== 'atendida' && e.status !== 'cancelada' ? 'chegou' : ''} es-${e.status}" data-id="${e.id}">
-        <div class="es-cli"><span class="avatar">${esc(iniciais(e.cliente_nome))}</span>
-          <div><b>${esc(e.cliente_nome)}</b><small>${esc(e.cliente_telefone || 'sem telefone')}</small></div></div>
-        <div class="es-peca">
-          ${U.miniatura(p ? { id: p.id, foto_versao: p.foto_versao } : e.produto_id ? { id: e.produto_id, foto_versao: e.produto_foto_versao } : null, 'es-foto')}
-          <div><b>${esc(pecaTxt(e))}</b>
-            <small>pediu ${dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`}${e.usuario ? ` · anotado por ${esc(e.usuario)}` : ''}</small>
-            ${e.observacao ? `<small class="es-obs">“${esc(e.observacao)}”</small>` : ''}</div>
-        </div>
-        <div class="es-situacao">
-          ${e.status === 'atendida' ? '<span class="selo ok">Atendida</span>' : e.status === 'cancelada' ? '<span class="selo">Cancelada</span>'
-    : p ? `<span class="es-chegou">${Icone('sino')} Chegou! <small>${p.estoque} em estoque${e.produto_id ? '' : ` · ${esc(p.nome)}${p.tamanho ? ` ${esc(p.tamanho)}` : ''}`}</small></span>`
+      const chegouAgora = p && e.status !== 'atendida' && e.status !== 'cancelada';
+      return `<div class="es-card es2 ${chegouAgora ? 'chegou' : ''} es-${e.status}" data-id="${e.id}">
+        ${chegouAgora ? `<span class="es2-fita">${Icone('sino')} Chegou!</span>` : ''}
+        <div class="es2-foto">${U.miniatura(p ? { id: p.id, foto_versao: p.foto_versao } : e.produto_id ? { id: e.produto_id, foto_versao: e.produto_foto_versao } : null, 'es2-img')}</div>
+        <div class="es2-corpo">
+          <b class="es2-peca">${esc(pecaTxt(e))}</b>
+          ${e.observacao ? `<small class="es-obs">“${esc(e.observacao)}”</small>` : ''}
+          <div class="es2-cli">${U.avatarCliente(e.cliente_id, e.cliente_nome, e.cliente_foto)}
+            <div><b>${esc(e.cliente_nome)}</b><small>pediu ${dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`}${e.usuario ? ` · ${esc(e.usuario)}` : ''}</small></div></div>
+          <div class="es-situacao">
+            ${e.status === 'atendida' ? '<span class="selo ok">Atendida</span>' : e.status === 'cancelada' ? '<span class="selo">Cancelada</span>'
+    : p ? `<span class="es-chegou">${p.estoque} em estoque${e.produto_id ? '' : ` · ${esc(p.nome)}${p.tamanho ? ` ${esc(p.tamanho)}` : ''}`} · <b>${brl(p.preco_venda)}</b></span>`
       : '<span class="es-esperando"><i></i>Aguardando chegar</span>'}
-          ${e.status === 'avisada' ? `<small>avisada ${dataHora(e.avisado_em)}</small>` : ''}
-        </div>
-        <div class="es-acoes">
-          ${['aguardando', 'avisada'].includes(e.status) ? `
-            ${p && link ? `<a class="btn cl-btn-zap btn-peq" ${link} data-avisar>${Icone('whatsapp')} Avisar</a>` : ''}
-            ${p ? `<button class="btn btn-primario btn-peq" data-vender>${Icone('sacola')} Vender</button>` : ''}
-            <button class="btn-ico" data-atendida title="Marcar como atendida">${Icone('check')}</button>
-            <button class="btn-ico" data-cancelar title="Tirar da lista">${Icone('lixeira')}</button>`
-    : `<button class="btn-ico" data-reabrir title="Voltar para a lista">${Icone('troca')}</button>`}
+            ${e.status === 'avisada' ? `<small>avisada ${dataHora(e.avisado_em)}</small>` : ''}
+          </div>
+          <div class="es-acoes">
+            ${['aguardando', 'avisada'].includes(e.status) ? `
+              ${p && link ? `<a class="btn cl-btn-zap btn-peq" ${link} data-avisar>${Icone('whatsapp')} Avisar</a>` : ''}
+              ${p ? `<button class="btn btn-primario btn-peq" data-vender>${Icone('sacola')} Vender</button>` : ''}
+              <span class="espaco"></span>
+              <button class="btn-ico" data-atendida title="Marcar como atendida">${Icone('check')}</button>
+              <button class="btn-ico" data-cancelar title="Tirar da lista">${Icone('lixeira')}</button>`
+    : `<span class="espaco"></span><button class="btn-ico" data-reabrir title="Voltar para a lista">${Icone('troca')}</button>`}
+          </div>
         </div>
       </div>`;
     }).join('') || `<div class="vd-vazio">${Ilustracao.svg(aba === 'chegou' ? 'presente' : 'busca', 150)}

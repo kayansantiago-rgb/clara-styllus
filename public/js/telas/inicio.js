@@ -59,6 +59,36 @@ Telas.inicio = (() => {
     return out;
   }
 
+  // Uma frase por dia, para começar o expediente.
+  const FRASES = [
+    'Cada cliente que entra é uma história nova. Capriche no atendimento!',
+    'Vitrine arrumada vende sozinha.',
+    'Sorriso no rosto e peça certa na mão: venda feita.',
+    'Hoje é um ótimo dia para bater a meta.',
+    'Quem lembra do nome da cliente, ganha a cliente.',
+    'Uma mensagem no WhatsApp pode virar a venda do dia.',
+    'Moda é sobre como a cliente se sente. Ajude ela a se sentir linda.',
+    'Peça parada é dinheiro parado: que tal uma promoção?',
+    'Atendimento bom faz a cliente voltar. Atendimento ótimo faz ela trazer as amigas.',
+    'Pequenas vendas somadas fazem um grande mês.',
+    'Ofereça um acessório: completa o look e o ticket.',
+    'Cliente satisfeita é a melhor propaganda da loja.',
+    'Organização hoje, tranquilidade no fechamento do caixa.',
+    'Novidade chegou? Avise quem estava esperando!',
+    'Cada “não” deixa você mais perto do próximo “sim”.',
+    'Faça cada cliente sair mais feliz do que entrou.',
+    'Provador cheio é sinal de venda chegando.',
+    'Seu jeito de atender é o que a cliente vai lembrar.',
+    'Um bom dia começa com o caixa aberto e a loja cheirosa.',
+    'Sugira o tamanho certo: confiança vende mais que desconto.',
+    'Hoje é dia de fazer alguém se sentir especial.',
+  ];
+  const fraseDoDia = () => {
+    const d = new Date();
+    const dia = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
+    return FRASES[dia % FRASES.length];
+  };
+
   async function abrir(raiz) {
     const resumoP = api('/api/painel/resumo').catch(() => null);
     const [r, bk, conds, at, esp, res] = await Promise.all([
@@ -82,6 +112,7 @@ Telas.inicio = (() => {
         <div class="in2-hero-txt">
           <small class="in2-data">${hojeTxt.charAt(0).toUpperCase() + hojeTxt.slice(1)}</small>
           <h1>${saudacao()}, ${esc(nome)}!</h1>
+          <p class="in3-frase">“${esc(fraseDoDia())}”</p>
           <div class="in2-resumo" id="in-resumo">
             <b class="in2-resumo-tit">${Icone('estrela')} Como está a loja</b>
             <ul>${resumo ? frases(resumo).map(([ico, t, tipo]) => `<li class="${tipo || ''}">${Icone(ico)}<span>${t}</span></li>`).join('') : '<li>Não consegui montar o resumo agora.</li>'}</ul>
@@ -117,7 +148,7 @@ Telas.inicio = (() => {
         Se o computador der defeito, os dados podem se perder. <a href="#/config?aba=backup">Fazer backup agora →</a></div>`
     : bk && bk.ultimo_erro ? `<div class="pdv-alerta alerta painel-alerta"><i data-icone="nuvem"></i> ${esc(bk.ultimo_erro)}</div>` : ''}
       </div>
-      <div class="in-atalhos in2-atalhos">
+      <div class="in-atalhos in2-atalhos in3-atalhos">
         <a class="in-atalho" href="#/pdv">${Icone('sacola')}<b>Vender</b><small>abrir o caixa</small></a>
         <a class="in-atalho" href="#/produtos">${Icone('roupa')}<b>Produtos</b><small>cadastrar e estoque</small></a>
         <a class="in-atalho" href="#/etiquetas">${Icone('etiqueta')}<b>Etiquetas</b><small>imprimir</small></a>
@@ -156,7 +187,7 @@ Telas.inicio = (() => {
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('grafico')} Mais vendidos da semana</h3>
           ${r.mais_vendidos.map((p, i) => `
-            <div class="painel-item"><span class="pos">${i + 1}</span>${U.miniatura({ id: p.produto_id, foto_versao: p.foto_versao })}
+            <div class="painel-item in3-top"><span class="pos rl-pos rl-pos-${i + 1}">${i + 1}º</span>${U.miniatura({ id: p.produto_id, foto_versao: p.foto_versao }, 'in3-top-foto')}
               <span class="painel-item-txt"><b>${esc(p.nome)}</b><small>${p.quantidade} peça(s) · ${brl(p.total)}</small></span></div>`).join('')
     || U.vazio({ ilu: 'sacola', compacto: true, texto: 'Nenhuma venda nos últimos 7 dias.' })}
         </div>
@@ -165,7 +196,7 @@ Telas.inicio = (() => {
           <h3 class="titulo-ico">${Icone('presente')} Aniversariantes</h3>
           ${r.aniversariantes.map((c) => {
     const link = Zap.attrs(c.telefone, 'aniversario', { nome: c.nome });
-    return `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b>
+    return `<div class="painel-item in3-niver ${c.em_dias === 0 ? 'hoje' : ''}">${U.avatarCliente(c.id, c.nome, c.foto_versao)}<span class="painel-item-txt"><b>${esc(c.nome)}</b>
               <small>${c.em_dias === 0 ? '<b class="txt-rosa">hoje!</b>' : c.em_dias === 1 ? 'amanhã' : `em ${c.em_dias} dias`} · ${c.aniversario.slice(8)}/${c.aniversario.slice(5, 7)}</small></span>
               ${link ? `<a class="btn btn-peq" ${link}><i data-icone="whatsapp"></i> Parabéns</a>` : ''}</div>`;
   }).join('') || U.vazio({ ilu: 'presente', compacto: true, texto: 'Ninguém faz aniversário nos próximos 7 dias.' })}
@@ -179,7 +210,7 @@ Telas.inicio = (() => {
             <div class="card"><small>Recebido hoje</small><b>${brl(r.crediario.recebido)}</b></div>
           </div>
           <h4>Vencendo hoje</h4>
-          ${r.crediario.vencendo_hoje.map((c) => `<div class="painel-item"><span class="painel-item-txt"><b>${esc(c.nome)}</b><small>${brl(c.valor)}</small></span>
+          ${r.crediario.vencendo_hoje.map((c) => `<div class="painel-item">${U.avatarCliente(c.id, c.nome, c.foto_versao)}<span class="painel-item-txt"><b>${esc(c.nome)}</b><small>${brl(c.valor)}</small></span>
             ${Zap.attrs(c.telefone, 'parcela_hoje', { nome: c.nome, valor: brl(c.valor) }) ? `<a class="btn btn-peq" ${Zap.attrs(c.telefone, 'parcela_hoje', { nome: c.nome, valor: brl(c.valor) })}><i data-icone="whatsapp"></i> Lembrar</a>` : ''}</div>`).join('')
     || U.vazio({ ilu: 'caderno', compacto: true, texto: 'Nenhuma parcela vence hoje.' })}
           <a href="#/crediario">Ver crediário completo →</a>
@@ -188,8 +219,8 @@ Telas.inicio = (() => {
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('caixa')} Estoque</h3>
           ${r.estoque_baixo
-    ? `<p><b class="txt-perigo">${r.estoque_baixo}</b> produto(s) no estoque mínimo ou esgotados.</p><a href="#/relatorios">Ver lista para repor →</a>`
-    : '<p>Tudo certo com o estoque.</p>'}
+    ? `<div class="in3-estoque alerta"><b>${r.estoque_baixo}</b><span>produto(s) no estoque mínimo ou esgotados</span></div><a href="#/relatorios">Ver lista para repor →</a>`
+    : `<div class="in3-estoque ok">${Icone('check')}<span>Tudo certo com o estoque.</span></div>`}
         </div>
       </div>`;
 

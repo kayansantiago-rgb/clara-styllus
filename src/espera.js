@@ -11,7 +11,7 @@
 const STATUS = ['aguardando', 'avisada', 'atendida', 'cancelada'];
 
 function instalarEspera({ db, rota, erro, inteiro, texto, plano, planos }) {
-  const BASE = `SELECT e.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone, c.cpf AS cliente_cpf,
+  const BASE = `SELECT e.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone, c.cpf AS cliente_cpf, c.foto_versao AS cliente_foto,
       p.nome AS produto_nome, p.tamanho AS produto_tamanho, p.cor AS produto_cor, p.estoque AS produto_estoque,
       p.preco_venda AS produto_preco, p.foto_versao AS produto_foto_versao, p.codigo AS produto_codigo
     FROM espera e JOIN clientes c ON c.id = e.cliente_id LEFT JOIN produtos p ON p.id = e.produto_id`;

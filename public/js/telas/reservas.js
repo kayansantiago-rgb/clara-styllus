@@ -34,6 +34,7 @@ Telas.reservas = (() => {
       carregar();
     };
     raiz.querySelector('#lista').onclick = (ev) => {
+      if (ev.target.closest('[data-zap]')) return; // o WhatsApp cuida
       const card = ev.target.closest('[data-i]');
       if (!card) return;
       const r = lista[Number(card.dataset.i)];
@@ -63,9 +64,10 @@ Telas.reservas = (() => {
         : n < 0 ? `Venceu há ${-n} dia(s)` : n === 0 ? 'Busca hoje' : n === 1 ? 'Busca amanhã' : `Faltam ${n} dias`;
       const pct = r.total ? Math.round((r.pago / r.total) * 100) : 0;
       return `<div class="cd-card rs-card cd-${st}" data-i="${i}" tabindex="0">
-        <div class="cd-topo"><span class="avatar">${esc(iniciais(r.cliente_nome))}</span>
+        <div class="cd-topo">${U.avatarCliente(r.cliente_id, r.cliente_nome, r.cliente_foto)}
           <div><b>${esc(r.cliente_nome)}</b><small>nº ${r.id} · ${dataHora(r.criado_em).split(' ')[0]}</small></div>
           <span class="cd-prazo">${prazo}<small>até ${dataBr(r.prazo)}</small></span></div>
+        ${r.status === 'aberta' ? `<div class="cd-tempo" title="Tempo até o prazo"><i style="width:${U.pctPrazo(r.criado_em, r.prazo)}%"></i></div>` : ''}
         <div class="cd-fotos">${r.itens.slice(0, 5).map((it) => U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao }, 'cd-foto')).join('')}
           ${r.itens.length > 5 ? `<span class="cd-mais">+${r.itens.length - 5}</span>` : ''}</div>
         <div class="rs-pago">
@@ -73,7 +75,9 @@ Telas.reservas = (() => {
           <div class="rs-valores"><span>Pago <b>${brl(r.pago)}</b></span><span>Falta <b>${brl(r.falta)}</b></span></div>
         </div>
         <div class="cd-rodape"><span><b>${r.pecas}</b> peça(s) · <b>${brl(r.total)}</b></span>
-          ${r.status === 'aberta' ? `<button class="btn btn-primario btn-peq" data-retirar>${Icone('sacola')} Retirar</button>` : ''}</div>
+          <span class="cd-acoes">${r.status === 'aberta' && Zap.attrs(r.cliente_telefone, 'reserva', { nome: r.cliente_nome, prazo: dataBr(r.prazo), falta: brl(r.falta) })
+    ? `<a class="btn-ico cd-zap" title="Lembrar no WhatsApp" ${Zap.attrs(r.cliente_telefone, 'reserva', { nome: r.cliente_nome, prazo: dataBr(r.prazo), falta: brl(r.falta) })}>${Icone('whatsapp')}</a>` : ''}
+          ${r.status === 'aberta' ? `<button class="btn btn-primario btn-peq" data-retirar>${Icone('sacola')} Retirar</button>` : ''}</span></div>
       </div>`;
     }).join('') || `<div class="vd-vazio cd-vazio">${Ilustracao.svg('presente', 150)}<b>Nenhuma reserva ${status === 'aberta' ? 'aberta' : ''}</b><br>
       <small>No caixa: bipe as peças, escolha a cliente e clique em <b>Reservar</b>.</small></div>`;

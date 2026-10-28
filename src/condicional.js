@@ -12,7 +12,7 @@ function instalarCondicional({ db, rota, erro, inteiro, texto, plano, planos, tr
     const c = plano(
       db
         .prepare(
-          `SELECT c.*, cl.nome AS cliente_nome, cl.telefone AS cliente_telefone, cl.cpf AS cliente_cpf
+          `SELECT c.*, cl.nome AS cliente_nome, cl.telefone AS cliente_telefone, cl.cpf AS cliente_cpf, cl.foto_versao AS cliente_foto
            FROM condicionais c JOIN clientes cl ON cl.id = c.cliente_id WHERE c.id = ?`
         )
         .get(id)

@@ -30,11 +30,17 @@
       <span class="avatar" title="${esc(usuario.nome)}">${esc(iniciais(usuario.nome))}</span>
       <span class="usuario-txt"><b>${esc(usuario.nome)}</b><small>${usuario.perfil === 'admin' ? 'Administrador(a)' : 'Vendedor(a)'}</small></span>
       <span class="usuario-acoes">
+        <button class="btn-ico" id="tema" title="Modo escuro / claro">${Icone(document.documentElement.classList.contains('escuro') ? 'sol' : 'lua')}</button>
         <button class="btn-ico" id="minha-senha" title="Trocar minha senha">${Icone('chave')}</button>
         <button class="btn-ico perigo" id="trocar" title="Sair / trocar usuário">${Icone('sair')}</button>
       </span>`;
     document.getElementById('trocar').onclick = sair;
     document.getElementById('minha-senha').onclick = trocarSenha;
+    document.getElementById('tema').onclick = (ev) => {
+      const escuro = document.documentElement.classList.toggle('escuro');
+      try { localStorage.setItem('tema', escuro ? 'escuro' : 'claro'); } catch { /* só nesta sessão */ }
+      ev.currentTarget.innerHTML = Icone(escuro ? 'sol' : 'lua');
+    };
     U.config().then((cfg) => {
       // Primeira vez do administrador: abre o assistente de boas-vindas.
       if (usuario.perfil === 'admin' && cfg.boas_vindas_ok !== '1') location.hash = '#/boas-vindas';
@@ -278,6 +284,13 @@
     U.fecharModal();
     document.querySelectorAll('.menu a').forEach((a) =>
       a.classList.toggle('ativo', a.dataset.rota === nome));
+    // A tela anterior some rapidinho antes da próxima entrar.
+    if (conteudo.firstElementChild && !Animacoes.reduzir()) {
+      conteudo.classList.add('saindo');
+      await new Promise((ok) => setTimeout(ok, 110));
+      if (telaAtual !== tela) return; // clicou em outra tela no meio do caminho
+    }
+    document.body.classList.add('carregando-tela');
     conteudo.innerHTML = '';
     conteudo.className = `tela-${nome}`;
     // No PDV o menu fica estreito (só ícones) para sobrar espaço para a venda.
@@ -295,6 +308,7 @@
         conteudo.innerHTML = `<div class="vazio">Não foi possível abrir a tela: ${esc(e.message)}</div>`;
       }
     }
+    if (telaAtual === tela) document.body.classList.remove('carregando-tela');
     atualizarStatusCaixa();
     atualizarBolinhaEspera();
   }
@@ -308,6 +322,17 @@
       el.textContent = r.chegaram;
       el.title = `${r.chegaram} peça(s) da lista de espera chegaram`;
     } catch { el.hidden = true; }
+    // Crediário atrasado, condicional para devolver hoje e reservas vencidas.
+    try {
+      const a = await api('/api/sistema/avisos');
+      const txt = { crediario: 'cliente(s) com parcela atrasada', condicional: 'condicional(is) para devolver hoje ou atrasada(s)', reservas: 'reserva(s) passaram do prazo' };
+      document.querySelectorAll('[data-bolinha]').forEach((b) => {
+        const v = a[b.dataset.bolinha] || 0;
+        b.hidden = !v;
+        b.textContent = v;
+        b.title = `${v} ${txt[b.dataset.bolinha]}`;
+      });
+    } catch { /* sem bolinhas */ }
   }
   window.atualizarBolinhaEspera = atualizarBolinhaEspera;
 

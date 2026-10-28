@@ -19,7 +19,7 @@ function instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, trans
     const r = plano(
       db
         .prepare(
-          `SELECT r.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone, c.cpf AS cliente_cpf, v.codigo AS vale_codigo
+          `SELECT r.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone, c.cpf AS cliente_cpf, c.foto_versao AS cliente_foto, v.codigo AS vale_codigo
            FROM reservas r JOIN clientes c ON c.id = r.cliente_id LEFT JOIN vales v ON v.id = r.vale_id WHERE r.id = ?`
         )
         .get(id)

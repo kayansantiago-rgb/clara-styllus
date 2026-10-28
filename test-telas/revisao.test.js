@@ -151,3 +151,27 @@ test('clientes em cartões com selos e filtros; ficha com linha do tempo; venda 
     await sis.fechar();
   }
 });
+
+test('menu com bolinhas de aviso; modo escuro liga, fica guardado e desliga', OPC, async () => {
+  const sis = await novoSistema();
+  try {
+    const d = await dadosBasicos(sis);
+    // Parcela vencida: o Crediário ganha a bolinha vermelha.
+    await sis.pagina.evaluate((x) => U.api('/api/vendas', { metodo: 'POST', corpo: { cliente_id: x.ana.id, itens: [{ produto_id: x.blusa.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 8990, parcelas: 1, primeiro_vencimento: '2020-01-10' }] } }), d);
+    await sis.ir('clientes');
+    await sis.pagina.waitForSelector('[data-bolinha="crediario"]:not([hidden])');
+    assert.equal((await sis.pagina.textContent('[data-bolinha="crediario"]')).trim(), '1');
+    assert.equal(await sis.pagina.isHidden('[data-bolinha="reservas"]'), true);
+
+    await sis.pagina.click('#tema');
+    assert.equal(await sis.pagina.evaluate(() => document.documentElement.classList.contains('escuro')), true);
+    await sis.pagina.reload();
+    await sis.pagina.waitForSelector('#tema');
+    assert.equal(await sis.pagina.evaluate(() => document.documentElement.classList.contains('escuro')), true);
+    await sis.pagina.click('#tema');
+    assert.equal(await sis.pagina.evaluate(() => localStorage.getItem('tema')), 'claro');
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});

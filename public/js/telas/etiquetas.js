@@ -3,6 +3,7 @@ Telas.etiquetas = (() => {
   const { esc, brl, api, aviso, erro, local } = U;
   const CHAVE = 'fila_etiquetas';
   let raiz;
+  let escolhida = 0; // peça da fila mostrada na prévia grande
 
   const fila = () => local.ler(CHAVE, []);
   const gravar = (f) => local.gravar(CHAVE, f);
@@ -122,9 +123,12 @@ Telas.etiquetas = (() => {
         atualizarBotao();
         return;
       }
+      const mini = ev.target.closest('[data-mini]');
+      if (mini) { escolhida = Number(mini.dataset.mini); desenhar(); return; }
       const b = ev.target.closest('[data-rm]');
       if (!b) return;
       f.splice(Number(b.dataset.rm), 1);
+      if (escolhida >= f.length) escolhida = 0;
       gravar(f);
       desenhar();
     });
@@ -140,28 +144,44 @@ Telas.etiquetas = (() => {
           <span class="p4-tags">${x.produto.tamanho ? `<span class="p4-tag">Tam ${esc(x.produto.tamanho)}</span>` : ''}${x.produto.cor ? `<span class="p4-tag">${esc(x.produto.cor)}</span>` : ''}<small>${brl(x.produto.preco_venda)}</small></span></div>
         <span class="qtd-ctrl p4-qtd"><button class="mini" data-menos="${i}">${Icone('menos')}</button>
           <input type="number" min="0" class="et-qtd" data-i="${i}" value="${x.quantidade}"><button class="mini" data-mais="${i}">${Icone('mais')}</button></span>
+        <div class="et-mini" data-mini="${i}" title="Como esta etiqueta vai sair (clique para ver grande)"></div>
         <button class="p4-remover" data-rm="${i}" title="Tirar da fila">${Icone('lixeira')}</button>
       </div>`).join('') || `<div class="p4-vazio">${Ilustracao.svg('etiqueta', 150)}<b>Fila vazia</b>
         <p>Bipe a peça acima, ou use o botão de etiqueta na tela de Produtos.<br>Ao cadastrar um produto, o sistema também oferece mandar as etiquetas para cá.</p></div>`;
     atualizarBotao();
 
     const cfg = await U.config();
-    const exemplo = f[0]?.produto || { nome: 'Vestido Midi Canelado', tamanho: 'M', cor: 'Preto', referencia: '1020', preco_venda: 15990, codigo: '2000000000015' };
+    const exemplo = f[escolhida]?.produto || f[0]?.produto || { nome: 'Vestido Midi Canelado', tamanho: 'M', cor: 'Preto', referencia: '1020', preco_venda: 15990, codigo: '2000000000015' };
     const previa = raiz.querySelector('#previa');
     previa.innerHTML = `<div class="previa-folha" style="width:${cfg.etiqueta_largura_mm}mm;height:${cfg.etiqueta_altura_mm}mm"></div>`;
     ajustarPrevia(cfg);
+    await pintarEtiqueta(previa.firstElementChild, exemplo, cfg, 16);
+    // Miniatura de cada etiqueta da fila, do jeito que vai sair.
+    const px = 96 / 25.4;
+    const zoom = Math.min(0.62, 96 / ((Number(cfg.etiqueta_largura_mm) || 40) * px), 64 / ((Number(cfg.etiqueta_altura_mm) || 30) * px));
+    for (const el of raiz.querySelectorAll('[data-mini]')) {
+      const x = f[Number(el.dataset.mini)];
+      if (!x) continue;
+      el.classList.toggle('sel', Number(el.dataset.mini) === escolhida);
+      el.innerHTML = `<div class="previa-folha" style="width:${cfg.etiqueta_largura_mm}mm;height:${cfg.etiqueta_altura_mm}mm;zoom:${zoom.toFixed(3)}"></div>`;
+      await pintarEtiqueta(el.firstElementChild, x.produto, cfg, 8);
+    }
+  }
+
+  /** Desenha a etiqueta de uma peça dentro de "folha" (modelo pronto ou "Minha etiqueta"). */
+  async function pintarEtiqueta(folha, produto, cfg, escala) {
     if (EtiquetaLayout.ativo(cfg)) {
       const layout = EtiquetaLayout.ler(cfg);
       await EtiquetaLayout.pronto(layout);
-      const c = EtiquetaLayout.canvas(layout, exemplo, cfg, 16);
+      const c = EtiquetaLayout.canvas(layout, produto, cfg, escala);
       c.className = 'et-previa-canvas';
-      previa.firstElementChild.appendChild(c);
+      folha.appendChild(c);
       return;
     }
     // Isola o CSS da etiqueta num shadow root para não afetar a página.
-    const sombra = previa.firstElementChild.attachShadow({ mode: 'open' });
+    const sombra = folha.attachShadow({ mode: 'open' });
     sombra.innerHTML = `<style>${Impressao.cssEtiquetas({ ...cfg, etiqueta_colunas: '2' }).replace(/@page[^}]*}/g, '')}
-      .etq { outline: none; background: #fff; }</style>${Impressao.htmlEtiqueta(exemplo, cfg)}`;
+      .etq { outline: none; background: #fff; }</style>${Impressao.htmlEtiqueta(produto, cfg)}`;
   }
 
   /** Aumenta a prévia o quanto cabe no quadro (etiqueta de 40, 50, 60 mm… nunca passa da borda). */
