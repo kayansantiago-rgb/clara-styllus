@@ -146,3 +146,29 @@ test('lista do crediário traz o mapa das parcelas (pagas, vencidas, a vencer) e
   assert.equal(ficha.historico.length, 1);
   assert.equal(ficha.pecas_compradas[0].venda_id, v.corpo.id);
 });
+
+test('relatório: venda no crediário não é faturamento; só entra quando a cliente paga (inclusive débito antigo)', () => {
+  const { chamar, produto, cliente } = preparar();
+  const d = hoje();
+  // Venda à vista de R$ 300 e venda no crediário de R$ 300.
+  chamar('POST', '/api/vendas', { itens: [{ produto_id: produto.id, quantidade: 1 }], pagamentos: [{ forma: 'pix', valor: 30000 }] });
+  chamar('POST', '/api/vendas', { cliente_id: cliente.id, itens: [{ produto_id: produto.id, quantidade: 1 }], pagamentos: [{ forma: 'crediario', valor: 30000, parcelas: 3 }] });
+  let r = chamar('GET', `/api/relatorios?de=${d}&ate=${d}`).corpo;
+  assert.equal(r.totais.faturamento, 30000);
+  assert.equal(r.totais.vendido_crediario, 30000);
+  assert.equal(r.totais.vendido, 60000);
+  assert.ok(!r.formas.some((f) => f.forma === 'crediario'));
+
+  // Débito antigo de R$ 50 lançado e pago em dinheiro: entra no faturamento.
+  const deb = chamar('POST', `/api/crediario/clientes/${cliente.id}/debito`, { valor: 5000, descricao: 'Caderno antigo' });
+  assert.equal(deb.status, 200, JSON.stringify(deb.corpo));
+  const rec = chamar('POST', `/api/crediario/clientes/${cliente.id}/receber`, { valor: 5000, forma: 'dinheiro' });
+  assert.equal(rec.status, 200, JSON.stringify(rec.corpo));
+  r = chamar('GET', `/api/relatorios?de=${d}&ate=${d}`).corpo;
+  assert.equal(r.totais.recebido_crediario, 5000);
+  assert.equal(r.totais.faturamento, 35000);
+  assert.equal(r.formas.find((f) => f.forma === 'crediario_recebido').valor, 5000);
+  assert.equal(r.por_dia.reduce((a, x) => a + x.faturamento, 0), 35000);
+  // Meta do mês no Início usa a mesma conta.
+  assert.equal(chamar('GET', '/api/painel').corpo.mes.faturamento, 35000);
+});

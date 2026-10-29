@@ -3626,3 +3626,9 @@ body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
 .pdv5 #t-reservar { --c: #e08a3a; } .pdv5 #t-crediario { --c: #b8798a; } .pdv5 #t-mais { --c: #2f9e6a; }
 .pdv5 .p4-acao:hover .i { transform: scale(1.08); }
 @media (max-width: 1500px) { .pdv5 .p4-acao .i { width: 15px; height: 15px; padding: 4px; } }
+.rl-kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.rl-kpi-cred small strong { color: var(--texto); font-weight: 700; }
+.rl-cred-dica { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; padding: 8px 10px; border-radius: 12px; background: var(--rosa-claro); font-size: 12.5px; }
+.rl-cred-dica .i { width: 15px; height: 15px; flex-shrink: 0; color: var(--rosa); }
+.rl-cred-dica { display: block; line-height: 1.45; }
+.rl-cred-dica .i { vertical-align: -3px; margin-right: 4px; }

@@ -9,7 +9,8 @@ Telas.relatorios = (() => {
   }
 
   const PERIODOS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['mes', 'Este mês'], ['passado', 'Mês passado'], ['outro', 'Escolher datas']];
-  const COR_FORMA = { dinheiro: '#2f9e6a', pix: '#16a596', debito: '#2f5fa8', credito: '#7a49a6', crediario: '#b06d80', vale: '#c99a3e', outro: '#7a6d74' };
+  const COR_FORMA = { dinheiro: '#2f9e6a', pix: '#16a596', debito: '#2f5fa8', credito: '#7a49a6', crediario: '#b06d80', crediario_recebido: '#b06d80', vale: '#c99a3e', outro: '#7a6d74' };
+  const nomeForma = (f) => (f === 'crediario_recebido' ? 'Crediário recebido' : U.FORMAS[f] || f);
   const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const SEMANA_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
   const SEMANA_ORDEM = [1, 2, 3, 4, 5, 6, 0];
@@ -187,8 +188,12 @@ Telas.relatorios = (() => {
         </div>
       </div>
       <div class="vd-kpis rl-kpis">
-        <div class="vd-kpi destaque"><span>${Icone('carteira')} Faturamento</span><b>${brl(t.faturamento)}</b>
+        <div class="vd-kpi destaque" title="Vendas pagas na hora + parcelas do crediário recebidas. Venda no crediário só entra quando a cliente paga.">
+          <span>${Icone('carteira')} Faturamento</span><b>${brl(t.faturamento)}</b>
           <small>${variacao(t.faturamento, r.anterior.faturamento)} vs. ${brl(r.anterior.faturamento)} no período anterior</small></div>
+        <div class="vd-kpi rl-kpi-cred" title="Vendido no crediário neste período: ainda a receber. Entra no faturamento quando a cliente pagar.">
+          <span>${Icone('caderno')} Vendido no crediário</span><b>${brl(t.vendido_crediario)}</b>
+          <small>a receber · recebido no período <strong>${brl(t.recebido_crediario)}</strong></small></div>
         <div class="vd-kpi vd-kpi-cai"><span>${Icone('dinheiro')} Cai na conta</span><b>${brl(t.cai_na_conta ?? t.faturamento)}</b>
           <small>${t.faturamento - (t.cai_na_conta ?? t.faturamento) ? `− ${brl(t.faturamento - t.cai_na_conta)} de taxas` : 'sem taxas no período'}${t.juros_repassados ? ` · inclui ${brl(t.juros_repassados)} de juros pagos pelas clientes` : ''}</small></div>
         <div class="vd-kpi"><span>${Icone('recibo')} Vendas</span><b>${t.vendas}</b><small>${variacao(t.vendas, r.anterior.vendas)} · ${t.pecas} peça(s)</small></div>
@@ -201,7 +206,8 @@ Telas.relatorios = (() => {
         <div class="cartao"><div class="cabecalho-cartao"><h3 class="titulo-ico">${Icone('grafico')} Faturamento por dia</h3></div>
           ${Graficos.colunas(diasDoPeriodo(r), { altura: 200 })}</div>
         <div class="cartao"><h3 class="titulo-ico">${Icone('cartao')} Formas de pagamento</h3>
-          ${Graficos.rosca(r.formas.map((f) => ({ nome: U.FORMAS[f.forma] || f.forma, valor: f.valor, cor: COR_FORMA[f.forma] || '#4a3aa7' })), { centro: 'Recebido' })}</div>
+          ${Graficos.rosca(r.formas.map((f) => ({ nome: nomeForma(f.forma), valor: f.valor, cor: COR_FORMA[f.forma] || '#4a3aa7' })), { centro: 'Entrou' })}
+          ${t.vendido_crediario ? `<p class="dica rl-cred-dica">${Icone('caderno')} Vendido no crediário: <b>${brl(t.vendido_crediario)}</b> (entra aqui quando a cliente pagar)</p>` : ''}</div>
       </div>
 
       <div class="rl-grade">
@@ -209,7 +215,7 @@ Telas.relatorios = (() => {
           <p class="dica">${pico ? `Mais vendas entre <b>${pico.hora}h e ${pico.hora + 1}h</b>. Bom horário para ter mais gente no caixa.` : 'Sem vendas no período.'}</p>
           ${Graficos.colunas(horas, { altura: 150, formato: qtd })}</div>
         <div class="cartao"><h3 class="titulo-ico">${Icone('caderno')} Dia da semana</h3>
-          <p class="dica">Quanto a loja fatura em cada dia da semana no período.</p>
+          <p class="dica">Quanto a loja vende em cada dia da semana no período.</p>
           ${Graficos.colunas(semana, { altura: 150 })}</div>
       </div>
 
@@ -229,13 +235,14 @@ Telas.relatorios = (() => {
       <div class="duas-colunas">
         <div class="cartao dre">
           <h3 class="titulo-ico">${Icone('estrela')} Lucro real do período</h3>
-          <div class="linha"><span>Vendas</span><b>${brl(t.faturamento)}</b></div>
+          <div class="linha"><span>Entradas <small>(vendas pagas + crediário recebido)</small></span><b>${brl(t.faturamento)}</b></div>
           <div class="linha"><span>(−) Trocas/devoluções em vale</span><span class="txt-perigo">− ${brl(t.trocas)}</span></div>
           <div class="linha"><span>(−) Custo das peças vendidas</span><span class="txt-perigo">− ${brl(t.custo - t.custo_trocas)}</span></div>
           ${t.sinais_retidos ? `<div class="linha"><span>(+) Sinais de reserva que ficaram com a loja</span><span class="txt-ok">+ ${brl(t.sinais_retidos)}</span></div>` : ''}
           <div class="linha"><span>(−) Taxas das maquininhas</span><span class="txt-perigo">− ${brl(t.taxas)}</span></div>
           <div class="linha"><span>(−) Despesas da loja</span><span class="txt-perigo">− ${brl(t.despesas)}</span></div>
           ${t.compras_mercadoria ? `<p class="dica">As compras de mercadoria (${brl(t.compras_mercadoria)}) não entram aqui: o custo das peças vendidas já está na conta.</p>` : ''}
+          ${t.vendido_crediario ? `<p class="dica">Vendido no crediário no período: ${brl(t.vendido_crediario)}. Entra no lucro quando a cliente pagar as parcelas.</p>` : ''}
           <div class="linha total"><span>= Lucro real</span><b class="${t.lucro_real < 0 ? 'txt-perigo' : 'txt-ok'}">${brl(t.lucro_real)}</b></div>
           ${t.faturamento ? `<p class="dica">Margem real: <b>${((t.lucro_real / t.faturamento) * 100).toFixed(1).replace('.', ',')}%</b> das vendas.</p>` : ''}
         </div>

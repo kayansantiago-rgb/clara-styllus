@@ -28,7 +28,7 @@ const ResumoMes = (() => {
       faturamento: r.totais.faturamento,
       vendas: r.totais.vendas,
       pecas: r.totais.pecas || 0,
-      ticket: r.totais.vendas ? Math.round(r.totais.faturamento / r.totais.vendas) : 0,
+      ticket: r.totais.ticket_medio,
       anterior: ant.totais.faturamento,
       melhorDia,
       vendedora,

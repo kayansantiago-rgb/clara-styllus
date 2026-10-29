@@ -1498,6 +1498,25 @@ function criarApi(db, opcoes = {}) {
   }, 'admin');
 
   // ------------------------------------------------------------ relatórios
+  /**
+   * Dinheiro que entrou no período (regime de caixa): vendas pagas na hora (tudo menos crediário)
+   * + parcelas do crediário recebidas (de vendas ou de débitos antigos). Venda no crediário só vira
+   * faturamento quando a cliente paga.
+   */
+  function entradas(de, ate) {
+    const filtro = `v.status = 'concluida' AND date(v.criado_em) BETWEEN ? AND ?`;
+    const vendido = db.prepare(`SELECT COALESCE(SUM(total),0) AS n FROM vendas v WHERE ${filtro}`).get(de, ate).n;
+    const vendidoCrediario = db.prepare(
+      `SELECT COALESCE(SUM(p.valor),0) AS n FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
+       WHERE ${filtro} AND p.forma = 'crediario'`
+    ).get(de, ate).n;
+    const recebidoCrediario = db.prepare(
+      `SELECT COALESCE(SUM(valor),0) AS n FROM crediario_recebimentos WHERE status = 'ok' AND date(criado_em) BETWEEN ? AND ?`
+    ).get(de, ate).n;
+    return { vendido, vendido_crediario: vendidoCrediario, recebido_crediario: recebidoCrediario,
+      faturamento: vendido - vendidoCrediario + recebidoCrediario };
+  }
+
   rota('GET', '/api/relatorios', ({ query }) => {
     const hoje = new Date().toLocaleDateString('sv-SE');
     const de = texto(query.get('de'), 10) || hoje;
@@ -1521,8 +1540,15 @@ function criarApi(db, opcoes = {}) {
       .get(de, ate);
     totais.pecas = custo.pecas;
     totais.custo = custo.custo;
-    totais.lucro_bruto = totais.faturamento - custo.custo;
+    // Ticket médio: valor das vendas (inclui as do crediário), por venda.
     totais.ticket_medio = totais.vendas ? Math.round(totais.faturamento / totais.vendas) : 0;
+    // Faturamento = o que entrou: vendas pagas na hora + crediário recebido. O crediário vendido fica à parte.
+    const ent = entradas(de, ate);
+    totais.vendido = ent.vendido;
+    totais.vendido_crediario = ent.vendido_crediario;
+    totais.recebido_crediario = ent.recebido_crediario;
+    totais.faturamento = ent.faturamento;
+    totais.lucro_bruto = totais.faturamento - custo.custo;
 
     // Pagamentos: desconta o troco do dinheiro para mostrar o valor que realmente entrou.
     const formas = planos(
@@ -1531,17 +1557,24 @@ function criarApi(db, opcoes = {}) {
           `SELECT p.forma, SUM(p.valor) - CASE WHEN p.forma = 'dinheiro'
                THEN (SELECT COALESCE(SUM(troco),0) FROM vendas v WHERE ${filtro}) ELSE 0 END AS valor
            FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
-           WHERE ${filtro} GROUP BY p.forma ORDER BY valor DESC`
+           WHERE ${filtro} AND p.forma <> 'crediario' GROUP BY p.forma ORDER BY valor DESC`
         )
         .all(de, ate, de, ate)
     );
+    if (ent.recebido_crediario) formas.push({ forma: 'crediario_recebido', valor: ent.recebido_crediario });
+    formas.sort((a, b) => b.valor - a.valor);
     const porDia = planos(
       db
         .prepare(
-          `SELECT date(criado_em) AS dia, COUNT(*) AS vendas, SUM(total) AS faturamento
-           FROM vendas v WHERE ${filtro} GROUP BY dia ORDER BY dia`
+          `SELECT dia, SUM(vendas) AS vendas, SUM(valor) AS faturamento FROM (
+             SELECT date(v.criado_em) AS dia, 1 AS vendas,
+               v.total - COALESCE((SELECT SUM(p.valor) FROM venda_pagamentos p WHERE p.venda_id = v.id AND p.forma = 'crediario'),0) AS valor
+             FROM vendas v WHERE ${filtro}
+             UNION ALL
+             SELECT date(criado_em), 0, valor FROM crediario_recebimentos WHERE status = 'ok' AND date(criado_em) BETWEEN ? AND ?
+           ) GROUP BY dia ORDER BY dia`
         )
-        .all(de, ate)
+        .all(de, ate, de, ate)
     );
     const topProdutos = planos(
       db
@@ -1606,7 +1639,7 @@ function criarApi(db, opcoes = {}) {
     ));
     const totalTaxas = linhasTaxa.reduce((a, l) => a + l.taxa, 0);
     // Quanto das vendas realmente cai na conta (vendas antigas sem taxa gravada usam a taxa atual).
-    totais.cai_na_conta = totais.faturamento - linhasTaxa.filter((l) => l.origem === 'vendas').reduce((a, l) => a + l.taxa, 0);
+    totais.cai_na_conta = totais.faturamento - linhasTaxa.filter((l) => l.origem !== 'reserva').reduce((a, l) => a + l.taxa, 0);
     totais.taxas = totalTaxas;
     totais.lucro_apos_taxas = totais.lucro_bruto - totalTaxas;
     // Lucro real = vendas − trocas (com o custo das peças que voltaram) − custo − taxas − despesas.
@@ -1665,6 +1698,7 @@ function criarApi(db, opcoes = {}) {
       `SELECT COALESCE(SUM(i.quantidade),0) AS n FROM venda_itens i JOIN vendas v ON v.id = i.venda_id WHERE ${filtro}`
     ).get(desloca(de, -dias), desloca(de, -1)).n;
     anterior.ticket_medio = anterior.vendas ? Math.round(anterior.faturamento / anterior.vendas) : 0;
+    anterior.faturamento = entradas(desloca(de, -dias), desloca(de, -1)).faturamento;
     anterior.de = desloca(de, -dias);
     anterior.ate = desloca(de, -1);
     return {
@@ -1740,6 +1774,8 @@ function criarApi(db, opcoes = {}) {
          WHERE status = 'concluida' AND date(criado_em) BETWEEN ? AND ?`
       )
       .get(inicioMes, hoje);
+    // Meta do mês: conta o dinheiro que entrou (crediário só quando a cliente paga), igual aos relatórios.
+    mes.faturamento = entradas(inicioMes, hoje).faturamento;
     const [a, m] = hoje.split('-').map(Number);
     const diasNoMes = new Date(a, m, 0).getDate();
     const diaDoMes = Number(hoje.slice(8));

@@ -9,6 +9,11 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Relatórios pelo dinheiro que entrou**: venda no crediário não conta como faturamento; ela entra quando a
+  cliente paga a parcela (inclusive débitos antigos lançados à mão). O relatório mostra à parte quanto foi
+  **vendido no crediário** (a receber) e o **crediário recebido** aparece nas formas de pagamento. A meta do mês
+  e o resumo do mês em imagem seguem a mesma conta.
+
 - **Caixa ainda mais esperto**: a foto da peça "voa" até a sacola quando entra na venda; a busca pelo nome mostra
   cartões com foto (as variações do mesmo modelo juntas); se o modelo tem vários tamanhos/cores, abre a **grade**
   com o estoque de cada um para tocar no certo; sacola animada no caixa livre e atalhos do topo com ícones coloridos.
