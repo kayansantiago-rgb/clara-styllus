@@ -3652,3 +3652,11 @@ body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
 .cad-unico-dica .i { width: 18px; height: 18px; flex-shrink: 0; }
 .p4-tag.p4-tag-unico { background: var(--ouro-claro); color: #6b4d12; border-color: #ecd9ae; }
 .pr-unico { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--ouro-claro); color: #6b4d12; }
+
+/* Relatórios: os 6 quadros em 2 linhas de 3 (só ficam lado a lado em tela bem larga) e o valor nunca sai do quadro */
+.rl-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+@media (min-width: 1600px) { .rl-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; } }
+@media (max-width: 760px) { .rl-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+.rl-kpis .vd-kpi b { font-size: clamp(20px, 2vw, 28px); overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.rl-kpis .vd-kpi > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-cred-dica { margin-top: 22px !important; clear: both; }
