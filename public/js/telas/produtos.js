@@ -302,7 +302,7 @@ Telas.produtos = (() => {
         <button type="button" class="pm-foto" data-acao="grade" data-i="${i0}" title="Ver a grade">${U.miniatura(p0, 'pm-img')}</button>
         <div class="pm-info">
           <div class="pm-topo"><div><small class="pm-cat">${esc([p0.categoria, p0.marca].filter(Boolean).join(' · '))}</small>
-            <b class="pm-nome">${esc(g.nome)}</b>${p0.referencia ? `<small class="pm-ref">Ref ${esc(p0.referencia)}</small>` : ''}</div>
+            <b class="pm-nome">${esc(g.nome)}</b>${p0.preco_unico ? ' <span class="pr-unico">Preço único</span>' : ''}${p0.referencia ? `<small class="pm-ref">Ref ${esc(p0.referencia)}</small>` : ''}</div>
             <div class="pm-preco">${precos.length > 1 ? `<small>a partir de</small><b>${brl(Math.min(...precos))}</b>` : precoHtml(p0)}</div></div>
           ${linhasCor}
         </div>
@@ -439,8 +439,12 @@ Telas.produtos = (() => {
           </aside>
 
           <div class="cad-passos fp-principal">
+            ${novo && !opcoes.base ? `<div class="cad-tipo" id="cad-tipo">
+              <button type="button" class="cad-tipo-op ${opcoes.repetir && opcoes.repetir.unico ? '' : 'sel'}" data-tipo="grade">${Icone('roupa')}<span><b>Peça com tamanhos</b><small>Vestido, calça… cada tamanho e cor com seu código</small></span></button>
+              <button type="button" class="cad-tipo-op ${opcoes.repetir && opcoes.repetir.unico ? 'sel' : ''}" data-tipo="unico">${Icone('etiqueta')}<span><b>Várias peças, preço único</b><small>Brincos, meias, bijuterias… um código e uma etiqueta para todas</small></span></button>
+            </div>` : ''}
             <section class="cad-passo">
-              ${passo(1, 'Qual é a peça?', 'Nome e categoria')}
+              ${passo(1, '<span id="cad-t1">Qual é a peça?</span>', 'Nome e categoria')}
               <input name="nome" class="cad-nome" required value="${esc(p.nome)}" autofocus placeholder="Ex.: Vestido midi canelado">
               <div class="cad-cats fp-cats" id="fp-cats">${categorias.map((c) => `<button type="button" class="cad-cat ${String(p.categoria || '').toLowerCase() === c.toLowerCase() ? 'sel' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
               <details class="cad-mais" ${p.marca || p.referencia ? 'open' : ''}><summary>Categoria, marca e referência</summary>
@@ -469,6 +473,17 @@ Telas.produtos = (() => {
               </details>
             </section>
 
+            ${novo && !opcoes.base ? `
+            <section class="cad-passo fp-unico" hidden>
+              ${passo(3, 'Quantas peças chegaram?', 'Todas com o mesmo código e a mesma etiqueta')}
+              <div class="cad-unico">
+                <span class="qtd-ctrl cad-unico-qtd"><button type="button" class="mini" data-un="-1">${Icone('menos')}</button>
+                  <input name="qtd_unico" type="number" min="0" inputmode="numeric" value="${opcoes.repetir && opcoes.repetir.unico ? '' : ''}" placeholder="0">
+                  <button type="button" class="mini" data-un="1">${Icone('mais')}</button></span>
+                <div class="cad-unico-chips">${[5, 10, 20, 30, 50].map((n) => `<button type="button" class="cad-mk" data-unq="${n}"><b>${n}</b></button>`).join('')}</div>
+              </div>
+              <p class="cad-unico-dica">${Icone('etiqueta')} Sai <b>uma etiqueta só</b> com PREÇO ÚNICO e o preço bem grande (dá para imprimir mais na fila). No caixa, bipe uma vez para cada peça vendida.</p>
+            </section>` : ''}
             ${novo ? `
             <section class="cad-passo fp-grade">
               ${passo(3, 'Tamanhos, cores e quantidades', 'Toque nos tamanhos e nas cores que chegaram')}
@@ -484,6 +499,8 @@ Telas.produtos = (() => {
               </div>
               <label class="interruptor"><input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}><span class="trilho"></span>
                 <span class="txt"><b>Produto ativo</b><small>Desligado, a peça some do caixa e das buscas.</small></span></label>
+              <label class="interruptor"><input type="checkbox" name="preco_unico" ${p.preco_unico ? 'checked' : ''}><span class="trilho"></span>
+                <span class="txt"><b>Preço único (várias peças)</b><small>Etiqueta "PREÇO ÚNICO" para peças parecidas com o mesmo preço.</small></span></label>
             </section>`}
 
             <details class="cad-mais cad-outras fp-opcoes" ${p.atalho || p.servico ? 'open' : ''}><summary>Outras opções (botão rápido no caixa, serviço)</summary>
@@ -515,6 +532,28 @@ Telas.produtos = (() => {
     const editor = novo
       ? GradeEditor.criar(corpo.querySelector('#grade-editor'), { existentes, tamanhos: tamIniciais, cores: corIniciais, codigoPendente: opcoes.codigo })
       : null;
+    // ---------------------------------------------------- tipo: grade ou preço único
+    let unico = !novo && !!p.preco_unico;
+    const tipoBox = corpo.querySelector('#cad-tipo');
+    const qtdUnico = () => Math.max(0, Number(form.qtd_unico && form.qtd_unico.value) || 0);
+    const mudarTipo = (t) => {
+      unico = t === 'unico';
+      tipoBox.querySelectorAll('[data-tipo]').forEach((b) => b.classList.toggle('sel', b.dataset.tipo === t));
+      corpo.querySelector('.fp-grade').hidden = unico;
+      corpo.querySelector('.fp-unico').hidden = !unico;
+      corpo.querySelector('#cad-t1').textContent = unico ? 'Que peças são?' : 'Qual é a peça?';
+      form.nome.placeholder = unico ? 'Ex.: Brincos variados, Meias, Bijuterias' : 'Ex.: Vestido midi canelado';
+      vitrine();
+    };
+    if (tipoBox) {
+      tipoBox.onclick = (ev) => { const b = ev.target.closest('[data-tipo]'); if (b) { mudarTipo(b.dataset.tipo); form.nome.focus(); } };
+      corpo.querySelector('.fp-unico').onclick = (ev) => {
+        const b = ev.target.closest('[data-un],[data-unq]');
+        if (!b) return;
+        form.qtd_unico.value = b.dataset.unq ? b.dataset.unq : Math.max(0, qtdUnico() + Number(b.dataset.un));
+        vitrine();
+      };
+    }
     // ---------------------------------------------------- vitrine (lado esquerdo, ao vivo)
     const vitrine = U.debounce(() => desenharVitrine(), 120);
     const margem = () => {
@@ -560,13 +599,18 @@ Telas.produtos = (() => {
       corpo.querySelector('#cad-v-preco').innerHTML = v > 0
         ? `${de > v ? `<s>${brl(de)}</s>` : ''}<b>${brl(v)}</b>` : '<span class="cad-vazio">R$ 0,00</span>';
       // Passos completos ganham o ✓.
-      const feito = [!!nome, v > 0, editor ? editor.variantes(false).length > 0 : !!form.codigo.value];
+      const feito = [!!nome, v > 0, unico && novo ? qtdUnico() > 0 : editor ? editor.variantes(false).length > 0 : !!form.codigo.value];
       corpo.querySelectorAll('[data-passo]').forEach((el) => {
         const ok = feito[Number(el.dataset.passo) - 1];
         el.classList.toggle('ok', ok);
         el.textContent = ok ? '✓' : el.dataset.passo;
       });
-      if (editor) {
+      if (editor && unico) {
+        const n = qtdUnico();
+        corpo.querySelector('#cad-total').innerHTML = n
+          ? `<b>${n}</b> peça(s) · preço único${v ? ` · <span>${brl(v * n)} em estoque</span>` : ''}`
+          : '<span class="txt-suave">Nenhuma peça ainda</span>';
+      } else if (editor) {
         const vs = editor.variantes(false);
         const pecas = vs.reduce((a, x) => a + x.quantidade, 0);
         corpo.querySelector('#cad-total').innerHTML = pecas
@@ -578,7 +622,9 @@ Telas.produtos = (() => {
         nome: nome || 'Nome da peça', categoria: cat, preco_venda: v, preco_anterior: de > v ? de : null,
         tamanho: editor ? (editor.tamanhos()[0] || '') : form.tamanho.value, cor: editor ? (editor.cores()[0] || '') : form.cor.value,
         referencia: form.referencia.value, codigo: (!editor && form.codigo.value) || '2000000000015',
+        preco_unico: novo ? unico : !!(form.preco_unico && form.preco_unico.checked),
       };
+      if (pr.preco_unico) { pr.tamanho = ''; pr.cor = ''; }
       const caixa = corpo.querySelector('#cad-etq');
       const larg = Number(cfg.etiqueta_largura_mm) || 40;
       const alt = Number(cfg.etiqueta_altura_mm) || 30;
@@ -776,6 +822,7 @@ Telas.produtos = (() => {
     form.preco_venda.addEventListener('input', () => { form.preco_venda.dataset.mexeu = '1'; });
     form.preco_venda.oninput = margem;
     margem();
+    if (tipoBox && opcoes.repetir && opcoes.repetir.unico) mudarTipo('unico');
 
     form.onsubmit = async (ev) => {
       ev.preventDefault();
@@ -796,10 +843,23 @@ Telas.produtos = (() => {
       }
       let chegaram = [];
       try {
+        if (novo && unico) {
+          // Várias peças com o mesmo preço: um produto só, com a quantidade toda no estoque.
+          const n = qtdUnico();
+          if (!n) return aviso('Diga quantas peças chegaram.', 'erro');
+          const criado = await api('/api/produtos', { metodo: 'POST', corpo: { ...base, preco_unico: true, estoque: n } });
+          await salvarFoto([criado.id]);
+          aviso(`${criado.nome}: ${n} peça(s) com preço único cadastradas.`);
+          // Uma etiqueta só para todas (dá para imprimir mais na fila, se quiser uma por peça).
+          Telas.etiquetas.depoisDaEntrada([{ produto: criado, quantidade: 1 }]);
+          if (raiz) carregar();
+          if (fazerOutro) return formulario(null, { repetir: { categoria: base.categoria, marca: base.marca, unico: true } });
+          return fecharModal();
+        }
         if (!novo) {
           await api(`/api/produtos/${p.id}`, {
             metodo: 'PUT',
-            corpo: { ...base, tamanho: d.tamanho, cor: d.cor, codigo: d.codigo, ativo: !!d.ativo },
+            corpo: { ...base, tamanho: d.tamanho, cor: d.cor, codigo: d.codigo, ativo: !!d.ativo, preco_unico: !!d.preco_unico },
           });
           let ids = [p.id];
           if (foto !== undefined && corpo.querySelector('#foto-cor')?.checked) {

@@ -200,6 +200,19 @@ const Impressao = (() => {
     const detalhes = [p.tamanho && `Tam ${p.tamanho}`, p.cor, p.referencia && `Ref ${p.referencia}`]
       .filter(Boolean).join(' · ');
     const modelo = cfg.etiqueta_modelo || 'padrao';
+    const loja = cfg.etiqueta_mostrar_loja !== '1' || modelo === 'simples' ? ''
+      : cfg.etiqueta_logo === '1' ? `<div class="loja-logo"><img src="${location.origin}/img/logo-etiqueta.png" alt="${esc(cfg.loja_nome || 'Clara Styllus')}"></div>`
+        : `<div class="loja">${esc(cfg.loja_nome || 'Clara Styllus')}</div>`;
+    // Preço único: várias peças parecidas com a mesma etiqueta.
+    if (p.preco_unico) {
+      return `<div class="etq modelo-preco etq-unico">${loja}
+        <div class="unico-faixa">PREÇO ÚNICO</div>
+        <div class="nome">${esc(p.nome)}</div>
+        ${cfg.etiqueta_mostrar_preco !== '1' ? '' : `<div class="preco">${brl(p.preco_venda)}</div>`}
+        <div class="barras">${CodigoBarras.svg(p.codigo)}</div>
+        <div class="cod">${esc(p.codigo)}</div>
+      </div>`;
+    }
     return `<div class="etq modelo-${esc(modelo)}">
       ${cfg.etiqueta_mostrar_loja !== '1' || modelo === 'simples' ? ''
     : cfg.etiqueta_logo === '1' ? `<div class="loja-logo"><img src="${location.origin}/img/logo-etiqueta.png" alt="${esc(cfg.loja_nome || 'Clara Styllus')}"></div>`
@@ -252,6 +265,7 @@ const Impressao = (() => {
       .modelo-preco .nome { font-size: ${Math.max(5, h * 0.17)}pt; }
       .modelo-preco .preco { font-size: ${Math.max(9, h * 0.52)}pt; }
       .modelo-preco .de + .preco { font-size: ${Math.max(8, h * 0.42)}pt; }
+      .unico-faixa { background: #000; color: #fff; font-weight: 900; letter-spacing: 1.5px; font-size: ${Math.max(5, h * 0.16)}pt; padding: 0 2mm; border-radius: 1mm; line-height: 1.25; }
       .avista { font-size: ${Math.max(6, h * 0.24)}pt; font-weight: bold; line-height: 1.1; }
       .parcela { font-size: ${Math.max(8, h * 0.36)}pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
       .sjuros { font-size: ${Math.max(5, h * 0.15)}pt; text-transform: uppercase; letter-spacing: .5px; line-height: 1.1; }

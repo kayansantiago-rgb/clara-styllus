@@ -343,7 +343,7 @@ Telas.pdv = (() => {
           ${U.miniatura(p, 'p4-item-foto')}
           <div class="p4-item-txt">
             <b title="${esc(p.nome)}">${esc(p.nome)}</b>
-            <span class="p4-tags">${p.tamanho ? `<span class="p4-tag">Tam ${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${esc(p.cor)}</span>` : ''}${tagEstoque(p)}<small>${esc(p.codigo)}</small></span>
+            <span class="p4-tags">${p.preco_unico ? '<span class="p4-tag p4-tag-unico">Preço único</span>' : ''}${p.tamanho ? `<span class="p4-tag">Tam ${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${esc(p.cor)}</span>` : ''}${tagEstoque(p)}<small>${esc(p.codigo)}</small></span>
           </div>
           <div class="p4-item-preco">${liq ? `<s>${num(p.preco_anterior)}</s>` : ''}<span>${num(p.preco_venda)}</span><small>cada</small></div>
           <span class="qtd-ctrl p4-qtd"><button class="mini" data-acao="menos" title="Menos uma">${Icone('menos')}</button><span>${it.quantidade}</span><button class="mini" data-acao="mais" title="Mais uma">${Icone('mais')}</button></span>

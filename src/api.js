@@ -366,6 +366,7 @@ function criarApi(db, opcoes = {}) {
     if ('ativo' in corpo) p.ativo = corpo.ativo ? 1 : 0;
     if ('servico' in corpo) p.servico = corpo.servico ? 1 : 0;
     if ('atalho' in corpo) p.atalho = corpo.atalho ? 1 : 0;
+    if ('preco_unico' in corpo) p.preco_unico = corpo.preco_unico ? 1 : 0;
     if (!parcial || 'preco_anterior' in corpo) {
       // Preço "De" (liquidação): só faz sentido se for maior que o preço atual.
       const ant = inteiro(corpo.preco_anterior, 'preco_anterior', { min: 0, padrao: 0 });
@@ -569,8 +570,8 @@ function criarApi(db, opcoes = {}) {
           p.preco_custo, p.preco_venda, estoqueInicial, p.estoque_minimo, p.ncm,
           p.preco_anterior && p.preco_anterior > p.preco_venda ? p.preco_anterior : null);
       const id = Number(r.lastInsertRowid);
-      if (p.servico || p.atalho) {
-        db.prepare('UPDATE produtos SET servico = ?, atalho = ? WHERE id = ?').run(p.servico || 0, p.atalho || 0, id);
+      if (p.servico || p.atalho || p.preco_unico) {
+        db.prepare('UPDATE produtos SET servico = ?, atalho = ?, preco_unico = ? WHERE id = ?').run(p.servico || 0, p.atalho || 0, p.preco_unico || 0, id);
       }
       if (!p.codigo) {
         db.prepare('UPDATE produtos SET codigo = ? WHERE id = ?').run(gerarEan13Interno(id), id);

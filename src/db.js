@@ -497,6 +497,10 @@ function migrar(db) {
   if (!colunas('produtos').includes('foto_versao')) {
     db.exec('ALTER TABLE produtos ADD COLUMN foto_versao INTEGER');
   }
+  // Preço único: várias peças parecidas (brincos, meias…) com um código e uma etiqueta só.
+  if (!colunas('produtos').includes('preco_unico')) {
+    db.exec('ALTER TABLE produtos ADD COLUMN preco_unico INTEGER NOT NULL DEFAULT 0');
+  }
   db.exec(`CREATE TABLE IF NOT EXISTS produto_fotos (
     produto_id INTEGER PRIMARY KEY REFERENCES produtos(id),
     tipo TEXT NOT NULL,

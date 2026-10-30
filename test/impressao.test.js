@@ -192,3 +192,15 @@ test('crediário, condicional e reserva: só a via da cliente, sem linha de assi
   assert.doesNotMatch(cliente, /_{10}/);
   assert.match(doc.condicional(cd, cfg, 'Via da loja').texto, /_{10}/);
 });
+
+test('etiqueta "preço único": várias peças com um código só, sai PRECO UNICO e o preço grande (ZPL, EPL e TSPL)', () => {
+  const { gerarEtiquetas } = require('../src/impressao/etiquetas');
+  const unico = { ...prod, nome: 'Brincos variados', tamanho: 'M', cor: 'Preto', preco_venda: 1500, preco_unico: 1 };
+  for (const modo of ['zpl', 'epl', 'tspl']) {
+    const saida = gerarEtiquetas([{ produto: unico, quantidade: 1 }], { ...cfgEtq, etiqueta_colunas: '1', impressao_etiqueta_modo: modo }).toString('latin1');
+    assert.match(saida, /PRECO UNICO/);
+    assert.match(saida, /BRINCOS VARIADOS/);
+    assert.match(saida, /R\$ 15,00/);
+    assert.doesNotMatch(saida, /TAM M/); // tamanho e cor não aparecem: vale para várias peças
+  }
+});

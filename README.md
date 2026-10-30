@@ -9,6 +9,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Várias peças, preço único**: no cadastro, escolha "Várias peças, preço único" para brincos, meias,
+  bijuterias… Um código só para todas, o estoque com a quantidade que chegou e **uma etiqueta** com
+  "PREÇO ÚNICO" e o preço bem grande (dá para imprimir mais na fila). No caixa, bipe uma vez por peça vendida.
+
 - **Relatórios pelo dinheiro que entrou**: venda no crediário não conta como faturamento; ela entra quando a
   cliente paga a parcela (inclusive débitos antigos lançados à mão). O relatório mostra à parte quanto foi
   **vendido no crediário** (a receber) e o **crediário recebido** aparece nas formas de pagamento. A meta do mês

@@ -61,6 +61,17 @@ function conteudo(p, cfg, m) {
     if (cfg.etiqueta_logo === '1') linhas.push({ logo: true, alt: (destaque ? 0.13 : modelo === 'parcelado' ? 0.15 : 0.17) * h });
     else linhas.push({ texto: cfg.loja_nome || 'Clara Styllus', alt: (destaque ? 0.08 : 0.1) * h });
   }
+  // Preço único: várias peças com a mesma etiqueta — "PREÇO ÚNICO", o grupo e o preço bem grande.
+  if (p.preco_unico) {
+    linhas.push({ texto: 'PRECO UNICO', alt: 0.085 * h });
+    linhas.push({ texto: p.nome, alt: 0.08 * h });
+    if (cfg.etiqueta_mostrar_preco === '1') linhas.push({ texto: preco(p.preco_venda), alt: 0.26 * h });
+    return linhas.map((l) => (l.logo ? { ...l, alt: Math.max(16, Math.round(l.alt)) } : {
+      ...l,
+      texto: semAcento(String(l.texto).replace(/[\x00-\x1f\x7f]+/g, ' ')).toUpperCase(),
+      alt: Math.max(12, Math.round(l.alt)),
+    }));
+  }
   linhas.push({ texto: p.nome, alt: (destaque ? 0.09 : 0.11) * h });
   if (det) linhas.push({ texto: det, alt: (destaque ? 0.075 : 0.085) * h });
   if (cfg.etiqueta_mostrar_preco === '1' && modelo === 'parcelado' && parcelasEtiqueta(cfg) >= 2) {

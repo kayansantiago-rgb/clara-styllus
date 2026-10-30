@@ -61,3 +61,31 @@ test('cadastro rápido: categoria pelo nome, tamanhos lembrados, "fazer outro" e
     await sis.fechar();
   }
 });
+
+test('cadastro "várias peças, preço único": um código só, estoque com a quantidade e 1 etiqueta na fila', { skip: require('./ajuda').pular, timeout: 90000 }, async () => {
+  const { novoSistema, dadosBasicos } = require('./ajuda');
+  const assert = require('node:assert/strict');
+  const sis = await novoSistema();
+  try {
+    await dadosBasicos(sis);
+    await sis.ir('produtos');
+    await sis.pagina.click('#novo');
+    await sis.pagina.click('[data-tipo=unico]');
+    assert.equal(await sis.pagina.isHidden('.fp-grade'), true);
+    await sis.pagina.fill('#f-prod [name=nome]', 'Meias soquete');
+    await sis.pagina.fill('#f-prod [name=preco_venda]', '9,90');
+    await sis.pagina.click('[data-unq="30"]');
+    await sis.pagina.click('#f-prod button.btn-primario[type=submit]');
+    await sis.pagina.waitForTimeout(900);
+    const lista = await sis.api('/api/produtos?q=Meias');
+    assert.equal(lista.length, 1);
+    assert.equal(lista[0].preco_unico, 1);
+    assert.equal(lista[0].estoque, 30);
+    assert.equal(lista[0].preco_venda, 990);
+    const fila = await sis.pagina.evaluate(() => U.local.ler('fila_etiquetas', []));
+    assert.equal(fila.find((x) => x.produto.id === lista[0].id).quantidade, 1);
+    assert.deepEqual(sis.erros, []);
+  } finally {
+    await sis.fechar();
+  }
+});
