@@ -9,6 +9,9 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Valor da parcela na hora**: no pagamento em crédito ou crediário, cada opção de parcelas já mostra quanto
+  fica ("3x de R$ 50,00 sem juros"), e a parcela escolhida aparece em destaque no total.
+
 - **Várias peças, preço único**: no cadastro, escolha "Várias peças, preço único" para brincos, meias,
   bijuterias… Um código só para todas, o estoque com a quantidade que chegou e **uma etiqueta** com
   "PREÇO ÚNICO" e o preço bem grande (dá para imprimir mais na fila). No caixa, bipe uma vez por peça vendida.

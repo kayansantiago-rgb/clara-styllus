@@ -1112,12 +1112,20 @@ Telas.pdv = (() => {
     const restante = () => t.total - pago();
 
     const aPartir = Number(cfg.juros_a_partir) || 0;
+    // Cada opção já mostra quanto fica a parcela ("3x de R$ 50,00"), para responder a cliente na hora.
     const preencherParcelas = () => {
+      if (forma !== 'credito' && forma !== 'crediario') return;
       const max = forma === 'crediario' ? maxParcelas : 12;
       const atual = Number(parcEl.value) || 1;
-      // No crédito: até 3x sem juros; a partir de 4x com os juros da maquininha (para a cliente).
-      parcEl.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i + 1}">${i + 1}x${
-        forma !== 'credito' ? '' : aPartir && i + 1 >= aPartir ? ' com juros' : ' sem juros'}</option>`).join('');
+      const digitado = U.paraCentavos(valorEl.value);
+      const v = dividir && digitado > 0 ? digitado : t.total;
+      parcEl.innerHTML = Array.from({ length: max }, (_, i) => {
+        const n = i + 1;
+        // No crédito: até 3x sem juros; a partir de 4x com os juros da maquininha (para a cliente).
+        const j = forma === 'credito' ? U.juros(cfg, 'credito', n, v, bandeira) : 0;
+        const txt = forma !== 'credito' ? '' : n === 1 ? ' à vista' : j ? ' com juros' : ' sem juros';
+        return `<option value="${n}">${n}x de ${brl(Math.ceil((v + j) / n))}${txt}</option>`;
+      }).join('');
       parcEl.value = String(Math.min(atual, max));
     };
 
@@ -1148,6 +1156,8 @@ Telas.pdv = (() => {
       if (!b) return;
       bandeira = b.dataset.band;
       corpo.querySelectorAll('[data-band]').forEach((x) => x.classList.toggle('sel', x === b));
+      preencherParcelas();
+      if (!dividir) atualizarDireto();
       infoTaxa();
       valorEl.focus();
     };
@@ -1207,7 +1217,11 @@ Telas.pdv = (() => {
         ? `<small>Passar na maquininha</small><b>${brl(t.total + juros)}</b>
            <span class="pag2-parcelas">${n}x de ${brl(Math.ceil((t.total + juros) / n))}</span>
            <span>com juros · venda ${brl(t.total)}</span>`
-        : `<small>Total</small><b>${brl(t.total)}</b><span>${t.pecas} peça${t.pecas === 1 ? '' : 's'}${t.bruto - t.total ? ` · desconto ${brl(t.bruto - t.total)}` : ''}</span>`;
+        : n > 1 && (forma === 'credito' || forma === 'crediario')
+          ? `<small>Total</small><b>${brl(t.total)}</b>
+           <span class="pag2-parcelas">${n}x de ${brl(Math.ceil(t.total / n))}</span>
+           <span>${forma === 'credito' ? 'sem juros no cartão' : 'no crediário'}</span>`
+          : `<small>Total</small><b>${brl(t.total)}</b><span>${t.pecas} peça${t.pecas === 1 ? '' : 's'}${t.bruto - t.total ? ` · desconto ${brl(t.bruto - t.total)}` : ''}</span>`;
       corpo.querySelector('#pag-total').classList.toggle('com-juros', !!juros);
     };
 
@@ -1293,7 +1307,7 @@ Telas.pdv = (() => {
       const b = e.target.closest('[data-rm]');
       if (b) { pagamentos.splice(Number(b.dataset.rm), 1); atualizar(); valorEl.focus(); }
     };
-    valorEl.addEventListener('input', () => { infoCrediario(); if (!dividir) atualizarDireto(); });
+    valorEl.addEventListener('input', () => { if (dividir) preencherParcelas(); infoCrediario(); if (!dividir) atualizarDireto(); });
     parcEl.addEventListener('change', () => { infoCrediario(); if (!dividir) atualizarDireto(); });
     vencEl.addEventListener('change', infoCrediario);
     // Alt + 1…7 escolhe a forma de pagamento. Os números sozinhos sempre digitam o valor
