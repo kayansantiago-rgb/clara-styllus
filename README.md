@@ -9,6 +9,14 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Produtos e relatórios mais visuais**:
+  - **Ficha da peça**: clique na foto ou no nome para ver a foto grande, a grade de tamanhos colorida, quanto
+    vendeu em 30 dias, há quanto tempo está na loja, o lucro por peça e as vendas das últimas 8 semanas.
+  - **Selos** nos produtos: Novidade (até 15 dias), Mais vendida (top 5 do mês), Última peça e Parada (60 dias sem vender).
+  - **Gráficos animados** (barras crescem, rosca gira, bolinha no ponto ao passar o mouse).
+  - **Calendário de vendas** nos Relatórios: um quadradinho por dia, mais escuro onde vendeu mais, com estrela no melhor dia.
+  - **Carregamento suave**: blocos cinza animados enquanto a tela busca os dados.
+
 - **Valor da parcela na hora**: no pagamento em crédito ou crediário, cada opção de parcelas já mostra quanto
   fica ("3x de R$ 50,00 sem juros"), e a parcela escolhida aparece em destaque no total.
 

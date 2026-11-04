@@ -68,6 +68,7 @@ Telas.relatorios = (() => {
       const k = d.toLocaleDateString('sv-SE');
       const x = mapa.get(k);
       out.push({
+        data: k,
         rotulo: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
         valor: x ? x.faturamento : 0,
         dica: `${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}: ${brl(x ? x.faturamento : 0)} · ${x ? x.vendas : 0} venda(s)`,
@@ -210,6 +211,26 @@ Telas.relatorios = (() => {
           ${t.vendido_crediario ? `<p class="dica rl-cred-dica">${Icone('caderno')} Vendido no crediário: <b>${brl(t.vendido_crediario)}</b> (entra aqui quando a cliente pagar)</p>` : ''}</div>
       </div>
 
+      ${(() => {
+    // O mês inteiro (do 1º dia do mês do início até o último dia do mês do fim), até 3 meses.
+    const ini = new Date(r.de.slice(0, 8) + '01T12:00');
+    const fimP = new Date(r.ate + 'T12:00');
+    const fim = new Date(fimP.getFullYear(), fimP.getMonth() + 1, 0, 12);
+    if ((fim - ini) / 864e5 > 93) return '';
+    const mapa = new Map(r.por_dia.map((d) => [d.dia, d]));
+    const hoje = U.hoje();
+    const dados = [];
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
+      const k = d.toLocaleDateString('sv-SE');
+      const x = mapa.get(k);
+      const nome = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+      dados.push({ data: k, valor: x ? x.faturamento : 0, futuro: k > hoje,
+        dica: k > hoje ? `${nome}: ainda não chegou` : `${nome}: ${brl(x ? x.faturamento : 0)} · ${x ? x.vendas : 0} venda(s)` });
+    }
+    return `<div class="cartao rl-cal"><h3 class="titulo-ico">${Icone('reserva')} Calendário de vendas
+      <small>cada quadradinho é um dia · quanto mais escuro, mais vendeu</small></h3>${Graficos.calendario(dados)}</div>`;
+  })()}
+
       <div class="rl-grade">
         <div class="cartao"><h3 class="titulo-ico">${Icone('relogio')} Horário de pico</h3>
           <p class="dica">${pico ? `Mais vendas entre <b>${pico.hora}h e ${pico.hora + 1}h</b>. Bom horário para ter mais gente no caixa.` : 'Sem vendas no período.'}</p>
@@ -246,7 +267,7 @@ Telas.relatorios = (() => {
           <div class="linha total"><span>= Lucro real</span><b class="${t.lucro_real < 0 ? 'txt-perigo' : 'txt-ok'}">${brl(t.lucro_real)}</b></div>
           ${t.faturamento ? `<p class="dica">Margem real: <b>${((t.lucro_real / t.faturamento) * 100).toFixed(1).replace('.', ',')}%</b> das vendas.</p>` : ''}
         </div>
-        <div class="cartao" id="desp-resumo"><h3 class="titulo-ico">${Icone('recibo')} Despesas da loja</h3><div class="vazio">Carregando…</div></div>
+        <div class="cartao" id="desp-resumo"><h3 class="titulo-ico">${Icone('recibo')} Despesas da loja</h3>${U.esqueleto(3)}</div>
       </div>
       <div class="cartao" id="desp-lista"></div>
       <div class="cartao">
@@ -289,8 +310,8 @@ Telas.relatorios = (() => {
             <td class="r txt-perigo">${p.estoque}</td><td class="r">${p.estoque_minimo}</td></tr>`).join('') || '<tr><td class="vazio" colspan="3">Tudo certo.</td></tr>'}</tbody></table>
         </div>
       </div>
-      <div class="cartao" id="abc"><h3 class="titulo-ico">${Icone('grafico')} Curva ABC</h3><div class="vazio">Carregando…</div></div>
-      <div class="cartao" id="paradas"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3><div class="vazio">Carregando…</div></div>`;
+      <div class="cartao" id="abc"><h3 class="titulo-ico">${Icone('grafico')} Curva ABC</h3>${U.esqueleto(3)}</div>
+      <div class="cartao" id="paradas"><h3 class="titulo-ico">${Icone('relogio')} Peças paradas</h3>${U.esqueleto(3)}</div>`;
     ligarDespesas(t.faturamento);
     carregarAbc();
     carregarParadas();

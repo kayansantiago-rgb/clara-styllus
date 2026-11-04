@@ -299,7 +299,8 @@
       if (telaAtual !== tela) return; // clicou em outra tela no meio do caminho
     }
     document.body.classList.add('carregando-tela');
-    conteudo.innerHTML = '';
+    // Enquanto a tela busca os dados, mostra o "esqueleto" (o PDV abre na hora e não precisa).
+    conteudo.innerHTML = nome === 'pdv' ? '' : U.esqueletoTela();
     conteudo.className = `tela-${nome}`;
     // No PDV o menu fica estreito (só ícones) para sobrar espaço para a venda.
     document.body.classList.toggle('modo-pdv', nome === 'pdv');

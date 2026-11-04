@@ -395,6 +395,15 @@ const U = (() => {
   const fotoUrl = (p) => (p && p.foto_versao ? `/api/produtos/${p.id}/foto?v=${p.foto_versao}` : null);
 
   /** Miniatura da peça (ou um ícone quando não tem foto). */
+  /** Blocos cinza animados enquanto os dados carregam ("esqueleto" da tela). */
+  const esqueleto = (linhas = 3) => `<div class="esq-bloco" aria-label="Carregando">${Array.from({ length: linhas }, (_, i) =>
+    `<div class="esq-linha" style="width:${[92, 76, 84, 60, 70][i % 5]}%"></div>`).join('')}</div>`;
+  /** Esqueleto de uma tela inteira: título, quadros de números e cartões. */
+  const esqueletoTela = () => `<div class="esq-tela" aria-label="Carregando">
+    <div class="esq-cab"><div class="esq-linha esq-titulo"></div><div class="esq-linha" style="width:34%"></div></div>
+    <div class="esq-kpis">${'<div class="esq-cartao"><div class="esq-linha" style="width:50%"></div><div class="esq-linha esq-num"></div><div class="esq-linha" style="width:70%"></div></div>'.repeat(4)}</div>
+    <div class="esq-grade">${'<div class="esq-cartao esq-alto"><div class="esq-linha" style="width:40%"></div><div class="esq-linha"></div><div class="esq-linha" style="width:85%"></div><div class="esq-linha" style="width:65%"></div></div>'.repeat(2)}</div>
+  </div>`;
   /** Foto da cliente (quando cadastrada) ou as iniciais, no formato de avatar redondo. */
   const avatarCliente = (id, nome, fotoVersao, classe = 'avatar') => (fotoVersao
     ? `<img class="${classe} cli-foto" src="/api/clientes/${id}/foto?v=${fotoVersao}" alt="" loading="lazy">`
@@ -433,7 +442,7 @@ const U = (() => {
   }
 
   return {
-    som, fotoUrl, miniatura, avatarCliente, pctPrazo, reduzirImagem,
+    som, fotoUrl, miniatura, avatarCliente, pctPrazo, esqueleto, esqueletoTela, reduzirImagem,
     sessao,
     api, brl, num, paraCentavos, esc, dataHora, hoje, cpf, cpfValido, aviso, avisoAcao, desfazivel, erro,
     abrirModal, fecharModal, modalAberto, confirmar, perguntar, local, config, debounce,

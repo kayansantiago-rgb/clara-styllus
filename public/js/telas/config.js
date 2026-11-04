@@ -424,7 +424,7 @@ Telas.config = (() => {
         ${secao('backup', `
         <div class="cartao">
           <h3 class="titulo-ico">${Icone('nuvem')} Situação dos backups</h3>
-          <div id="backup-status" class="backup-status">Carregando…</div>
+          <div id="backup-status" class="backup-status">${U.esqueleto(2)}</div>
           <div class="acoes acoes-esq">
             <button type="button" class="btn btn-primario" id="backup-agora">${Icone('nuvem')} Fazer backup agora</button>
             <a class="btn" href="/api/backup" download>${Icone('nuvem')} Baixar uma cópia neste computador</a>
@@ -453,7 +453,7 @@ Telas.config = (() => {
         ${secao('atualizacao', `
         <div class="cartao" id="atualizacoes">
           <h3 class="titulo-ico">${Icone('atualizar')} Atualizações do sistema</h3>
-          <div id="at-status">Carregando…</div>
+          <div id="at-status">${U.esqueleto(2)}</div>
           <details class="at-avancado"><summary>Atualização automática e acesso</summary>
             <div class="grade-form">
               ${check('atualizacao_auto', 'Procurar versão nova sozinho (a cada 6 horas, quando tiver internet) e já deixar baixada')}

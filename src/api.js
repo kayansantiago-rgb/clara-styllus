@@ -485,6 +485,74 @@ function criarApi(db, opcoes = {}) {
     return { apagados: alvo.length };
   }, 'admin');
 
+  /**
+   * Selos dos modelos (nome + referência): novidade, mais vendida, última peça e parada.
+   * Devolve { "nome|ref": ['novidade', ...] } para a tela de Produtos.
+   */
+  rota('GET', '/api/produtos/selos', () => {
+    const modelos = db.prepare(
+      `SELECT lower(p.nome) || '|' || COALESCE(p.referencia, '') AS k,
+         MIN(p.criado_em) AS criado, SUM(CASE WHEN p.servico = 0 AND p.estoque > 0 THEN p.estoque ELSE 0 END) AS estoque,
+         (SELECT MAX(v.criado_em) FROM venda_itens i JOIN vendas v ON v.id = i.venda_id JOIN produtos p2 ON p2.id = i.produto_id
+           WHERE v.status = 'concluida' AND lower(p2.nome) = lower(p.nome) AND COALESCE(p2.referencia,'') = COALESCE(p.referencia,'')) AS ultima,
+         (SELECT COALESCE(SUM(i.quantidade),0) FROM venda_itens i JOIN vendas v ON v.id = i.venda_id JOIN produtos p2 ON p2.id = i.produto_id
+           WHERE v.status = 'concluida' AND v.criado_em >= datetime('now','localtime','-30 days')
+             AND lower(p2.nome) = lower(p.nome) AND COALESCE(p2.referencia,'') = COALESCE(p.referencia,'')) AS v30
+       FROM produtos p WHERE p.ativo = 1 AND p.atalho = 0 AND p.servico = 0
+       GROUP BY lower(p.nome), COALESCE(p.referencia, '')`
+    ).all();
+    const dias = (d) => (d ? (Date.now() - new Date(String(d).replace(' ', 'T')).getTime()) / 864e5 : Infinity);
+    const top = new Set(modelos.filter((m) => m.v30 >= 2).sort((a, b) => b.v30 - a.v30).slice(0, 5).map((m) => m.k));
+    const out = {};
+    for (const m of modelos) {
+      const selos = [];
+      if (dias(m.criado) <= 15) selos.push('novidade');
+      if (top.has(m.k)) selos.push('mais_vendida');
+      if (m.estoque === 1) selos.push('ultima');
+      if (m.estoque > 0 && dias(m.criado) > 60 && dias(m.ultima) > 60) selos.push('parada');
+      if (selos.length) out[m.k] = selos;
+    }
+    return out;
+  });
+
+  /** Ficha do modelo: vendas (30 dias e total), há quantos dias está na loja, vendas por tamanho e por semana. */
+  rota('GET', '/api/produtos/ficha', ({ query }) => {
+    const nome = texto(query.get('nome'));
+    if (!nome) throw erro(400, 'Informe o nome do produto.');
+    const ref = texto(query.get('referencia')) || '';
+    const doModelo = `lower(p.nome) = lower(?) AND COALESCE(p.referencia,'') = ?`;
+    const itens = planos(db.prepare(`SELECT * FROM produtos p WHERE ${doModelo}`).all(nome, ref));
+    if (!itens.length) throw erro(404, 'Produto não encontrado.');
+    const vendas = (extra = '') => db.prepare(
+      `SELECT COALESCE(SUM(i.quantidade),0) AS pecas, COALESCE(SUM(i.total),0) AS total
+       FROM venda_itens i JOIN vendas v ON v.id = i.venda_id JOIN produtos p ON p.id = i.produto_id
+       WHERE v.status = 'concluida' AND ${doModelo} ${extra}`
+    ).get(nome, ref);
+    const mes = vendas(`AND v.criado_em >= datetime('now','localtime','-30 days')`);
+    const sempre = vendas();
+    const ultima = db.prepare(
+      `SELECT MAX(v.criado_em) AS d FROM venda_itens i JOIN vendas v ON v.id = i.venda_id JOIN produtos p ON p.id = i.produto_id
+       WHERE v.status = 'concluida' AND ${doModelo}`
+    ).get(nome, ref).d;
+    const porTamanho = planos(db.prepare(
+      `SELECT COALESCE(NULLIF(p.tamanho,''),'Único') AS tamanho, SUM(i.quantidade) AS pecas
+       FROM venda_itens i JOIN vendas v ON v.id = i.venda_id JOIN produtos p ON p.id = i.produto_id
+       WHERE v.status = 'concluida' AND ${doModelo} GROUP BY 1 ORDER BY pecas DESC`
+    ).all(nome, ref));
+    // Peças vendidas em cada uma das últimas 8 semanas (a última é a atual).
+    const semanas = Array.from({ length: 8 }, (_, i) => db.prepare(
+      `SELECT COALESCE(SUM(i.quantidade),0) AS n FROM venda_itens i JOIN vendas v ON v.id = i.venda_id JOIN produtos p ON p.id = i.produto_id
+       WHERE v.status = 'concluida' AND ${doModelo}
+         AND v.criado_em >= datetime('now','localtime', ?) AND v.criado_em < datetime('now','localtime', ?)`
+    ).get(nome, ref, `-${(8 - i) * 7} days`, i === 7 ? '+1 day' : `-${(7 - i) * 7} days`).n);
+    const criado = itens.map((p) => p.criado_em).sort()[0];
+    return {
+      nome: itens[0].nome, referencia: ref || null, criado_em: criado, ultima_venda: ultima,
+      vendidas_30: mes.pecas, total_30: mes.total, vendidas_total: sempre.pecas, total_vendido: sempre.total,
+      por_tamanho: porTamanho, semanas,
+    };
+  });
+
   rota('GET', '/api/produtos/grade', ({ query }) => {
     const nome = texto(query.get('nome'));
     if (!nome) throw erro(400, 'Informe o nome do produto.');

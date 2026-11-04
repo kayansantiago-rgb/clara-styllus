@@ -87,16 +87,30 @@ Telas.produtos = (() => {
   }
 
   let todos = [];
+  let selos = {};
   let ultimaBusca = 0;
+  // Selos do modelo: novidade, mais vendida, última peça, parada.
+  const SELOS = {
+    novidade: ['Novidade', 'estrela'], mais_vendida: ['Mais vendida', 'fogo'], ultima: ['Última peça', 'alerta'], parada: ['Parada', 'relogio'],
+  };
+  const selosDe = (p) => selos[`${String(p.nome).toLowerCase()}|${p.referencia || ''}`] || [];
+  const selosHtml = (p, classe = '') => selosDe(p).map((k) => `<span class="pr-selo pr-selo-${k} ${classe}" title="${{
+    novidade: 'Chegou há menos de 15 dias', mais_vendida: 'Entre as 5 que mais venderam nos últimos 30 dias',
+    ultima: 'Só tem 1 peça deste modelo', parada: 'Sem vender há mais de 60 dias',
+  }[k]}">${Icone(SELOS[k][1])}${SELOS[k][0]}</span>`).join('');
   async function carregar() {
     if (!raiz) return;
     const q = raiz.querySelector('#q').value;
     const extra = filtro === 'baixo' ? '&estoque_baixo=1' : filtro === 'inativos' ? '&inativos=1' : '';
     const pedido = ++ultimaBusca;
     try {
-      const r = await api(`/api/produtos?q=${encodeURIComponent(q)}${extra}&limite=1000`);
+      const [r, sl] = await Promise.all([
+        api(`/api/produtos?q=${encodeURIComponent(q)}${extra}&limite=1000`),
+        api('/api/produtos/selos').catch(() => ({})),
+      ]);
       if (pedido !== ultimaBusca) return; // chegou uma busca mais nova
       todos = r;
+      selos = sl;
     } catch (e) { return erro(e); }
     desenhar();
     avisoVazias();
@@ -244,7 +258,7 @@ Telas.produtos = (() => {
       el.className = 'pr-vitrine';
       el.innerHTML = lista.map((p, i) => `
         <div class="pr-card ${p.ativo ? '' : 'inativo'}">
-          <div class="pr-card-foto">${U.miniatura(p, 'pr-foto-g')}${pilula(p)}</div>
+          <div class="pr-card-foto" data-acao="ficha" data-i="${i}">${U.miniatura(p, 'pr-foto-g')}${pilula(p)}${selosDe(p).length ? `<div class="pr-selos pr-selos-foto">${selosHtml(p)}</div>` : ''}</div>
           <div class="pr-card-txt"><b title="${esc(p.nome)}">${esc(p.nome)}</b>
             <small>${esc([p.tamanho && 'Tam ' + p.tamanho, p.cor].filter(Boolean).join(' · ') || '—')}</small></div>
           <div class="pr-card-preco">${precoHtml(p)}</div>
@@ -257,7 +271,7 @@ Telas.produtos = (() => {
       lista.map((p, i) => `
       <div class="pr-linha ${p.ativo ? '' : 'inativo'}">
         ${U.miniatura(p, 'pr-foto')}
-        <div class="pr-nome"><b>${esc(p.nome)}</b><small>${esc([p.categoria, p.marca, p.referencia && 'Ref ' + p.referencia].filter(Boolean).join(' · '))} <code>${esc(p.codigo)}</code></small></div>
+        <div class="pr-nome" data-acao="ficha" data-i="${i}"><b>${esc(p.nome)}</b>${selosHtml(p, 'mini')}<small>${esc([p.categoria, p.marca, p.referencia && 'Ref ' + p.referencia].filter(Boolean).join(' · '))} <code>${esc(p.codigo)}</code></small></div>
         <div class="p4-tags">${p.tamanho ? `<span class="p4-tag">${esc(p.tamanho)}</span>` : ''}${p.cor ? `<span class="p4-tag">${bolinha(p.cor)}${esc(p.cor)}</span>` : ''}</div>
         <div class="r pr-custo">${p.preco_custo ? num(p.preco_custo) : '—'}</div>
         <div class="r pr-preco">${precoHtml(p)}</div>
@@ -299,10 +313,11 @@ Telas.produtos = (() => {
         }).join('')}</div></div>`).join('');
       const inativo = ps.every((p) => !p.ativo);
       return `<article class="pm ${inativo ? 'inativo' : ''} ${pecas ? '' : 'sem-estoque'}">
-        <button type="button" class="pm-foto" data-acao="grade" data-i="${i0}" title="Ver a grade">${U.miniatura(p0, 'pm-img')}</button>
+        <button type="button" class="pm-foto" data-acao="ficha" data-i="${i0}" title="Ver a ficha da peça">${U.miniatura(p0, 'pm-img')}</button>
         <div class="pm-info">
           <div class="pm-topo"><div><small class="pm-cat">${esc([p0.categoria, p0.marca].filter(Boolean).join(' · '))}</small>
-            <b class="pm-nome">${esc(g.nome)}</b>${p0.preco_unico ? ' <span class="pr-unico">Preço único</span>' : ''}${p0.referencia ? `<small class="pm-ref">Ref ${esc(p0.referencia)}</small>` : ''}</div>
+            <b class="pm-nome" data-acao="ficha" data-i="${i0}" title="Ver a ficha da peça">${esc(g.nome)}</b>${p0.preco_unico ? ' <span class="pr-unico">Preço único</span>' : ''}
+            ${selosDe(p0).length ? `<div class="pr-selos">${selosHtml(p0)}</div>` : ''}${p0.referencia ? `<small class="pm-ref">Ref ${esc(p0.referencia)}</small>` : ''}</div>
             <div class="pm-preco">${precos.length > 1 ? `<small>a partir de</small><b>${brl(Math.min(...precos))}</b>` : precoHtml(p0)}</div></div>
           ${linhasCor}
         </div>
@@ -328,6 +343,7 @@ Telas.produtos = (() => {
     if (b.dataset.acao === 'parecido') formulario(null, { modelo: p });
     if (b.dataset.acao === 'estoque') estoque(p);
     if (b.dataset.acao === 'grade') grade(p);
+    if (b.dataset.acao === 'ficha') ficha(p);
     if (b.dataset.acao === 'avisar') {
       // O modelo inteiro (todos os tamanhos e cores com estoque), não só esta variação.
       const mesmo = todos.filter((x) => x.nome === p.nome && (x.referencia || '') === (p.referencia || '') && x.estoque > 0);
@@ -1077,6 +1093,71 @@ Telas.produtos = (() => {
   }
 
   /** Grade visual: tamanhos nas colunas, cores nas linhas, estoque em cada célula. */
+  /** Ficha do modelo: foto grande, grade colorida, vendas do mês, há quanto tempo está na loja e o lucro por peça. */
+  async function ficha(p) {
+    const q = `nome=${encodeURIComponent(p.nome)}${p.referencia ? `&referencia=${encodeURIComponent(p.referencia)}` : ''}`;
+    let f;
+    let g;
+    try { [f, g] = await Promise.all([api(`/api/produtos/ficha?${q}`), api(`/api/produtos/grade?${q}`)]); } catch (e) { return erro(e); }
+    const doModelo = todos.filter((x) => x.nome === p.nome && (x.referencia || '') === (p.referencia || ''));
+    const vars = doModelo.length ? doModelo : [p];
+    const p0 = vars.find((x) => x.foto_versao) || p;
+    const admin = U.sessao.ehAdmin();
+    const dias = Math.max(0, Math.floor((Date.now() - new Date(String(f.criado_em).replace(' ', 'T')).getTime()) / 864e5));
+    const diasTxt = dias === 0 ? 'hoje' : dias === 1 ? '1 dia' : dias < 60 ? `${dias} dias` : `${Math.round(dias / 30)} meses`;
+    const ultima = f.ultima_venda ? Math.max(0, Math.floor((Date.now() - new Date(f.ultima_venda.replace(' ', 'T')).getTime()) / 864e5)) : null;
+    const lucro = p0.preco_custo > 0 ? p0.preco_venda - p0.preco_custo : null;
+    const margem = lucro !== null && p0.preco_venda ? Math.round((lucro / p0.preco_venda) * 100) : null;
+    const classe = (c) => (!c ? 'vazia' : c.estoque <= 0 ? 'zero' : c.estoque <= c.minimo ? 'baixo' : 'ok');
+    const semCor = g.cores.length === 1 && g.cores[0] === '—';
+    const corpo = abrirModal('Ficha da peça', `
+      <div class="pf">
+        <div class="pf-foto">${U.miniatura(p0, 'pf-img')}<div class="pr-selos pr-selos-foto">${selosHtml(p0)}</div></div>
+        <div class="pf-info">
+          <small class="pf-cat">${esc([p0.categoria, p0.marca, f.referencia && `Ref ${f.referencia}`].filter(Boolean).join(' · '))}</small>
+          <h2>${esc(f.nome)}</h2>
+          <div class="pf-preco">${p0.preco_anterior > p0.preco_venda ? `<s>${brl(p0.preco_anterior)}</s>` : ''}<b>${brl(p0.preco_venda)}</b></div>
+          <div class="pf-nums">
+            <div><small>Vendeu em 30 dias</small><b>${f.vendidas_30} <span>peça${f.vendidas_30 === 1 ? '' : 's'}</span></b><em>${brl(f.total_30)}</em></div>
+            <div><small>Na loja há</small><b>${diasTxt}</b><em>${ultima === null ? 'ainda não vendeu' : ultima === 0 ? 'vendeu hoje' : `última venda há ${ultima} dia(s)`}</em></div>
+            ${admin ? `<div><small>Lucro por peça</small><b class="${margem !== null && margem < 30 ? 'txt-perigo' : 'txt-ok'}">${lucro === null ? '—' : brl(lucro)}</b><em>${margem === null ? 'sem custo cadastrado' : `margem de ${margem}%`}</em></div>` : ''}
+            <div><small>Em estoque</small><b>${g.total} <span>peça${g.total === 1 ? '' : 's'}</span></b><em>${brl(g.total * p0.preco_venda)}</em></div>
+          </div>
+          <h4>Tamanhos e cores</h4>
+          <div class="pf-grade" style="--cols:${g.tamanhos.length}">
+            ${semCor ? '' : '<span></span>'}${g.tamanhos.map((t) => `<span class="pf-th">${esc(t)}</span>`).join('')}
+            ${g.cores.map((cor) => `${semCor ? '' : `<span class="pf-cor">${bolinha(cor)}${esc(cor)}</span>`}${g.tamanhos.map((t) => {
+    const c = g.celulas[`${cor}|${t}`];
+    return `<span class="pf-cel ${classe(c)}" title="${c ? `${c.estoque} peça(s)` : 'não cadastrado'}">${c ? c.estoque : '·'}</span>`;
+  }).join('')}`).join('')}
+          </div>
+          ${f.por_tamanho.length ? `<p class="pf-sai">Sai mais: ${f.por_tamanho.slice(0, 4).map((x) => `<b>${esc(x.tamanho)}</b> (${x.pecas})`).join(' · ')}</p>` : ''}
+          <h4>Vendas nas últimas 8 semanas</h4>
+          ${f.semanas.some((n) => n) ? Graficos.colunas(f.semanas.map((n, i) => ({ rotulo: i === 7 ? 'esta' : `${7 - i}s`, valor: n, destaque: i === 7,
+    dica: `${i === 7 ? 'Esta semana' : `${7 - i} semana(s) atrás`}: ${n} peça(s)` })), { altura: 90, formato: (n) => `${Math.round(n)}` })
+    : '<p class="dica">Ainda não vendeu nas últimas 8 semanas.</p>'}
+        </div>
+      </div>
+      <div class="acoes pf-acoes">
+        <button class="btn" id="pf-etq">${Icone('etiqueta')} Etiquetas</button>
+        <button class="btn" id="pf-zap">${Icone('whatsapp')} Avisar clientes</button>
+        <button class="btn so-admin" id="pf-grade">${Icone('grade')} Estoque por tamanho</button>
+        <button class="btn btn-primario so-admin" id="pf-editar">${Icone('lapis')} Editar</button>
+      </div>`, { largura: '900px', classe: 'modal-ficha-produto' });
+    corpo.querySelector('#pf-editar').onclick = () => formulario(p);
+    corpo.querySelector('#pf-grade').onclick = () => grade(p);
+    corpo.querySelector('#pf-zap').onclick = () => {
+      const comPeca = vars.filter((x) => x.estoque > 0);
+      Interessadas.abrir((comPeca.length ? comPeca : vars).map((x) => x.id));
+    };
+    corpo.querySelector('#pf-etq').onclick = () => {
+      const comPeca = vars.filter((x) => x.estoque > 0 && !x.servico);
+      if (!comPeca.length) return aviso('Este modelo não tem peças em estoque.', 'alerta');
+      comPeca.forEach((x) => Telas.etiquetas.adicionar(x, x.preco_unico ? 1 : x.estoque));
+      U.avisoAcao(`Etiquetas de "${f.nome}" na fila.`, 'Ver fila', () => { location.hash = '#/etiquetas'; });
+    };
+  }
+
   async function grade(p) {
     let g;
     try {

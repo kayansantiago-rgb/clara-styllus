@@ -181,3 +181,24 @@ test('despesas: tirar da gaveta, sangria vira despesa, editar e apagar devolvend
   assert.equal(chamar('DELETE', `/api/despesas/${todas.find((x) => x.descricao === 'Motoboy').id}`).corpo.devolvido_ao_caixa, false);
   assert.equal(esperado(), 17000);
 });
+
+test('selos dos produtos (novidade, mais vendida, última peça, parada) e ficha da peça', () => {
+  const { chamar, db } = require('./ajuda').novaApi();
+  const P = (c) => chamar('POST', '/api/produtos/grade', c).corpo;
+  const [calca] = P({ nome: 'Calça Wide', preco_venda: 18990, preco_custo: 8000, variantes: [{ tamanho: '38', quantidade: 10 }, { tamanho: '40', quantidade: 2 }] });
+  P({ nome: 'Blazer', preco_venda: 42990, variantes: [{ tamanho: 'G', quantidade: 1 }] });
+  P({ nome: 'Saia Antiga', preco_venda: 9990, variantes: [{ tamanho: 'M', quantidade: 3 }] });
+  chamar('POST', '/api/caixa/abrir', { valor_abertura: 0 });
+  chamar('POST', '/api/vendas', { itens: [{ produto_id: calca.id, quantidade: 2 }], pagamentos: [{ forma: 'pix', valor: 37980 }] });
+  db.prepare(`UPDATE produtos SET criado_em = datetime('now','localtime','-90 days') WHERE nome IN ('Saia Antiga', 'Calça Wide')`).run();
+  const s = chamar('GET', '/api/produtos/selos').corpo;
+  assert.deepEqual(s['calça wide|'], ['mais_vendida']);
+  assert.deepEqual(s['blazer|'], ['novidade', 'ultima']);
+  assert.deepEqual(s['saia antiga|'], ['parada']);
+  const f = chamar('GET', '/api/produtos/ficha?nome=Calça Wide').corpo;
+  assert.equal(f.vendidas_30, 2);
+  assert.equal(f.total_30, 37980);
+  assert.equal(f.semanas.length, 8);
+  assert.equal(f.semanas[7], 2);
+  assert.deepEqual(f.por_tamanho, [{ tamanho: '38', pecas: 2 }]);
+});

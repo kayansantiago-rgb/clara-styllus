@@ -88,6 +88,32 @@ const Graficos = (() => {
     <div class="g-calor-legenda"><span>menos</span>${TONS.map((t, i) => `<i style="background:${t}" title="até ${formato((max * (i + 1)) / TONS.length)}"></i>`).join('')}<span>mais</span></div>`;
   }
 
+  /**
+   * Calendário de calor (um quadradinho por dia, semanas em linhas, segunda a domingo).
+   * dias: [{ data: 'AAAA-MM-DD', valor, dica }] em ordem.
+   */
+  function calendario(dias, { formato = U.brl } = {}) {
+    const comValor = dias.filter((d) => d.valor > 0);
+    if (!comValor.length) return '<div class="g-vazio">Sem vendas no período.</div>';
+    const max = Math.max(...comValor.map((d) => d.valor));
+    const tom = (v) => (v > 0 ? TONS[Math.min(TONS.length - 1, Math.floor((v / max) * TONS.length - 1e-9))] : '');
+    const hoje = new Date().toLocaleDateString('sv-SE');
+    const primeiro = new Date(dias[0].data + 'T12:00');
+    const vazio = (primeiro.getDay() + 6) % 7; // segunda = 0
+    const melhor = comValor.reduce((a, d) => (d.valor > a.valor ? d : a));
+    return `<div class="g-cal">
+      ${['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d) => `<small class="g-cal-sem">${d}</small>`).join('')}
+      ${'<span></span>'.repeat(vazio)}
+      ${dias.map((d, i) => {
+    const dia = Number(d.data.slice(8));
+    const claro = d.valor && TONS.indexOf(tom(d.valor)) >= 3;
+    return `<i class="${d.valor ? '' : 'zero'} ${d.futuro ? 'futuro' : ''} ${d.data === hoje ? 'hoje' : ''} ${d === melhor ? 'melhor' : ''} ${claro ? 'escuro' : ''}"
+          style="${d.valor ? `background:${tom(d.valor)};` : ''}--i:${i}" data-dica="${esc(d.dica)}"><b>${dia}</b>${d.valor ? `<em>${formato(d.valor).replace('R$', '').trim().replace(/,\d\d$/, '')}</em>` : ''}</i>`;
+  }).join('')}
+    </div>
+    <div class="g-calor-legenda"><span>menos</span>${TONS.map((t) => `<i style="background:${t}"></i>`).join('')}<span>mais</span></div>`;
+  }
+
   // Dica flutuante única para todos os gráficos.
   let dica;
   function mostrar(ev) {
@@ -112,5 +138,5 @@ const Graficos = (() => {
     mostrar({ target: alvo, clientX: b.left + b.width / 2, clientY: b.top });
   });
 
-  return { colunas, barras, rosca, calor };
+  return { colunas, barras, rosca, calor, calendario };
 })();
