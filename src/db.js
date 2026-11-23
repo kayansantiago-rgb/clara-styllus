@@ -191,6 +191,13 @@ const CONFIG_PADRAO = {
   catalogo_site_id: '',
   catalogo_site_url: '',
   catalogo_publicado_em: '',
+  catalogo_destino: 'github',
+  catalogo_github_token: '',
+  catalogo_github_repo: '',
+  pedidos_url: '',
+  pedidos_chave: '',
+  pedidos_ultima_busca: '',
+  pedidos_erro: '',
   cupom_mensagem: 'Obrigada pela preferência! Trocas em até 30 dias com etiqueta e este comprovante.',
   cupom_largura_mm: '80',
   cupom_vias: '1',
@@ -511,6 +518,22 @@ function migrar(db) {
   if (!colunas('produtos').includes('preco_unico')) {
     db.exec('ALTER TABLE produtos ADD COLUMN preco_unico INTEGER NOT NULL DEFAULT 0');
   }
+  // Pedidos da loja online (site): cada pedido separa as peças numa reserva.
+  if (!colunas('reservas').includes('origem')) db.exec('ALTER TABLE reservas ADD COLUMN origem TEXT');
+  db.exec(`CREATE TABLE IF NOT EXISTS pedidos_site (
+    codigo TEXT PRIMARY KEY,
+    recebido_em TEXT NOT NULL,
+    cliente_id INTEGER REFERENCES clientes(id),
+    nome TEXT,
+    telefone TEXT,
+    observacao TEXT,
+    itens TEXT NOT NULL,
+    total INTEGER NOT NULL DEFAULT 0,
+    reserva_id INTEGER REFERENCES reservas(id),
+    faltou TEXT,
+    status TEXT NOT NULL DEFAULT 'novo' CHECK (status IN ('novo','visto','concluido','cancelado')),
+    importado_em TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  )`);
   db.exec(`CREATE TABLE IF NOT EXISTS produto_fotos (
     produto_id INTEGER PRIMARY KEY REFERENCES produtos(id),
     tipo TEXT NOT NULL,
@@ -554,14 +577,29 @@ function migrar(db) {
 }
 
 /** Executa fn dentro de uma transação; desfaz tudo se lançar erro. */
+/**
+ * Tudo ou nada. Pode ser chamada dentro de outra transação (vira um SAVEPOINT): o pedido do site, por
+ * exemplo, cadastra a cliente e cria a reserva (que já usa transação) juntos.
+ */
+const NIVEL = Symbol('nivelTransacao');
 function transacao(db, fn) {
-  db.exec('BEGIN IMMEDIATE');
+  const nivel = db[NIVEL] || 0;
+  const ponto = `t${nivel}`;
+  db.exec(nivel ? `SAVEPOINT ${ponto}` : 'BEGIN IMMEDIATE');
+  db[NIVEL] = nivel + 1;
   try {
     const r = fn();
-    db.exec('COMMIT');
+    db[NIVEL] = nivel;
+    db.exec(nivel ? `RELEASE ${ponto}` : 'COMMIT');
     return r;
   } catch (e) {
-    db.exec('ROLLBACK');
+    db[NIVEL] = nivel;
+    if (nivel) {
+      db.exec(`ROLLBACK TO ${ponto}`);
+      db.exec(`RELEASE ${ponto}`);
+    } else {
+      db.exec('ROLLBACK');
+    }
     throw e;
   }
 }

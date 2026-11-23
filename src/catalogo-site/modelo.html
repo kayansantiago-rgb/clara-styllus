@@ -200,6 +200,25 @@ main { position: relative; z-index: 2; background: var(--creme); }
 .gaveta-pe .bt-zap { justify-content: center; padding: 16px; font-size: 16px; }
 .gaveta-vazia { text-align: center; color: var(--suave); padding: 50px 10px; }
 
+/* Finalizar pedido */
+.form-pedido { display: flex; flex-direction: column; gap: 10px; }
+.form-pedido label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--suave); }
+.form-pedido input, .form-pedido textarea { font: inherit; font-size: 16px; font-weight: 500; color: var(--texto); padding: 13px 14px; border-radius: 14px; border: 1.5px solid var(--borda); background: #fff; outline: none; resize: none; }
+.form-pedido input:focus, .form-pedido textarea:focus { border-color: var(--rosa); box-shadow: 0 0 0 4px rgba(149,89,104,.14); }
+.form-pedido .erro { color: #b3372c; font-size: 13px; font-weight: 600; }
+.bt-pedido { display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 999px; padding: 16px; font-weight: 800; font-size: 16px; color: var(--vinho);
+  background: linear-gradient(135deg, var(--ouro-claro), var(--ouro)); box-shadow: 0 14px 30px -12px rgba(212,162,74,.8); }
+.bt-pedido[disabled] { opacity: .6; }
+.bt-voltar { border: 0; background: none; color: var(--suave); font-weight: 600; padding: 6px; }
+.feito { text-align: center; padding: 26px 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.feito .ok { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(140deg, #37b37a, #1f7a50); color: #fff; box-shadow: 0 16px 30px -12px rgba(31,122,80,.8);
+  animation: pop .6s cubic-bezier(.34,1.56,.64,1) both; }
+.feito .ok svg { width: 40px; height: 40px; }
+@keyframes pop { from { transform: scale(.3); opacity: 0; } }
+.feito h4 { font-family: var(--serif); font-size: 26px; margin: 4px 0 0; font-weight: 600; }
+.feito .cod { font-family: var(--serif); font-size: 22px; color: var(--rosa-escuro); background: #fff; border: 1.5px dashed var(--ouro); border-radius: 14px; padding: 8px 18px; letter-spacing: 2px; }
+.feito p { margin: 0; color: var(--suave); line-height: 1.5; }
+
 /* Rodapé */
 .rodape { position: relative; z-index: 2; background: var(--vinho); color: rgba(255,255,255,.75); padding: 60px clamp(16px, 5vw, 72px) 40px; text-align: center; }
 .rodape img { height: 70px; margin: 0 auto 18px; }
@@ -530,7 +549,7 @@ main { position: relative; z-index: 2; background: var(--creme); }
         <span class="aviso-escolha" id="aviso-escolha" hidden></span>
         <div class="prov-acoes">
           <button class="bt-linha" id="prov-sacola">${ICONE_MAIS} Pôr na sacola</button>
-          ${D.whatsapp ? '<button class="bt-ouro" id="prov-quero">Quero essa!</button>' : ''}
+          ${D.whatsapp || D.pedidos ? '<button class="bt-ouro" id="prov-quero">Quero essa!</button>' : ''}
         </div>
       </div>
       <button class="fechar" id="prov-fechar" aria-label="Fechar">${ICONE_X}</button>`;
@@ -565,6 +584,7 @@ main { position: relative; z-index: 2; background: var(--creme); }
       if (e.target.closest('#prov-sacola')) { if (ok()) { porNaSacola(p, tam, cor); fecharPeca(); } return; }
       if (e.target.closest('#prov-quero')) {
         if (!ok()) return;
+        if (D.pedidos) { porNaSacola(p, tam, cor); fecharPeca(); return abrirGaveta('sacola'); }
         window.open(zap(`Oi! Vi no catálogo e quero:\n• nº ${p.num} ${p.nome}${tam ? ` — Tam ${tam}` : ''}${cor ? ` · ${cor}` : ''}${D.mostrarPreco ? ` — ${brl(p.preco)}` : ''}`), '_blank');
       }
     };
@@ -599,28 +619,116 @@ main { position: relative; z-index: 2; background: var(--creme); }
     b.classList.remove('pula'); void b.offsetWidth; b.classList.add('pula');
     toast(`${p.nome} está na sacola 🛍️`);
   }
+  let etapa = 'sacola'; // sacola → dados → feito
+  let ultimoPedido = null;
+  const ICONE_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+  const lembrar = (() => { try { return JSON.parse(localStorage.getItem(`${CHAVE}-cliente`) || '{}'); } catch { return {}; } })();
   function desenharSacola() {
     const n = sacola.length;
     $('#sacola-n').hidden = !n;
     $('#sacola-n').textContent = n;
+    const lista = $('#gaveta-lista');
+    const pe = $('#gaveta-pe');
+    if (etapa === 'feito' && ultimoPedido) {
+      lista.innerHTML = `<div class="feito"><span class="ok">${ICONE_OK}</span><h4>Pedido recebido!</h4>
+        <span class="cod">${esc(ultimoPedido.codigo)}</span>
+        <p>Já separamos suas peças por <b>${D.prazoReserva} dias</b>.<br>A loja vai te chamar no WhatsApp para combinar o pagamento e a retirada ou entrega.</p></div>`;
+      pe.innerHTML = D.whatsapp ? `<a class="bt-zap" target="_blank" rel="noopener" href="${zap(`Oi! Fiz o pedido nº ${ultimoPedido.codigo} pelo site 💕`)}">Falar com a loja no WhatsApp</a>` : '';
+      return;
+    }
     const itens = sacola.map((x, i) => ({ ...x, i, p: D.pecas.find((p) => p.id === x.id) }));
-    $('#gaveta-lista').innerHTML = itens.length ? itens.map(({ p, tam, cor, i }) => `<div class="item">
+    const total = itens.reduce((a, x) => a + x.p.preco, 0);
+    if (etapa === 'dados' && itens.length) {
+      lista.innerHTML = `<form class="form-pedido" id="form-pedido" novalidate>
+        <p style="margin:0;color:var(--suave)">${n} peça${n === 1 ? '' : 's'}${D.mostrarPreco ? ` · <b style="color:var(--rosa-escuro)">${brl(total)}</b>` : ''}. Seus dados para a loja falar com você:</p>
+        <label>Seu nome<input name="nome" autocomplete="name" maxlength="80" value="${esc(lembrar.nome || '')}" required></label>
+        <label>WhatsApp (com DDD)<input name="telefone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="(63) 99999-9999" value="${esc(lembrar.telefone || '')}" required></label>
+        <label>Observação (opcional)<textarea name="observacao" rows="3" maxlength="300" placeholder="Ex.: vou buscar no sábado / quero entrega no centro"></textarea></label>
+        <span class="erro" id="erro-pedido" hidden></span>
+      </form>`;
+      pe.innerHTML = '<button class="bt-pedido" id="confirmar-pedido">Confirmar pedido</button><button class="bt-voltar" id="voltar-sacola">← Voltar para a sacola</button>';
+      return;
+    }
+    etapa = 'sacola';
+    lista.innerHTML = itens.length ? itens.map(({ p, tam, cor, i }) => `<div class="item">
       ${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : '<span class="sem"></span>'}
       <div><b>${esc(p.nome)}</b><small>nº ${p.num}${tam ? ` · Tam ${esc(tam)}` : ''}${cor ? ` · ${esc(cor)}` : ''}${D.mostrarPreco ? ` · ${brl(p.preco)}` : ''}</small></div>
       <button data-rm="${i}" aria-label="Tirar">${ICONE_X}</button></div>`).join('')
       : '<div class="gaveta-vazia">Sua sacola está vazia.<br>Toque no <b>+</b> das peças que gostar.</div>';
-    const total = itens.reduce((a, x) => a + x.p.preco, 0);
-    $('#gaveta-pe').innerHTML = itens.length ? `${D.mostrarPreco ? `<div class="gaveta-total"><span>${n} peça${n === 1 ? '' : 's'}</span><b>${brl(total)}</b></div>` : ''}
-      ${D.whatsapp ? '<button class="bt-zap" id="enviar-pedido">Enviar pedido no WhatsApp</button>' : ''}` : '';
+    pe.innerHTML = itens.length ? `${D.mostrarPreco ? `<div class="gaveta-total"><span>${n} peça${n === 1 ? '' : 's'}</span><b>${brl(total)}</b></div>` : ''}
+      ${D.pedidos ? '<button class="bt-pedido" id="finalizar">Finalizar pedido</button>' : ''}
+      ${D.whatsapp ? `<button class="bt-zap" id="enviar-pedido" ${D.pedidos ? 'style="background:#fff;color:#1a7f45;border:1.5px solid #25d366;box-shadow:none"' : ''}>${D.pedidos ? 'Ou mandar a lista no WhatsApp' : 'Enviar pedido no WhatsApp'}</button>` : ''}` : '';
+  }
+
+  /** Manda o pedido para a caixa de pedidos da loja (Google). */
+  async function enviarPedido(pedido) {
+    const corpo = JSON.stringify(pedido);
+    try {
+      const r = await fetch(D.pedidos, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: corpo });
+      const j = await r.json();
+      return !!j.ok;
+    } catch {
+      // Sem como ler a resposta (CORS): manda de novo "às cegas". Se chegar duas vezes, a loja recebe uma só (mesmo código).
+      try { await fetch(D.pedidos, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: corpo }); return true; } catch { return false; }
+    }
+  }
+  const novoCodigo = () => {
+    const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const v = new Uint8Array(6);
+    (window.crypto || window.msCrypto).getRandomValues(v);
+    return [...v].map((x) => letras[x % letras.length]).join('');
+  };
+  async function confirmarPedido() {
+    const f = $('#form-pedido');
+    const err = $('#erro-pedido');
+    const nome = f.nome.value.trim();
+    const tel = f.telefone.value.trim();
+    const dig = tel.replace(/\D/g, '');
+    const falta = !nome ? 'Escreva seu nome.' : dig.length < 10 || dig.length > 13 ? 'Escreva seu WhatsApp com DDD.' : '';
+    err.hidden = !falta;
+    err.textContent = falta;
+    if (falta) return;
+    const b = $('#confirmar-pedido');
+    b.disabled = true;
+    b.textContent = 'Enviando…';
+    const itens = sacola.map((x) => {
+      const p = D.pecas.find((y) => y.id === x.id);
+      const v = p.variantes.find((y) => y.t === (x.tam || '') && y.c === (x.cor || '')) || p.variantes.find((y) => y.t === (x.tam || '')) || p.variantes[0] || { id: p.id };
+      return { id: v.id, nome: p.nome, tam: x.tam || '', cor: x.cor || '', preco: p.preco };
+    });
+    const pedido = { codigo: novoCodigo(), nome, telefone: tel, observacao: f.observacao.value.trim(), itens, total: itens.reduce((a, x) => a + x.preco, 0), enviado: new Date().toISOString() };
+    const ok = await enviarPedido(pedido);
+    if (!ok) {
+      b.disabled = false;
+      b.textContent = 'Confirmar pedido';
+      err.hidden = false;
+      err.textContent = 'Não consegui enviar agora (sem internet?). Tente de novo ou mande a lista no WhatsApp.';
+      return;
+    }
+    try { localStorage.setItem(`${CHAVE}-cliente`, JSON.stringify({ nome, telefone: tel })); } catch { /* ok */ }
+    lembrar.nome = nome; lembrar.telefone = tel;
+    ultimoPedido = pedido;
+    sacola = [];
+    gravar();
+    etapa = 'feito';
+    desenharSacola();
   }
   desenharSacola();
   const gaveta = $('#gaveta');
-  const fecharGaveta = () => gaveta.classList.remove('aberta');
-  $('#bt-sacola').onclick = () => gaveta.classList.add('aberta');
+  const fecharGaveta = () => {
+    gaveta.classList.remove('aberta');
+    if (etapa === 'feito') { etapa = 'sacola'; setTimeout(desenharSacola, 400); }
+  };
+  const abrirGaveta = (passo) => { if (passo) etapa = passo; desenharSacola(); gaveta.classList.add('aberta'); };
+  $('#bt-sacola').onclick = () => abrirGaveta(etapa === 'feito' ? 'feito' : 'sacola');
   $('#fechar-gaveta').onclick = fecharGaveta;
+  gaveta.addEventListener('submit', (e) => { e.preventDefault(); confirmarPedido(); });
   gaveta.addEventListener('click', (e) => {
     const rm = e.target.closest('[data-rm]');
     if (rm) { sacola.splice(Number(rm.dataset.rm), 1); gravar(); return desenharSacola(); }
+    if (e.target.closest('#finalizar')) { etapa = 'dados'; desenharSacola(); setTimeout(() => { const i = $('#form-pedido [name=nome]'); if (i && !i.value) i.focus(); }, 300); return; }
+    if (e.target.closest('#voltar-sacola')) { etapa = 'sacola'; return desenharSacola(); }
+    if (e.target.closest('#confirmar-pedido')) { confirmarPedido(); return; }
     if (e.target.closest('#enviar-pedido')) {
       const linhas = sacola.map((x) => {
         const p = D.pecas.find((y) => y.id === x.id);

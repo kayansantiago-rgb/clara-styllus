@@ -47,6 +47,14 @@ function criarServidor(db, opcoes = {}) {
     };
     setTimeout(procurar, 60000).unref();
     setInterval(procurar, 6 * 36e5).unref();
+    // Pedidos da loja online: busca os novos de 2 em 2 minutos (só se a caixa de pedidos estiver configurada).
+    const buscarPedidos = () => {
+      despachar.pedidosSite.sincronizar().then((r) => {
+        if (r.novos.length) console.log(`Pedidos do site recebidos: ${r.novos.join(', ')}`);
+      }).catch((e) => console.error('Pedidos do site:', e.message));
+    };
+    setTimeout(buscarPedidos, 20000).unref();
+    setInterval(buscarPedidos, 2 * 60000).unref();
   }
 
   // Outros computadores da loja: liberado em Configurações (ou REDE_LIBERADA=1 na linha de comando).

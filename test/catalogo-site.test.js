@@ -88,11 +88,12 @@ test('catálogo online: publica na Netlify (cria o site na 1ª vez, depois só a
   await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
   process.env.PDV_NETLIFY_API = `http://127.0.0.1:${srv.address().port}`;
   try {
+    chamar('PUT', '/api/config', { catalogo_destino: 'netlify' });
     const sem = await chamar('POST', '/api/catalogo/site/publicar');
     assert.equal(sem.status, 502);
     assert.match(sem.corpo.erro, /chave da Netlify/);
 
-    chamar('PUT', '/api/config', { catalogo_netlify_token: 'segredo-abc' });
+    chamar('PUT', '/api/config', { catalogo_destino: 'netlify', catalogo_netlify_token: 'segredo-abc' });
     const cfg = chamar('GET', '/api/config').corpo;
     assert.notEqual(cfg.catalogo_netlify_token, 'segredo-abc');
     // Salvar as configurações com a chave mascarada não apaga a chave guardada.
@@ -115,6 +116,97 @@ test('catálogo online: publica na Netlify (cria o site na 1ª vez, depois só a
     assert.ok(st.publicado_em);
   } finally {
     delete process.env.PDV_NETLIFY_API;
+    srv.close();
+  }
+});
+
+test('catálogo online no GitHub Pages: cria o repositório, manda só o que mudou e liga o Pages', async () => {
+  const { chamar } = preparar();
+  const repos = new Map(); // nome -> { arquivos: Map(path -> sha), tree, head, pages }
+  const pedidos = [];
+  let n = 0;
+  const id = () => `sha${++n}`;
+  const srv = http.createServer((req, res) => {
+    const partes = [];
+    req.on('data', (c) => partes.push(c));
+    req.on('end', () => {
+      const corpo = partes.length ? JSON.parse(Buffer.concat(partes).toString()) : null;
+      pedidos.push(`${req.method} ${req.url}`);
+      const ok = (o, st = 200) => { res.statusCode = st; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); };
+      if (req.headers.authorization !== 'Bearer ghp_teste') return ok({ message: 'Bad credentials' }, 401);
+      const m = /^\/repos\/loja\/([^/]+)(\/.*)?$/.exec(req.url.split('?')[0]);
+      if (req.url === '/user') return ok({ login: 'loja' });
+      if (req.method === 'POST' && req.url === '/user/repos') {
+        repos.set(corpo.name, { blobs: new Map(), trees: new Map([['t0', []]]), commits: new Map([['c0', 't0']]), head: 'c0', pages: false });
+        return ok({ name: corpo.name, owner: { login: 'loja' }, default_branch: 'main' }, 201);
+      }
+      if (!m) return ok({ message: 'Not Found' }, 404);
+      const r = repos.get(m[1]);
+      const resto = m[2] || '';
+      if (!r) return ok({ message: 'Not Found' }, 404);
+      if (!resto) return ok({ name: m[1], owner: { login: 'loja' }, default_branch: 'main' });
+      if (resto === '/git/ref/heads/main') return ok({ object: { sha: r.head } });
+      if (resto.startsWith('/git/commits/')) return ok({ tree: { sha: r.commits.get(resto.split('/').pop()) } });
+      if (resto.startsWith('/git/trees/')) return ok({ tree: (r.trees.get(resto.split('/').pop()) || []).map((t) => ({ ...t, type: 'blob' })) });
+      if (resto === '/git/blobs') {
+        const dados = Buffer.from(corpo.content, 'base64');
+        const sha = catalogoSite.shaGit(dados);
+        r.blobs.set(sha, dados);
+        return ok({ sha }, 201);
+      }
+      if (resto === '/git/trees') {
+        const chave = corpo.tree.map((t) => `${t.path}:${t.sha}`).sort().join('|');
+        for (const [k, v] of r.trees) if (v.map((t) => `${t.path}:${t.sha}`).sort().join('|') === chave) return ok({ sha: k }, 201);
+        const tid = id();
+        r.trees.set(tid, corpo.tree.map((t) => ({ path: t.path, sha: t.sha })));
+        return ok({ sha: tid }, 201);
+      }
+      if (req.method === 'POST' && resto === '/git/commits') { const cid = id(); r.commits.set(cid, corpo.tree); return ok({ sha: cid }, 201); }
+      if (req.method === 'PATCH' && resto === '/git/refs/heads/main') { r.head = corpo.sha; return ok({}); }
+      if (resto === '/pages' && req.method === 'GET') return r.pages ? ok({ html_url: `https://loja.github.io/${m[1]}/` }) : ok({ message: 'Not Found' }, 404);
+      if (resto === '/pages' && req.method === 'POST') { r.pages = true; return ok({ html_url: `https://loja.github.io/${m[1]}/` }, 201); }
+      return ok({ message: 'Not Found' }, 404);
+    });
+  });
+  await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
+  process.env.PDV_GITHUB_API = `http://127.0.0.1:${srv.address().port}`;
+  try {
+    chamar('PUT', '/api/config', { catalogo_github_token: 'ghp_teste', catalogo_nome_site: 'catalogo-clara' });
+    const r1 = await chamar('POST', '/api/catalogo/site/publicar');
+    assert.equal(r1.status, 200, JSON.stringify(r1.corpo));
+    assert.equal(r1.corpo.url, 'https://loja.github.io/catalogo-clara/');
+    const repo = repos.get('catalogo-clara');
+    assert.ok(repo.pages, 'liga o GitHub Pages');
+    const arvore = repo.trees.get(repo.commits.get(repo.head));
+    const caminhos = arvore.map((t) => t.path);
+    assert.ok(caminhos.includes('index.html') && caminhos.includes('.nojekyll') && caminhos.includes('assets/logo.png'));
+    const html = repo.blobs.get(arvore.find((t) => t.path === 'index.html').sha).toString();
+    assert.match(html, /Calça Wide/);
+    assert.equal(chamar('GET', '/api/config').corpo.catalogo_github_token, '••••••••');
+    assert.equal(chamar('GET', '/api/catalogo/site').corpo.repo, 'loja/catalogo-clara');
+
+    // A 2ª publicação já sabe o endereço do site (imagem de prévia do WhatsApp); da 3ª em diante, sem
+    // mudanças, não reenvia arquivos nem cria commit.
+    await chamar('POST', '/api/catalogo/site/publicar');
+    assert.match(repo.blobs.get(repo.trees.get(repo.commits.get(repo.head)).find((t) => t.path === 'index.html').sha).toString(),
+      /og:image" content="https:\/\/loja\.github\.io\/catalogo-clara\/fotos\//);
+    pedidos.length = 0;
+    const r2 = await chamar('POST', '/api/catalogo/site/publicar');
+    assert.equal(r2.status, 200);
+    assert.ok(!pedidos.some((p) => p.includes('/git/blobs') || p.includes('POST /repos/loja/catalogo-clara/git/commits') || p === 'POST /user/repos'), pedidos.join('\n'));
+
+    // Preço mudou: manda só o index.html.
+    const calca = chamar('GET', '/api/produtos?q=Calça').corpo.find((p) => p.estoque > 0);
+    chamar('PUT', `/api/produtos/${calca.id}`, { preco_venda: 17990 });
+    pedidos.length = 0;
+    await chamar('POST', '/api/catalogo/site/publicar');
+    assert.equal(pedidos.filter((p) => p.includes('/git/blobs')).length, 1);
+
+    chamar('PUT', '/api/config', { catalogo_github_token: 'errado' });
+    const r4 = await chamar('POST', '/api/catalogo/site/publicar');
+    assert.match(r4.corpo.erro, /chave do GitHub não foi aceita/);
+  } finally {
+    delete process.env.PDV_GITHUB_API;
     srv.close();
   }
 });

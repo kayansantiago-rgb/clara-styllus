@@ -104,6 +104,8 @@ function montarPecas(db, { soEstoque = true } = {}) {
       novo: dias <= 15,
       top: top.has(m.k),
       ultima: estoque === 1,
+      // Cada tamanho × cor com estoque, para o pedido saber qual peça separar (sem dizer quantas tem).
+      variantes: disp.map((p) => ({ id: p.id, t: p.tamanho || '', c: p.cor || '' })),
       destaque: (top.has(m.k) ? 2 : 0) + (dias <= 15 ? 1 : 0),
     });
   }
@@ -134,6 +136,9 @@ function montarDados(db, cfg, opcoes = {}) {
     cidade: cfg.loja_cidade || '',
     parcelas: parcelasSemJuros(cfg),
     mostrarPreco: cfg.catalogo_mostrar_preco !== '0',
+    // Caixa de pedidos (Google Apps Script): com ela, a sacola vira pedido que cai no sistema.
+    pedidos: /^https:\/\/script\.google(usercontent)?\.com\//.test(cfg.pedidos_url || '') ? cfg.pedidos_url : '',
+    prazoReserva: Number(cfg.reserva_prazo_dias) || 7,
     atualizado: hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     categorias,
     pecas,
@@ -318,4 +323,103 @@ async function publicar({ token, siteId, nome, zip }) {
   return { site_id: id, url: url || deploy.ssl_url || deploy.url, deploy_id: deploy.id };
 }
 
-module.exports = { montarDados, montarHtml, arquivosDoSite, lerFoto, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };
+// -------------------------------------------------------- github pages
+const apiGithub = () => process.env.PDV_GITHUB_API || 'https://api.github.com';
+const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms));
+
+async function chamarGithub(token, metodo, caminho, corpo) {
+  const r = await fetch(`${apiGithub()}${caminho}`, {
+    method: metodo,
+    headers: {
+      Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'ClaraStyllus-PDV', ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+  });
+  const texto = await r.text();
+  let json = null;
+  try { json = texto ? JSON.parse(texto) : null; } catch { /* sem JSON */ }
+  if (!r.ok) {
+    const msg = (json && json.message) || r.statusText;
+    const e = new Error(r.status === 401 ? 'A chave do GitHub não foi aceita. Gere outra (passo a passo em "Site da loja").'
+      : r.status === 403 && /scope|permission|Resource not accessible/i.test(msg) ? 'A chave do GitHub não tem permissão. Gere a chave marcando "repo".'
+        : `GitHub: ${msg}`);
+    e.status = r.status;
+    throw e;
+  }
+  return json;
+}
+
+/** Identificador do arquivo no Git (para só enviar o que mudou). */
+const shaGit = (dados) => require('node:crypto').createHash('sha1').update(`blob ${dados.length}\0`).update(dados).digest('hex');
+
+/**
+ * Publica no GitHub Pages: cria o repositório público na conta da loja (na 1ª vez), manda os arquivos
+ * num commit só (apenas os que mudaram) e liga o Pages. Devolve { repo: 'dono/nome', url }.
+ */
+async function publicarGithub({ token, repo, nome, arquivos, loja = 'Clara Styllus' }) {
+  if (!token) throw new Error('Falta a chave do GitHub (passo a passo em "Site da loja").');
+  const eu = await chamarGithub(token, 'GET', '/user');
+  let [dono, nomeRepo] = String(repo || '').split('/');
+  if (!dono || !nomeRepo) { dono = eu.login; nomeRepo = nomeSite(nome); }
+  const caminho = `/repos/${encodeURIComponent(dono)}/${encodeURIComponent(nomeRepo)}`;
+  let info;
+  try {
+    info = await chamarGithub(token, 'GET', caminho);
+  } catch (e) {
+    if (e.status !== 404) throw e;
+    if (dono.toLowerCase() !== String(eu.login).toLowerCase()) throw new Error(`O repositório ${dono}/${nomeRepo} não existe.`);
+    info = await chamarGithub(token, 'POST', '/user/repos', {
+      name: nomeRepo, description: `Catálogo online da ${loja}`, auto_init: true, has_issues: false, has_wiki: false, has_projects: false,
+    });
+  }
+  dono = info.owner.login;
+  nomeRepo = info.name;
+  const base = `/repos/${encodeURIComponent(dono)}/${encodeURIComponent(nomeRepo)}`;
+  const ramo = info.default_branch || 'main';
+  // Logo depois de criado, o repositório pode levar uns segundos para ter o primeiro commit.
+  let ref = null;
+  for (let i = 0; i < 8 && !ref; i++) {
+    try { ref = await chamarGithub(token, 'GET', `${base}/git/ref/heads/${encodeURIComponent(ramo)}`); } catch (e) {
+      if (e.status !== 404 && e.status !== 409) throw e;
+      await esperar(1500);
+    }
+  }
+  if (!ref) throw new Error('O GitHub ainda está criando o repositório. Tente de novo em 1 minuto.');
+  const cabeca = ref.object.sha;
+  const commit = await chamarGithub(token, 'GET', `${base}/git/commits/${cabeca}`);
+  const atual = await chamarGithub(token, 'GET', `${base}/git/trees/${commit.tree.sha}?recursive=1`);
+  const existentes = new Map((atual.tree || []).filter((t) => t.type === 'blob').map((t) => [t.path, t.sha]));
+  const todos = [
+    ...arquivos,
+    { nome: '.nojekyll', dados: Buffer.alloc(0) },
+    { nome: 'README.md', dados: Buffer.from(`# Catálogo online · ${loja}\n\nSite gerado pelo sistema da loja (Clara Styllus PDV). Não edite aqui: as mudanças são apagadas na próxima atualização.\n`) },
+  ];
+  const arvore = [];
+  for (const a of todos) {
+    let sha = shaGit(a.dados);
+    if (existentes.get(a.nome) !== sha) {
+      sha = (await chamarGithub(token, 'POST', `${base}/git/blobs`, { content: a.dados.toString('base64'), encoding: 'base64' })).sha;
+    }
+    arvore.push({ path: a.nome, mode: '100644', type: 'blob', sha });
+  }
+  const nova = await chamarGithub(token, 'POST', `${base}/git/trees`, { tree: arvore });
+  if (nova.sha !== commit.tree.sha) {
+    const c = await chamarGithub(token, 'POST', `${base}/git/commits`, {
+      message: `Catálogo atualizado em ${new Date().toLocaleString('pt-BR')}`, tree: nova.sha, parents: [cabeca],
+    });
+    await chamarGithub(token, 'PATCH', `${base}/git/refs/heads/${encodeURIComponent(ramo)}`, { sha: c.sha });
+  }
+  let pages;
+  try {
+    pages = await chamarGithub(token, 'GET', `${base}/pages`);
+  } catch (e) {
+    if (e.status !== 404) throw e;
+    pages = await chamarGithub(token, 'POST', `${base}/pages`, { source: { branch: ramo, path: '/' } });
+  }
+  const url = (pages && pages.html_url) || `https://${dono.toLowerCase()}.github.io/${nomeRepo}/`;
+  return { repo: `${dono}/${nomeRepo}`, url };
+}
+
+module.exports = {
+  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };

@@ -65,7 +65,7 @@ Telas.reservas = (() => {
       const pct = r.total ? Math.round((r.pago / r.total) * 100) : 0;
       return `<div class="cd-card rs-card cd-${st}" data-i="${i}" tabindex="0">
         <div class="cd-topo">${U.avatarCliente(r.cliente_id, r.cliente_nome, r.cliente_foto)}
-          <div><b>${esc(r.cliente_nome)}</b><small>nº ${r.id} · ${dataHora(r.criado_em).split(' ')[0]}</small></div>
+          <div><b>${esc(r.cliente_nome)}${r.origem === 'site' ? ' <span class="pr-selo pr-selo-novidade mini">Site</span>' : ''}</b><small>nº ${r.id} · ${dataHora(r.criado_em).split(' ')[0]}</small></div>
           <span class="cd-prazo">${prazo}<small>até ${dataBr(r.prazo)}</small></span></div>
         ${r.status === 'aberta' ? `<div class="cd-tempo" title="Tempo até o prazo"><i style="width:${U.pctPrazo(r.criado_em, r.prazo)}%"></i></div>` : ''}
         <div class="cd-fotos">${r.itens.slice(0, 5).map((it) => U.miniatura({ id: it.produto_id, foto_versao: it.foto_versao }, 'cd-foto')).join('')}
@@ -302,5 +302,5 @@ Telas.reservas = (() => {
     });
   }
 
-  return { abrir, criar, sair: () => { raiz = null; } };
+  return { abrir, criar, retirar, sair: () => { raiz = null; } };
 })();

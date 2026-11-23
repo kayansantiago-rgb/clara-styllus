@@ -9,6 +9,13 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Loja online com pedidos no sistema**: o site da loja pode ficar no **GitHub Pages** (o sistema cria o
+  repositório e liga o Pages sozinho) ou na Netlify. Com a **caixa de pedidos** ligada (um Google Apps Script grátis,
+  com os pedidos numa planilha só da loja), a cliente finaliza a sacola no site com nome e WhatsApp e o pedido cai
+  na tela **Pedidos online**: a cliente é achada pelo WhatsApp (ou cadastrada), as peças são **separadas numa
+  reserva** e aparece um aviso. Dali dá para confirmar no WhatsApp, passar no caixa quando ela vier ou cancelar
+  (as peças voltam ao estoque). O sistema busca os pedidos de 2 em 2 minutos.
+
 - **Site da loja (catálogo online 3D)**: em Produtos → **Site da loja**, o sistema monta um site animado com todas
   as peças em estoque (carrossel 3D, cartões que inclinam, fotos por cor, tamanhos, preços De/Por e parcelas) e
   publica na Netlify (grátis) com um clique. A cliente abre o link no celular, escolhe tamanho e cor, monta a

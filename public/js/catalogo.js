@@ -459,16 +459,32 @@ const Catalogo = (() => {
             <label class="check"><input type="checkbox" id="cs-esgot" ${cfg.catalogo_so_estoque !== '0' ? '' : 'checked'}> Mostrar também peças esgotadas</label>
             <button type="button" class="btn btn-claro btn-peq" id="cs-salvar">${Icone('check')} Salvar e atualizar a prévia</button>
           </details>
-          <details class="cs-bloco" ${st.tem_chave ? '' : 'open'}><summary>${Icone('chave')} Publicação (Netlify, grátis) ${st.tem_chave ? '<span class="selo ok">ligada</span>' : ''}</summary>
-            <ol class="cs-passos">
-              <li>Crie uma conta grátis em <b>app.netlify.com</b> (pode entrar com o Google).</li>
-              <li>Clique na sua foto → <b>User settings</b> → <b>Applications</b> → <b>Personal access tokens</b> → <b>New access token</b>.</li>
-              <li>Dê um nome (ex.: "loja"), escolha <b>No expiration</b>, gere e copie a chave.</li>
-              <li>Cole aqui embaixo e clique em <b>Publicar</b>. Pronto: o sistema cria o site sozinho.</li>
-            </ol>
-            <label>Chave da Netlify<input id="cs-chave" type="password" autocomplete="off" placeholder="${st.tem_chave ? 'chave guardada (cole outra para trocar)' : 'cole a chave aqui'}"></label>
-            <label>Endereço do site<div class="cs-end"><input id="cs-nome" value="${esc(cfg.catalogo_nome_site || st.nome_site)}" ${st.url ? 'disabled' : ''}><span>.netlify.app</span></div></label>
-            ${st.url ? '<small class="dica">O endereço já foi criado e não muda nas próximas atualizações.</small>' : ''}
+          <details class="cs-bloco" ${st.tem_chave ? '' : 'open'}><summary>${Icone('chave')} Onde o site fica hospedado ${st.tem_chave ? '<span class="selo ok">ligado</span>' : ''}</summary>
+            <div class="segmentos cs-destino" id="cs-destino">
+              <button type="button" class="segmento ${st.destino === 'github' ? 'sel' : ''}" data-d="github">GitHub Pages</button>
+              <button type="button" class="segmento ${st.destino === 'netlify' ? 'sel' : ''}" data-d="netlify">Netlify</button>
+            </div>
+            <div data-mostra="github" ${st.destino === 'github' ? '' : 'hidden'}>
+              <ol class="cs-passos">
+                <li>Entre no <b>github.com</b> com a conta da loja.</li>
+                <li>Clique na sua foto → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b>.</li>
+                <li>Em "Note" escreva <b>catalogo</b>, em "Expiration" escolha <b>No expiration</b> e marque só a caixa <b>repo</b>. Clique em <b>Generate token</b> e copie.</li>
+                <li>Cole aqui e clique em <b>Publicar</b>: o sistema cria o repositório e liga o GitHub Pages sozinho.</li>
+              </ol>
+              <label>Chave do GitHub<input id="cs-chave-github" type="password" autocomplete="off" placeholder="${st.destino === 'github' && st.tem_chave ? 'chave guardada (cole outra para trocar)' : 'ghp_…'}"></label>
+              <label>Nome do repositório<div class="cs-end"><span>github.com/…/</span><input id="cs-repo" value="${esc((st.repo || '').split('/')[1] || cfg.catalogo_nome_site || `catalogo-${st.nome_site}`)}" ${st.repo ? 'disabled' : ''}></div></label>
+              <small class="dica">Fica público (é um site). Obs.: as regras do GitHub Pages não são feitas para lojas virtuais; para um catálogo costuma ir bem, mas se um dia o GitHub reclamar, é só trocar para a Netlify aqui em cima.</small>
+            </div>
+            <div data-mostra="netlify" ${st.destino === 'netlify' ? '' : 'hidden'}>
+              <ol class="cs-passos">
+                <li>Crie uma conta grátis em <b>app.netlify.com</b> (pode entrar com o Google).</li>
+                <li>Clique na sua foto → <b>User settings</b> → <b>Applications</b> → <b>Personal access tokens</b> → <b>New access token</b>.</li>
+                <li>Dê um nome (ex.: "loja"), escolha <b>No expiration</b>, gere e copie a chave.</li>
+                <li>Cole aqui embaixo e clique em <b>Publicar</b>.</li>
+              </ol>
+              <label>Chave da Netlify<input id="cs-chave" type="password" autocomplete="off" placeholder="${st.destino === 'netlify' && st.tem_chave ? 'chave guardada (cole outra para trocar)' : 'cole a chave aqui'}"></label>
+              <label>Endereço do site<div class="cs-end"><input id="cs-nome" value="${esc(cfg.catalogo_nome_site || st.nome_site)}" ${st.url && st.destino === 'netlify' ? 'disabled' : ''}><span>.netlify.app</span></div></label>
+            </div>
           </details>
           <div class="cs-acoes">
             <button type="button" class="btn btn-primario btn-grande" id="cs-publicar">${Icone('nuvem')} ${st.url ? 'Atualizar o site' : 'Publicar o site'}</button>
@@ -505,6 +521,8 @@ const Catalogo = (() => {
       }
       corpo.querySelector('#cs-avisos').innerHTML = [
         !st.whatsapp_ok && `<div class="cs-aviso perigo">${Icone('whatsapp')}<span>Coloque o <b>telefone da loja</b> em Configurações → Loja: é para ele que os pedidos do site vão.</span></div>`,
+        st.pedidos_ok ? `<div class="cs-aviso ok">${Icone('check')}<span><b>Pedidos pelo site ligados:</b> quando a cliente finaliza a sacola, o pedido cai em <a href="#/pedidos" data-fechar>Pedidos online</a> com as peças separadas.</span></div>`
+          : `<div class="cs-aviso">${Icone('sacola')}<span>Quer que os pedidos do site caiam direto no sistema? <a href="#/pedidos" data-fechar>Ligue em Pedidos online</a> (grátis) e depois atualize o site.</span></div>`,
         st.sem_foto && `<div class="cs-aviso">${Icone('camera')}<span><b>${st.sem_foto}</b> peça(s) sem foto aparecem com "foto em breve". Tire a foto pelo celular no cadastro.</span></div>`,
         !st.pecas && `<div class="cs-aviso perigo">${Icone('alerta')}<span>Nenhuma peça com estoque para mostrar.</span></div>`,
       ].filter(Boolean).join('');
@@ -520,15 +538,27 @@ const Catalogo = (() => {
         catalogo_so_estoque: corpo.querySelector('#cs-esgot').checked ? '0' : '1',
         ...extra,
       };
+      corpoCfg.catalogo_destino = destino;
       const chave = corpo.querySelector('#cs-chave').value.trim();
       if (chave) corpoCfg.catalogo_netlify_token = chave;
-      const nome = corpo.querySelector('#cs-nome');
+      const chaveGh = corpo.querySelector('#cs-chave-github').value.trim();
+      if (chaveGh) corpoCfg.catalogo_github_token = chaveGh;
+      const nome = destino === 'github' ? corpo.querySelector('#cs-repo') : corpo.querySelector('#cs-nome');
       if (!nome.disabled && nome.value.trim()) corpoCfg.catalogo_nome_site = nome.value.trim();
       await U.api('/api/config', { metodo: 'PUT', corpo: corpoCfg });
       U.config(true).catch(() => {});
       st = await U.api('/api/catalogo/site');
       corpo.querySelector('#cs-chave').value = '';
+      corpo.querySelector('#cs-chave-github').value = '';
       desenhar();
+    };
+    let destino = st.destino;
+    corpo.querySelector('#cs-destino').onclick = (ev) => {
+      const b = ev.target.closest('[data-d]');
+      if (!b) return;
+      destino = b.dataset.d;
+      corpo.querySelectorAll('#cs-destino .segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      corpo.querySelectorAll('[data-mostra]').forEach((x) => { x.hidden = x.dataset.mostra !== destino; });
     };
     corpo.querySelector('#cs-salvar').onclick = async () => {
       try { await salvarTextos(); recarregar(); aviso('Textos salvos. A prévia foi atualizada.'); } catch (e) { erro(e); }
@@ -537,17 +567,17 @@ const Catalogo = (() => {
     bPub.onclick = async () => {
       try {
         await salvarTextos();
-        if (!st.tem_chave) return aviso('Cole a chave da Netlify (passo a passo logo acima) e clique de novo.', 'alerta');
+        if (!st.tem_chave) return aviso(`Cole a chave ${destino === 'github' ? 'do GitHub' : 'da Netlify'} (passo a passo logo acima) e clique de novo.`, 'alerta');
         bPub.disabled = true;
         bPub.innerHTML = `${Icone('nuvem')} Publicando… (pode levar até 1 minuto)`;
+        if (destino === 'github' && !st.url) aviso('Na primeira vez o GitHub leva 1 a 2 minutos para deixar o link no ar.');
         const r = await U.api('/api/catalogo/site/publicar', { metodo: 'POST' });
         st = await U.api('/api/catalogo/site');
         desenhar();
         recarregar();
         Animacoes.confete();
         U.avisoAcao(`Site no ar com ${r.pecas} peça(s)!`, 'Abrir', () => window.open(r.url, '_blank'));
-        const nome = corpo.querySelector('#cs-nome');
-        if (nome) nome.disabled = true;
+        corpo.querySelector(destino === 'github' ? '#cs-repo' : '#cs-nome').disabled = true;
       } catch (e) { erro(e); } finally {
         bPub.disabled = false;
         bPub.innerHTML = `${Icone('nuvem')} ${st.url ? 'Atualizar o site' : 'Publicar o site'}`;

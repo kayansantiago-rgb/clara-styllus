@@ -19,6 +19,7 @@ const { instalarGiro } = require('./giro');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
 const catalogoSite = require('./catalogo-site');
+const { instalarPedidosSite } = require('./pedidos-site');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas, gerarEtiquetasImagem } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
@@ -319,7 +320,7 @@ function criarApi(db, opcoes = {}) {
   // ---------------------------------------------------------------- config
   const OCULTO = '••••••••';
   // Chaves guardadas nas configurações que nunca voltam para a tela (nem para quem é administradora).
-  const SEGREDOS = ['atualizacao_token', 'catalogo_netlify_token'];
+  const SEGREDOS = ['atualizacao_token', 'catalogo_netlify_token', 'catalogo_github_token'];
   const ocultarSegredos = (c) => { for (const k of SEGREDOS) if (c[k]) c[k] = OCULTO; return c; };
   // O token de atualização nunca volta para a tela (só aparece que está preenchido).
   rota('GET', '/api/config', () => {
@@ -350,7 +351,10 @@ function criarApi(db, opcoes = {}) {
       sem_foto: dados.pecas.filter((p) => !p.fotos.length).length,
       categorias: dados.categorias,
       whatsapp_ok: !!dados.whatsapp,
-      tem_chave: !!cfg.catalogo_netlify_token,
+      destino: cfg.catalogo_destino === 'netlify' ? 'netlify' : 'github',
+      tem_chave: !!(cfg.catalogo_destino === 'netlify' ? cfg.catalogo_netlify_token : cfg.catalogo_github_token),
+      repo: cfg.catalogo_github_repo || null,
+      pedidos_ok: !!dados.pedidos,
       url: cfg.catalogo_site_url || null,
       publicado_em: cfg.catalogo_publicado_em || null,
       nome_site: catalogoSite.nomeSite(cfg.catalogo_nome_site || cfg.loja_nome),
@@ -389,20 +393,26 @@ function criarApi(db, opcoes = {}) {
     const cfg = config();
     const { arquivos, dados } = catalogoSite.arquivosDoSite(db, cfg, opcoesCatalogo(cfg));
     if (!dados.pecas.length) throw erro(400, 'Nenhuma peça com estoque para pôr no catálogo.');
+    const github = cfg.catalogo_destino !== 'netlify';
     let r;
     try {
-      r = await catalogoSite.publicar({
-        token: cfg.catalogo_netlify_token, siteId: cfg.catalogo_site_id,
-        nome: cfg.catalogo_nome_site || cfg.loja_nome, zip: catalogoSite.zipar(arquivos),
-      });
+      r = github
+        ? await catalogoSite.publicarGithub({
+          token: cfg.catalogo_github_token, repo: cfg.catalogo_github_repo, arquivos, loja: cfg.loja_nome || 'Clara Styllus',
+          nome: cfg.catalogo_nome_site || `catalogo-${cfg.loja_nome || 'loja'}`,
+        })
+        : await catalogoSite.publicar({
+          token: cfg.catalogo_netlify_token, siteId: cfg.catalogo_site_id,
+          nome: cfg.catalogo_nome_site || cfg.loja_nome, zip: catalogoSite.zipar(arquivos),
+        });
     } catch (e) {
-      if (e.cause || /fetch failed|ENOTFOUND|ECONN/i.test(e.message)) throw erro(502, 'Sem internet neste computador agora. Confira a conexão e tente de novo.');
+      if (/fetch failed|ENOTFOUND|ECONN|EAI_AGAIN/i.test(String(e.message) + String(e.cause && e.cause.code))) throw erro(502, 'Sem internet neste computador agora. Confira a conexão e tente de novo.');
       throw erro(e.status === 401 ? 400 : 502, e.message);
     }
     const agora = new Date().toLocaleString('sv-SE').replace('T', ' ');
     const up = db.prepare('UPDATE config SET valor = ? WHERE chave = ?');
     transacao(db, () => {
-      up.run(r.site_id, 'catalogo_site_id');
+      if (github) up.run(r.repo, 'catalogo_github_repo'); else up.run(r.site_id, 'catalogo_site_id');
       up.run(r.url, 'catalogo_site_url');
       up.run(agora, 'catalogo_publicado_em');
     });
@@ -418,6 +428,7 @@ function criarApi(db, opcoes = {}) {
       crediario: n(`SELECT COUNT(DISTINCT cliente_id) AS n FROM crediario_parcelas WHERE status = 'aberta' AND vencimento < ?`, hoje),
       condicional: n(`SELECT COUNT(*) AS n FROM condicionais WHERE status = 'aberta' AND prazo <= ?`, hoje),
       reservas: n(`SELECT COUNT(*) AS n FROM reservas WHERE status = 'aberta' AND prazo < ?`, hoje),
+      pedidos: pedidosSite.novos(),
     };
   });
 
@@ -1068,6 +1079,7 @@ function criarApi(db, opcoes = {}) {
 
   instalarInventario({ db, rota, erro, inteiro, texto, plano, planos, transacao });
   const reservas = instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, transacao, config, caixaAberto });
+  const pedidosSite = instalarPedidosSite({ db, rota, erro, texto, plano, planos, transacao, config, reservas });
   instalarEspera({ db, rota, erro, inteiro, texto, plano, planos });
   instalarCelular({ db, rota, erro, texto });
 
@@ -2301,6 +2313,7 @@ function criarApi(db, opcoes = {}) {
   despachar.backup = backup; // usado pelo servidor para o backup diário
   despachar.usuarioDoToken = usuarioDoToken; // o envio do instalador confere o login antes de receber o arquivo
   despachar.atualizacao = atualizacao; // verificação periódica de versão nova
+  despachar.pedidosSite = pedidosSite; // busca os pedidos do site de 2 em 2 minutos
   return despachar;
 }
 

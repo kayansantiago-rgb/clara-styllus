@@ -91,18 +91,19 @@ function instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, trans
 
   rota('GET', '/api/reservas/:id', ({ params }) => buscar(params.id));
 
-  rota('POST', '/api/reservas', ({ corpo, usuario }) => {
-    const clienteId = inteiro(corpo.cliente_id, 'cliente', { min: 1 });
+  /**
+   * Cria a reserva: as peças saem do estoque e ficam separadas até o prazo. Usada pelo balcão e pelos
+   * pedidos que chegam do site (origem 'site').
+   */
+  function criarReserva({ clienteId, itens, prazo, observacao, usuarioNome, sinal, origem = null }) {
     if (!db.prepare('SELECT 1 FROM clientes WHERE id = ?').get(clienteId)) throw erro(400, 'Cliente não encontrada.');
-    const itens = Array.isArray(corpo.itens) ? corpo.itens : [];
     if (!itens.length) throw erro(400, 'Bipe as peças que vão ficar reservadas.');
     const cfg = config();
     const dias = Number(cfg.reserva_prazo_dias) || 7;
-    const prazo = texto(corpo.prazo, 10) || new Date(Date.now() + dias * 864e5).toLocaleDateString('sv-SE');
-    const sinal = lerSinal(corpo.sinal);
+    const ate = prazo || new Date(Date.now() + dias * 864e5).toLocaleDateString('sv-SE');
     return transacao(db, () => {
-      const r = db.prepare('INSERT INTO reservas (cliente_id, usuario, prazo, observacao) VALUES (?,?,?,?)')
-        .run(clienteId, usuario.nome, prazo, texto(corpo.observacao, 300));
+      const r = db.prepare('INSERT INTO reservas (cliente_id, usuario, prazo, observacao, origem) VALUES (?,?,?,?,?)')
+        .run(clienteId, usuarioNome, ate, observacao || null, origem);
       const id = Number(r.lastInsertRowid);
       let total = 0;
       for (const it of itens) {
@@ -121,11 +122,20 @@ function instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, trans
       }
       if (sinal) {
         if (sinal.valor > total) throw erro(400, 'O sinal não pode ser maior que o total da reserva.');
-        gravarSinal(id, sinal, usuario);
+        gravarSinal(id, sinal, { nome: usuarioNome });
       }
       return buscar(id);
     });
-  });
+  }
+
+  rota('POST', '/api/reservas', ({ corpo, usuario }) => criarReserva({
+    clienteId: inteiro(corpo.cliente_id, 'cliente', { min: 1 }),
+    itens: Array.isArray(corpo.itens) ? corpo.itens : [],
+    prazo: texto(corpo.prazo, 10),
+    observacao: texto(corpo.observacao, 300),
+    usuarioNome: usuario.nome,
+    sinal: lerSinal(corpo.sinal),
+  }));
 
   /** Mais um pagamento (a cliente adiantou mais um pouco). */
   rota('POST', '/api/reservas/:id/sinal', ({ params, corpo, usuario }) => {
@@ -198,7 +208,19 @@ function instalarReservas({ db, rota, erro, inteiro, texto, plano, planos, trans
         .all(caixaId)
     );
 
-  return { buscar, sinaisDoCaixa };
+  /** Cancela uma reserva que não tem sinal pago (ex.: pedido do site que a cliente desistiu). */
+  function cancelarSemSinal(id, motivo) {
+    const r = buscar(id);
+    if (r.status !== 'aberta') return r;
+    if (r.pago) throw erro(409, 'Esta reserva tem sinal pago: cancele pela tela de Reservas para escolher o que fazer com o sinal.');
+    return transacao(db, () => {
+      devolverEstoque(r, motivo || `Reserva nº ${r.id} cancelada`);
+      db.prepare(`UPDATE reservas SET status = 'cancelada', destino_sinal = 'nenhum', fechada_em = datetime('now','localtime') WHERE id = ?`).run(r.id);
+      return buscar(r.id);
+    });
+  }
+
+  return { buscar, sinaisDoCaixa, criarReserva, cancelarSemSinal };
 }
 
 module.exports = { instalarReservas };

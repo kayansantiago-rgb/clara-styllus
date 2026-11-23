@@ -334,7 +334,13 @@
     // Crediário atrasado, condicional para devolver hoje e reservas vencidas.
     try {
       const a = await api('/api/sistema/avisos');
-      const txt = { crediario: 'cliente(s) com parcela atrasada', condicional: 'condicional(is) para devolver hoje ou atrasada(s)', reservas: 'reserva(s) passaram do prazo' };
+      const txt = { crediario: 'cliente(s) com parcela atrasada', condicional: 'condicional(is) para devolver hoje ou atrasada(s)', reservas: 'reserva(s) passaram do prazo', pedidos: 'pedido(s) novo(s) do site' };
+      // Pedido novo do site: avisa uma vez, em qualquer tela.
+      if ((a.pedidos || 0) > pedidosVistos && telaAtual !== Telas.pedidos) {
+        U.som('sucesso');
+        U.avisoAcao(`${a.pedidos} pedido(s) novo(s) do site! As peças já estão separadas.`, 'Ver pedidos', () => { location.hash = '#/pedidos'; });
+      }
+      pedidosVistos = a.pedidos || 0;
       document.querySelectorAll('[data-bolinha]').forEach((b) => {
         const v = a[b.dataset.bolinha] || 0;
         b.hidden = !v;
@@ -344,6 +350,9 @@
     } catch { /* sem bolinhas */ }
   }
   window.atualizarBolinhaEspera = atualizarBolinhaEspera;
+  let pedidosVistos = 0;
+  // Os pedidos do site chegam a qualquer hora: confere os avisos do menu a cada minuto.
+  setInterval(() => { if (U.sessao.usuario && !document.hidden) atualizarBolinhaEspera(); }, 60000);
 
   async function atualizarStatusCaixa() {
     const el = document.getElementById('status-caixa');
