@@ -194,6 +194,9 @@ const CONFIG_PADRAO = {
   catalogo_destino: 'github',
   catalogo_github_token: '',
   catalogo_github_repo: '',
+  // Tema do site: auto (Black Friday, Natal e Dia das Mães entram sozinhos na época) ou um fixo.
+  catalogo_tema: 'auto',
+  catalogo_tema_fim: '',
   pedidos_url: '',
   pedidos_chave: '',
   pedidos_ultima_busca: '',
@@ -538,6 +541,25 @@ function migrar(db) {
     produto_id INTEGER PRIMARY KEY REFERENCES produtos(id),
     tipo TEXT NOT NULL,
     dados BLOB NOT NULL
+  )`);
+  // Fotos de 360° (a peça girando): várias fotos em volta do manequim, na ordem.
+  db.exec(`CREATE TABLE IF NOT EXISTS produto_360 (
+    produto_id INTEGER NOT NULL REFERENCES produtos(id),
+    ordem INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    dados BLOB NOT NULL,
+    PRIMARY KEY (produto_id, ordem)
+  )`);
+  if (!colunas('produtos').includes('foto360_versao')) {
+    db.exec('ALTER TABLE produtos ADD COLUMN foto360_versao INTEGER');
+    db.exec('ALTER TABLE produtos ADD COLUMN foto360_n INTEGER NOT NULL DEFAULT 0');
+  }
+  // Arquivos da loja (ex.: a foto de capa do site).
+  db.exec(`CREATE TABLE IF NOT EXISTS loja_arquivos (
+    chave TEXT PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    dados BLOB NOT NULL,
+    versao INTEGER NOT NULL
   )`);
   // Despesas: forma de pagamento, para quem foi pago, observação e a sangria (quando saiu da gaveta).
   for (const [col, tipo] of [['forma', 'TEXT'], ['favorecido', 'TEXT'], ['observacao', 'TEXT'], ['sangria_id', 'INTEGER']]) {

@@ -1143,11 +1143,22 @@ Telas.produtos = (() => {
       <div class="acoes pf-acoes">
         <button class="btn" id="pf-etq">${Icone('etiqueta')} Etiquetas</button>
         <button class="btn" id="pf-zap">${Icone('whatsapp')} Avisar clientes</button>
+        <button class="btn" id="pf-link" title="Link desta peça no site da loja (abre já nela, com a foto na prévia do WhatsApp)">${Icone('loja')} Link no site</button>
+        <button class="btn so-admin" id="pf-360" title="Fotos em volta do manequim: no site a cliente gira a roupa com o dedo">${Icone('atualizar')} ${vars.some((x) => x.foto360_n > 1) ? 'Giro 360° ✓' : 'Giro 360°'}</button>
         <button class="btn so-admin" id="pf-grade">${Icone('grade')} Estoque por tamanho</button>
         <button class="btn btn-primario so-admin" id="pf-editar">${Icone('lapis')} Editar</button>
       </div>`, { largura: '900px', classe: 'modal-ficha-produto' });
     corpo.querySelector('#pf-editar').onclick = () => formulario(p);
     corpo.querySelector('#pf-grade').onclick = () => grade(p);
+    corpo.querySelector('#pf-360').onclick = () => Foto360.abrir(vars.find((x) => x.foto360_n > 1) || p0, { aoSalvar: () => carregar().catch(() => {}) });
+    corpo.querySelector('#pf-link').onclick = async () => {
+      try {
+        const l = await api(`/api/catalogo/site/link/${p0.id}`);
+        const texto = `Olha essa peça que separei pra você 💕\n${l.nome}${l.mostrar_preco ? ` · ${brl(l.preco)}` : ''}\n${l.url}`;
+        try { await navigator.clipboard.writeText(l.url); } catch { /* sem permissão: segue com o WhatsApp */ }
+        U.avisoAcao('Link da peça copiado. Cole no WhatsApp da cliente.', 'Abrir WhatsApp', () => window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank'));
+      } catch (e) { erro(e); }
+    };
     corpo.querySelector('#pf-zap').onclick = () => {
       const comPeca = vars.filter((x) => x.estoque > 0);
       Interessadas.abrir((comPeca.length ? comPeca : vars).map((x) => x.id));

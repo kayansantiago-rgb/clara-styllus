@@ -3864,3 +3864,33 @@ body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
 .po-url input { flex: 1; }
 .menu nav a[data-rota="pedidos"] { --c: #d4a24a; }
 .menu-bolinha.novo { background: var(--ouro-vivo); color: #2b2326; }
+
+/* Site da loja: capa e tema */
+.cs-capa { display: flex; gap: 12px; align-items: center; margin-top: 4px; }
+.cs-capa-img { width: 112px; height: 72px; flex-shrink: 0; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #3b2730, #2b1d22); display: grid; place-items: center; color: rgba(255,255,255,.5); }
+.cs-capa-img img { width: 100%; height: 100%; object-fit: cover; }
+.cs-capa-img .i { width: 26px; height: 26px; }
+.cs-capa-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cs-capa-txt small { color: var(--texto-suave, #7a6d74); font-size: 12px; line-height: 1.35; }
+.cs-capa-bts { display: flex; gap: 6px; align-items: center; }
+.cs-capa-bts .btn { margin-top: 6px; }
+.cs-bloco select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--borda); background: #fff; }
+
+/* Giro 360° (cadastro) */
+.f3 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+.f3-palco { position: relative; aspect-ratio: 3 / 4; border-radius: 18px; overflow: hidden; background: #f7eef0; cursor: grab; touch-action: none; user-select: none; }
+.f3-palco:active { cursor: grabbing; }
+.f3-palco img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.f3-dica { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: inline-flex; gap: 6px; align-items: center; padding: 7px 12px; border-radius: 999px;
+  background: rgba(30,20,24,.72); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; transition: opacity .3s; pointer-events: none; }
+.f3-dica .i { width: 15px; height: 15px; }
+.f3-palco.mexeu .f3-dica { opacity: 0; }
+.f3-vazio { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #a2878f; text-align: center; padding: 20px; }
+.f3-vazio .i { width: 40px; height: 40px; opacity: .6; }
+.f3-lado { display: flex; flex-direction: column; gap: 12px; }
+.f3-passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; line-height: 1.45; font-size: 14px; }
+.f3-botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.f3-lado .acoes { margin-top: auto; }
+@media (max-width: 720px) { .f3 { grid-template-columns: 1fr; } .f3-palco { max-height: 52vh; } }
+.cs-bloco label.btn, .f3-lado label.btn { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; align-self: flex-start; font-size: 13.5px; }
+.f3-lado label.btn { margin: 0; }

@@ -45,12 +45,12 @@ function parcelasSemJuros(cfg) {
 
 /**
  * Peças do catálogo, juntando tamanhos e cores do mesmo modelo (nome + referência).
- * Devolve { pecas, fotos: Map(nomeArquivo → produto_id) }.
+ * Devolve { pecas, fotos: Map(nomeArquivo → { id, ordem? }) } (ordem = quadro do giro de 360°).
  */
 function montarPecas(db, { soEstoque = true } = {}) {
   const produtos = db.prepare(
     `SELECT p.id, p.nome, p.referencia, p.categoria, p.tamanho, p.cor, p.preco_venda, p.preco_anterior, p.estoque, p.foto_versao, p.criado_em,
-       f.tipo AS foto_tipo
+       p.foto360_versao, p.foto360_n, f.tipo AS foto_tipo
      FROM produtos p LEFT JOIN produto_fotos f ON f.produto_id = p.id
      WHERE p.ativo = 1 AND p.servico = 0 AND p.atalho = 0 AND p.excluido_em IS NULL ORDER BY p.id`
   ).all();
@@ -85,9 +85,16 @@ function montarPecas(db, { soEstoque = true } = {}) {
       if (coresComFoto.has(chaveCor)) continue;
       coresComFoto.add(chaveCor);
       const arq = `fotos/${p.id}-${p.foto_versao}.${{ 'image/png': 'png', 'image/webp': 'webp' }[p.foto_tipo] || 'jpg'}`;
-      fotos.set(arq, p.id);
+      fotos.set(arq, { id: p.id });
       fotosModelo.push(arq);
     }
+    // Giro de 360°: as fotos em volta do manequim, de uma das peças do modelo.
+    const g = m.itens.find((p) => p.foto360_versao && p.foto360_n > 1);
+    const giro = g ? Array.from({ length: g.foto360_n }, (_, i) => {
+      const arq = `giro/${g.id}-${g.foto360_versao}-${i}.jpg`;
+      fotos.set(arq, { id: g.id, ordem: i });
+      return arq;
+    }) : [];
     const criado = m.itens.map((p) => p.criado_em).sort()[0];
     const dias = (Date.now() - new Date(String(criado).replace(' ', 'T')).getTime()) / 864e5;
     const estoque = disp.reduce((a, p) => a + p.estoque, 0);
@@ -101,6 +108,9 @@ function montarPecas(db, { soEstoque = true } = {}) {
       de,
       varia: new Set(precos).size > 1,
       fotos: fotosModelo,
+      giro,
+      // Número fixo do modelo para o link direto da peça (não muda quando um tamanho esgota).
+      lk: m.itens[0].id,
       novo: dias <= 15,
       top: top.has(m.k),
       ultima: estoque === 1,
@@ -118,16 +128,59 @@ function montarPecas(db, { soEstoque = true } = {}) {
   return { pecas, fotos };
 }
 
+const dia = (a, m, d, h = 0, mi = 0, s = 0) => new Date(a, m, d, h, mi, s);
+const fimDoDia = (d) => dia(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+/** Black Friday no Brasil: a sexta depois da 4ª quinta-feira de novembro. */
+function blackFriday(ano) {
+  const d1 = dia(ano, 10, 1);
+  const primeiraQuinta = 1 + ((4 - d1.getDay() + 7) % 7);
+  return dia(ano, 10, primeiraQuinta + 21 + 1);
+}
+/** Dia das Mães: 2º domingo de maio. */
+function diaDasMaes(ano) {
+  const d1 = dia(ano, 4, 1);
+  return dia(ano, 4, 1 + ((7 - d1.getDay()) % 7) + 7);
+}
+const TEMAS = ['classico', 'black_friday', 'natal', 'maes', 'namorados', 'verao'];
+/** Tema do site: no "auto", as datas do comércio entram sozinhas na época (com contagem regressiva). */
+function temaDoSite(cfg, hoje = new Date()) {
+  const escolha = cfg.catalogo_tema || 'auto';
+  if (escolha !== 'auto') {
+    if (!TEMAS.includes(escolha) || escolha === 'classico') return { id: 'classico', fim: '' };
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(cfg.catalogo_tema_fim || '');
+    const fim = m ? fimDoDia(dia(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : null;
+    return { id: escolha, fim: fim && fim > hoje ? fim.toISOString() : '' };
+  }
+  const ano = hoje.getFullYear();
+  const bf = blackFriday(ano);
+  const maes = diaDasMaes(ano);
+  const janelas = [
+    ['black_friday', dia(ano, 10, bf.getDate() - 14), fimDoDia(dia(ano, 10, bf.getDate() + 2))], // até o domingo depois
+    ['natal', dia(ano, 11, 1), dia(ano, 11, 24, 23, 59, 59)],
+    ['maes', dia(ano, 4, maes.getDate() - 14), fimDoDia(maes)],
+    ['namorados', dia(ano, 5, 1), dia(ano, 5, 12, 23, 59, 59)],
+  ];
+  const j = janelas.find(([, ini, fim]) => hoje >= ini && hoje <= fim);
+  return j ? { id: j[0], fim: j[2].toISOString() } : { id: 'classico', fim: '' };
+}
+
+/** Foto de capa do site (guardada no sistema), ou null. */
+function capaDoSite(db) {
+  const c = db.prepare(`SELECT tipo, versao FROM loja_arquivos WHERE chave = 'capa'`).get();
+  return c ? `assets/capa-${c.versao}.${{ 'image/png': 'png', 'image/webp': 'webp' }[c.tipo] || 'jpg'}` : '';
+}
+
 /** Dados que vão para o site (o que o JavaScript da página lê). */
 function montarDados(db, cfg, opcoes = {}) {
   const { pecas, fotos } = montarPecas(db, opcoes);
-  const hoje = new Date();
+  const hoje = opcoes.hoje || new Date();
   const categorias = [...new Set(pecas.map((p) => p.categoria))];
   const loja = cfg.loja_nome || 'Clara Styllus';
   const dados = {
     loja,
     titulo: (cfg.catalogo_titulo || '').trim(),
     kicker: `Catálogo · ${MESES[hoje.getMonth()]} ${hoje.getFullYear()}`,
+    subtituloProprio: !!(cfg.catalogo_subtitulo || '').trim(),
     subtitulo: (cfg.catalogo_subtitulo || '').trim() || 'Escolha suas peças favoritas, monte a sua sacola e mande o pedido direto no nosso WhatsApp.',
     whatsapp: whatsapp(cfg.loja_telefone),
     telefone: cfg.loja_telefone || '',
@@ -139,6 +192,8 @@ function montarDados(db, cfg, opcoes = {}) {
     // Caixa de pedidos (Google Apps Script): com ela, a sacola vira pedido que cai no sistema.
     pedidos: /^https:\/\/script\.google(usercontent)?\.com\//.test(cfg.pedidos_url || '') ? cfg.pedidos_url : '',
     prazoReserva: Number(cfg.reserva_prazo_dias) || 7,
+    tema: temaDoSite(cfg, hoje),
+    capa: capaDoSite(db),
     atualizado: hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     categorias,
     pecas,
@@ -163,10 +218,42 @@ function montarHtml(dados, { urlSite = '' } = {}) {
     .replace('__DADOS__', () => json);
 }
 
-/** Foto de um produto (bytes como gravados no banco). */
-function lerFoto(db, produtoId) {
-  const f = db.prepare('SELECT tipo, dados FROM produto_fotos WHERE produto_id = ?').get(produtoId);
+/** Foto de um produto (bytes como gravados no banco); com `ordem`, um quadro do giro de 360°. */
+function lerFoto(db, produtoId, ordem = null) {
+  const f = ordem === null || ordem === undefined
+    ? db.prepare('SELECT tipo, dados FROM produto_fotos WHERE produto_id = ?').get(produtoId)
+    : db.prepare('SELECT tipo, dados FROM produto_360 WHERE produto_id = ? AND ordem = ?').get(produtoId, ordem);
   return f ? { tipo: f.tipo, dados: Buffer.from(f.dados) } : null;
+}
+
+/** A foto de capa (bytes), ou null. */
+function lerCapa(db) {
+  const c = db.prepare(`SELECT tipo, dados FROM loja_arquivos WHERE chave = 'capa'`).get();
+  return c ? { tipo: c.tipo, dados: Buffer.from(c.dados) } : null;
+}
+
+/**
+ * Página de cada peça (p/123/): o link que a loja manda no WhatsApp. Mostra a foto e o preço da peça na
+ * prévia da conversa e abre o catálogo já nela.
+ */
+function paginaDaPeca(dados, p, urlSite = '') {
+  const base = urlSite.replace(/\/$/, '');
+  const destino = `../../#peca-${p.lk}`;
+  const img = p.fotos[0] ? (base ? `${base}/${p.fotos[0]}` : `../../${p.fotos[0]}`) : (base ? `${base}/assets/logo.png` : '../../assets/logo.png');
+  const brl = (c) => `R$ ${(c / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+  const titulo = `${p.nome}${dados.mostrarPreco ? ` · ${brl(p.preco)}` : ''}`;
+  const desc = [p.tamanhos.length && `Tamanhos ${p.tamanhos.join(', ')}`, p.cores.length && p.cores.join(', '), `${dados.loja}. Toque para ver e pedir.`].filter(Boolean).join(' · ');
+  return `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escHtml(titulo)} · ${escHtml(dados.loja)}</title>
+<meta name="description" content="${escHtml(desc)}">
+<meta property="og:type" content="product"><meta property="og:title" content="${escHtml(titulo)}">
+<meta property="og:description" content="${escHtml(desc)}"><meta property="og:image" content="${escHtml(img)}">
+<meta name="theme-color" content="#2b1d22"><link rel="icon" href="../../assets/icone.png">
+<meta http-equiv="refresh" content="0; url=${destino}"><script>location.replace(${JSON.stringify(destino)});</script>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#2b1d22;font-family:system-ui,sans-serif}a{color:#f3d48a}</style>
+</head><body><a href="${destino}">Ver ${escHtml(p.nome)}</a></body></html>
+`;
 }
 
 const ASSETS = [
@@ -183,10 +270,15 @@ function arquivosDoSite(db, cfg, opcoes = {}) {
   for (const [nome, origem] of ASSETS) {
     if (fs.existsSync(origem)) lista.push({ nome, dados: fs.readFileSync(origem) });
   }
-  for (const [nome, id] of fotos) {
-    const f = lerFoto(db, id);
+  for (const [nome, { id, ordem }] of fotos) {
+    const f = lerFoto(db, id, ordem);
     if (f) lista.push({ nome, dados: f.dados });
   }
+  if (dados.capa) {
+    const c = lerCapa(db);
+    if (c) lista.push({ nome: dados.capa, dados: c.dados });
+  }
+  for (const p of dados.pecas) lista.push({ nome: `p/${p.lk}/index.html`, dados: Buffer.from(paginaDaPeca(dados, p, opcoes.urlSite), 'utf8') });
   // Licenças das fontes (OFL pede que acompanhem as fontes).
   for (const lic of ['LICENCA-Inter.txt', 'LICENCA-Playfair-Display.txt']) {
     const origem = path.join(PUBLICO, 'fonts', lic);
@@ -422,4 +514,4 @@ async function publicarGithub({ token, repo, nome, arquivos, loja = 'Clara Styll
 }
 
 module.exports = {
-  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };
+  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, lerCapa, paginaDaPeca, temaDoSite, blackFriday, diaDasMaes, TEMAS, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };

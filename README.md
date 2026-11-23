@@ -9,6 +9,17 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Site da loja ainda mais bonito**:
+  - **Giro de 360°** só nas peças escolhidas: na ficha da peça, **Giro 360°** recebe de 12 a 36 fotos tiradas em
+    volta do manequim. No site, a peça ganha o selo **360°** e a cliente arrasta o dedo para girar a roupa.
+  - **Foto de capa**: em Site da loja → Capa e tema, uma foto da loja ou da coleção fica atrás do título.
+  - **Temas de época**: no automático, Black Friday, Natal, Dia das Mães e Dia dos Namorados entram sozinhos na
+    época, com cores próprias, frases na faixa e **contagem regressiva**; depois o site volta ao clássico sozinho.
+    Também dá para fixar um tema (inclusive Verão) com ou sem data de fim.
+  - **Link direto da peça**: na ficha da peça, **Link no site** copia o link de uma roupa só, para mandar no
+    WhatsApp da cliente. O link mostra a foto e o preço na conversa e abre o catálogo já na peça. No site, o botão
+    **Compartilhar** faz o mesmo.
+
 - **Loja online com pedidos no sistema**: o site da loja pode ficar no **GitHub Pages** (o sistema cria o
   repositório e liga o Pages sozinho) ou na Netlify. Com a **caixa de pedidos** ligada (um Google Apps Script grátis,
   com os pedidos numa planilha só da loja), a cliente finaliza a sacola no site com nome e WhatsApp e o pedido cai

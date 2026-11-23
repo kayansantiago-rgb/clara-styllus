@@ -195,12 +195,16 @@ test('catálogo online no GitHub Pages: cria o repositório, manda só o que mud
     assert.equal(r2.status, 200);
     assert.ok(!pedidos.some((p) => p.includes('/git/blobs') || p.includes('POST /repos/loja/catalogo-clara/git/commits') || p === 'POST /user/repos'), pedidos.join('\n'));
 
-    // Preço mudou: manda só o index.html.
+    // Preço mudou: manda só o index.html e a página do link daquela peça (a prévia do WhatsApp mostra o preço).
     const calca = chamar('GET', '/api/produtos?q=Calça').corpo.find((p) => p.estoque > 0);
     chamar('PUT', `/api/produtos/${calca.id}`, { preco_venda: 17990 });
     pedidos.length = 0;
     await chamar('POST', '/api/catalogo/site/publicar');
-    assert.equal(pedidos.filter((p) => p.includes('/git/blobs')).length, 1);
+    assert.equal(pedidos.filter((p) => p.includes('/git/blobs')).length, 2);
+    const link = chamar('GET', `/api/catalogo/site/link/${calca.id}`).corpo;
+    assert.match(link.url, /^https:\/\/loja\.github\.io\/catalogo-clara\/p\/\d+\/$/);
+    const pagina = repo.trees.get(repo.commits.get(repo.head)).find((t) => t.path === `p/${link.url.match(/p\/(\d+)/)[1]}/index.html`);
+    assert.match(repo.blobs.get(pagina.sha).toString(), /og:title" content="Calça Wide · R\$ 179,90"/);
 
     chamar('PUT', '/api/config', { catalogo_github_token: 'errado' });
     const r4 = await chamar('POST', '/api/catalogo/site/publicar');
@@ -209,4 +213,47 @@ test('catálogo online no GitHub Pages: cria o repositório, manda só o que mud
     delete process.env.PDV_GITHUB_API;
     srv.close();
   }
+});
+
+test('site: giro de 360°, foto de capa, tema de época e link direto da peça', () => {
+  const { chamar, db } = novaApi();
+  const [p38, p40] = chamar('POST', '/api/produtos/grade', { nome: 'Vestido Midi', preco_venda: 25990, variantes: [{ tamanho: 'P', quantidade: 1 }, { tamanho: 'M', quantidade: 2 }] }).corpo;
+  const jpg = `data:image/jpeg;base64,${Buffer.from('quadro').toString('base64')}`;
+  // Giro: sobe quadro a quadro e fecha com a quantidade; faltando quadro, não fecha.
+  for (let i = 0; i < 8; i += 1) assert.equal(chamar('PUT', `/api/produtos/${p40.id}/360/${i}`, { imagem: jpg }).status, 200);
+  assert.equal(chamar('POST', `/api/produtos/${p40.id}/360`, { quadros: 9 }).status, 400);
+  assert.equal(chamar('POST', `/api/produtos/${p40.id}/360`, { quadros: 8 }).corpo.foto360_n, 8);
+  const cfg = chamar('GET', '/api/config').corpo;
+  let { dados } = catalogoSite.montarDados(db, cfg, { hoje: new Date(2026, 10, 23) });
+  const peca = dados.pecas.find((p) => p.nome === 'Vestido Midi');
+  assert.equal(peca.giro.length, 8);
+  assert.equal(peca.lk, p38.id, 'link fixo pelo primeiro cadastro do modelo');
+  assert.equal(chamar('GET', `/api/catalogo/site/previa/giro/${peca.giro[3].split('/')[1]}`).status, 200);
+
+  // Tema automático: Black Friday 2026 é 27/11; a contagem vai até o domingo seguinte.
+  assert.equal(catalogoSite.blackFriday(2026).getDate(), 27);
+  assert.equal(catalogoSite.blackFriday(2024).getDate(), 29);
+  assert.equal(catalogoSite.diaDasMaes(2026).getDate(), 10);
+  assert.equal(dados.tema.id, 'black_friday');
+  assert.equal(new Date(dados.tema.fim).getDate(), 29);
+  assert.equal(catalogoSite.temaDoSite(cfg, new Date(2026, 11, 10)).id, 'natal');
+  assert.equal(catalogoSite.temaDoSite(cfg, new Date(2026, 7, 10)).id, 'classico');
+  assert.deepEqual(catalogoSite.temaDoSite({ catalogo_tema: 'verao' }, new Date(2026, 0, 5)), { id: 'verao', fim: '' });
+  assert.equal(catalogoSite.temaDoSite({ catalogo_tema: 'classico' }, new Date(2026, 10, 23)).id, 'classico');
+
+  // Capa
+  assert.equal(chamar('PUT', '/api/catalogo/capa', { imagem: jpg }).status, 200);
+  ({ dados } = catalogoSite.montarDados(db, chamar('GET', '/api/config').corpo));
+  assert.match(dados.capa, /^assets\/capa-\d+\.jpg$/);
+  const { arquivos } = catalogoSite.arquivosDoSite(db, chamar('GET', '/api/config').corpo, { urlSite: 'https://loja.github.io/cat' });
+  const nomes = arquivos.map((a) => a.nome);
+  assert.ok(nomes.includes(dados.capa) && nomes.includes(peca.giro[0]) && nomes.includes(`p/${peca.lk}/index.html`));
+  const pag = arquivos.find((a) => a.nome === `p/${peca.lk}/index.html`).dados.toString();
+  assert.match(pag, new RegExp(`location.replace\\("../../#peca-${peca.lk}"\\)`));
+
+  // Link: sem site publicado avisa; publicado, devolve o endereço da página da peça (de qualquer tamanho).
+  assert.equal(chamar('GET', `/api/catalogo/site/link/${p40.id}`).status, 400);
+  chamar('PUT', '/api/config', { catalogo_site_url: 'https://loja.github.io/cat/' });
+  assert.equal(chamar('GET', `/api/catalogo/site/link/${p40.id}`).corpo.url, `https://loja.github.io/cat/p/${p38.id}/`);
+  assert.equal(chamar('DELETE', `/api/produtos/${p40.id}/360`).corpo.foto360_n, 0);
 });

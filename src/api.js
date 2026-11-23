@@ -355,6 +355,9 @@ function criarApi(db, opcoes = {}) {
       tem_chave: !!(cfg.catalogo_destino === 'netlify' ? cfg.catalogo_netlify_token : cfg.catalogo_github_token),
       repo: cfg.catalogo_github_repo || null,
       pedidos_ok: !!dados.pedidos,
+      tema: dados.tema,
+      capa: dados.capa ? `/api/catalogo/capa?v=${dados.capa.replace(/\D/g, '')}` : null,
+      com_360: dados.pecas.filter((p) => p.giro.length).length,
       url: cfg.catalogo_site_url || null,
       publicado_em: cfg.catalogo_publicado_em || null,
       nome_site: catalogoSite.nomeSite(cfg.catalogo_nome_site || cfg.loja_nome),
@@ -368,6 +371,17 @@ function criarApi(db, opcoes = {}) {
     return { __arquivo: true, inline: true, semCache: true, tipo: 'text/html; charset=utf-8', conteudo: Buffer.from(catalogoSite.montarHtml(dados, opcoesCatalogo(cfg)), 'utf8') };
   });
   rota('GET', '/api/catalogo/site/previa/:pasta/:arq', ({ params }) => {
+    if (params.pasta === 'assets' && /^capa-\d+\.(jpg|png|webp)$/.test(params.arq || '')) {
+      const c = catalogoSite.lerCapa(db);
+      if (!c) throw erro(404, 'Arquivo não encontrado.');
+      return { __arquivo: true, inline: true, tipo: c.tipo, conteudo: c.dados };
+    }
+    if (params.pasta === 'giro') {
+      const g = /^(\d+)-\d+-(\d+)\.jpg$/.exec(params.arq || '');
+      const f = g && catalogoSite.lerFoto(db, Number(g[1]), Number(g[2]));
+      if (!f) throw erro(404, 'Foto não encontrada.');
+      return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: f.dados };
+    }
     if (params.pasta === 'assets') {
       const a = catalogoSite.ASSETS.find(([nome]) => nome === `assets/${params.arq}`);
       if (!a || !fs.existsSync(a[1])) throw erro(404, 'Arquivo não encontrado.');
@@ -379,6 +393,37 @@ function criarApi(db, opcoes = {}) {
     const f = catalogoSite.lerFoto(db, Number(m[1]));
     if (!f) throw erro(404, 'Foto não encontrada.');
     return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: f.dados };
+  });
+
+  // Foto de capa do site (no lugar do fundo vinho da abertura).
+  rota('GET', '/api/catalogo/capa', () => {
+    const c = catalogoSite.lerCapa(db);
+    if (!c) throw erro(404, 'Sem foto de capa.');
+    return { __arquivo: true, inline: true, tipo: c.tipo, conteudo: c.dados };
+  });
+  rota('PUT', '/api/catalogo/capa', ({ corpo }) => {
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec((corpo && corpo.imagem) || '');
+    if (!m) throw erro(400, 'Imagem inválida (use JPG, PNG ou WEBP).');
+    const dados = Buffer.from(m[2], 'base64');
+    if (dados.length > 3e6) throw erro(400, 'Imagem muito grande.');
+    db.prepare(`INSERT OR REPLACE INTO loja_arquivos (chave, tipo, dados, versao) VALUES ('capa', ?, ?, ?)`).run(m[1], dados, Date.now());
+    return { ok: true };
+  }, 'admin');
+  rota('DELETE', '/api/catalogo/capa', () => {
+    db.prepare(`DELETE FROM loja_arquivos WHERE chave = 'capa'`).run();
+    return { ok: true };
+  }, 'admin');
+
+  /** Link direto de uma peça no site (abre o catálogo já nela, com a foto na prévia do WhatsApp). */
+  rota('GET', '/api/catalogo/site/link/:id', ({ params }) => {
+    const cfg = config();
+    const p = buscarProduto(params.id);
+    const { dados } = catalogoSite.montarDados(db, cfg, opcoesCatalogo(cfg));
+    const ids = new Set(db.prepare(`SELECT id FROM produtos WHERE nome = ? COLLATE NOCASE AND COALESCE(referencia, '') = ?`).all(p.nome, p.referencia || '').map((r) => r.id));
+    const peca = dados.pecas.find((x) => ids.has(x.lk));
+    if (!peca) throw erro(404, 'Esta peça não está no site (sem estoque ou inativa).');
+    if (!cfg.catalogo_site_url) throw erro(400, 'O site ainda não foi publicado. Publique em Produtos → Site da loja.');
+    return { url: `${cfg.catalogo_site_url.replace(/\/$/, '')}/p/${peca.lk}/`, nome: peca.nome, preco: peca.preco, foto: !!peca.fotos.length, mostrar_preco: dados.mostrarPreco };
   });
 
   /** O site inteiro em .zip (para publicar em qualquer hospedagem). */
@@ -563,6 +608,7 @@ function criarApi(db, opcoes = {}) {
     transacao(db, () => {
       for (const p of alvo) {
         db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
+        db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
       }
     });
@@ -684,6 +730,43 @@ function criarApi(db, opcoes = {}) {
   rota('DELETE', '/api/produtos/:id/foto', ({ params }) => {
     db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(params.id);
     db.prepare('UPDATE produtos SET foto_versao = NULL WHERE id = ?').run(params.id);
+    return buscarProduto(params.id);
+  }, 'admin');
+
+  // Giro de 360°: os quadros sobem um por vez (cada um é uma foto) e depois fecha com a quantidade.
+  rota('GET', '/api/produtos/:id/360/:n', ({ params }) => {
+    const f = catalogoSite.lerFoto(db, Number(params.id), Number(params.n));
+    if (!f) throw erro(404, 'Foto não encontrada.');
+    return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: f.dados };
+  });
+  rota('PUT', '/api/produtos/:id/360/:n', ({ params, corpo }) => {
+    buscarProduto(params.id);
+    const n = Number(params.n);
+    if (!Number.isInteger(n) || n < 0 || n >= 72) throw erro(400, 'Quadro inválido.');
+    const m = /^data:(image\/jpeg);base64,([A-Za-z0-9+/=]+)$/.exec((corpo && corpo.imagem) || '');
+    if (!m) throw erro(400, 'Imagem inválida.');
+    const dados = Buffer.from(m[2], 'base64');
+    if (dados.length > 1e6) throw erro(400, 'Imagem muito grande.');
+    db.prepare('INSERT OR REPLACE INTO produto_360 (produto_id, ordem, tipo, dados) VALUES (?,?,?,?)').run(params.id, n, m[1], dados);
+    return { ok: true };
+  }, 'admin');
+  rota('POST', '/api/produtos/:id/360', ({ params, corpo }) => {
+    buscarProduto(params.id);
+    const n = Number(corpo && corpo.quadros);
+    if (!Number.isInteger(n) || n < 6 || n > 72) throw erro(400, 'Use de 6 a 72 fotos.');
+    const tem = db.prepare('SELECT COUNT(*) AS n FROM produto_360 WHERE produto_id = ? AND ordem < ?').get(params.id, n).n;
+    if (tem !== n) throw erro(400, 'Faltou enviar alguma foto. Tente de novo.');
+    transacao(db, () => {
+      db.prepare('DELETE FROM produto_360 WHERE produto_id = ? AND ordem >= ?').run(params.id, n);
+      db.prepare('UPDATE produtos SET foto360_versao = ?, foto360_n = ? WHERE id = ?').run(Date.now(), n, params.id);
+    });
+    return buscarProduto(params.id);
+  }, 'admin');
+  rota('DELETE', '/api/produtos/:id/360', ({ params }) => {
+    transacao(db, () => {
+      db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(params.id);
+      db.prepare('UPDATE produtos SET foto360_versao = NULL, foto360_n = 0 WHERE id = ?').run(params.id);
+    });
     return buscarProduto(params.id);
   }, 'admin');
 
@@ -878,12 +961,13 @@ function criarApi(db, opcoes = {}) {
       db.prepare(`UPDATE espera SET descricao = COALESCE(descricao, ?), tamanho = COALESCE(tamanho, ?), cor = COALESCE(cor, ?),
         produto_id = NULL WHERE produto_id = ?`).run(p.nome, p.tamanho, p.cor, p.id);
       db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
+      db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(p.id);
       if (!historico) {
         db.prepare('DELETE FROM estoque_movimentos WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
         return { ok: true, apagado: true, nome: p.nome };
       }
-      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, codigo = codigo || '#excluido' || id,
+      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, foto360_versao = NULL, foto360_n = 0, codigo = codigo || '#excluido' || id,
         excluido_em = datetime('now','localtime') WHERE id = ?`).run(p.id);
       return { ok: true, apagado: false, nome: p.nome };
     });

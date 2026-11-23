@@ -452,6 +452,20 @@ const Catalogo = (() => {
           <div class="cs-link" id="cs-link"></div>
           <div class="cs-avisos" id="cs-avisos"></div>
           ${admin ? `
+          <details class="cs-bloco" open><summary>${Icone('estrela')} Capa e tema</summary>
+            <div class="cs-capa">
+              <div class="cs-capa-img" id="cs-capa-img"></div>
+              <div class="cs-capa-txt"><b>Foto de capa</b><small>Uma foto da loja, da vitrine ou da coleção. Fica atrás do título, bem no começo do site.</small>
+                <div class="cs-capa-bts"><label class="btn btn-claro btn-peq">${Icone('imagem')} Escolher foto<input type="file" accept="image/*" id="cs-capa-arq" hidden></label>
+                <button type="button" class="btn btn-fantasma btn-peq btn-perigo-claro" id="cs-capa-tirar" hidden>${Icone('lixeira')}</button></div></div>
+            </div>
+            <label>Tema<select id="cs-tema">
+              ${[['auto', 'Automático: entra sozinho na época'], ['classico', 'Clássico (vinho e dourado)'], ['black_friday', 'Black Friday'], ['natal', 'Natal'],
+    ['maes', 'Dia das Mães'], ['namorados', 'Dia dos Namorados'], ['verao', 'Verão']].map(([k, t]) => `<option value="${k}" ${(cfg.catalogo_tema || 'auto') === k ? 'selected' : ''}>${t}</option>`).join('')}
+            </select></label>
+            <label id="cs-tema-fim-l">Termina em (para a contagem regressiva)<input type="date" id="cs-tema-fim" value="${esc(cfg.catalogo_tema_fim || '')}"></label>
+            <small class="dica" id="cs-tema-info"></small>
+          </details>
           <details class="cs-bloco" ${st.tem_chave ? '' : 'open'}><summary>${Icone('ajustes')} Textos do site</summary>
             <label>Título<input id="cs-titulo" maxlength="40" value="${esc(cfg.catalogo_titulo || '')}" placeholder="${esc(cfg.loja_nome || 'Clara Styllus')}"></label>
             <label>Frase de apresentação<textarea id="cs-sub" rows="2" maxlength="160" placeholder="Escolha suas peças favoritas, monte a sua sacola e mande o pedido direto no nosso WhatsApp.">${esc(cfg.catalogo_subtitulo || '')}</textarea></label>
@@ -529,6 +543,49 @@ const Catalogo = (() => {
     };
     desenhar();
     if (!admin) return;
+
+    // Capa e tema
+    const NOMES_TEMA = { classico: 'Clássico', black_friday: 'Black Friday', natal: 'Natal', maes: 'Dia das Mães', namorados: 'Dia dos Namorados', verao: 'Verão' };
+    const desenharCapa = () => {
+      corpo.querySelector('#cs-capa-img').innerHTML = st.capa ? `<img src="${st.capa}" alt="">` : `<span>${Icone('imagem')}</span>`;
+      corpo.querySelector('#cs-capa-tirar').hidden = !st.capa;
+      const sel = corpo.querySelector('#cs-tema').value;
+      corpo.querySelector('#cs-tema-fim-l').hidden = sel === 'auto' || sel === 'classico';
+      const t = st.tema || { id: 'classico' };
+      const fim = t.fim ? new Date(t.fim).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '';
+      corpo.querySelector('#cs-tema-info').innerHTML = sel === 'auto'
+        ? `Black Friday, Natal, Dia das Mães e Dia dos Namorados entram sozinhos na época, com contagem regressiva. ${t.id !== 'classico' ? `Agora: <b>${NOMES_TEMA[t.id]}</b>${fim ? ` até ${fim}` : ''}.` : 'Agora: <b>Clássico</b>.'}`
+        : sel === 'classico' ? '' : 'Sem data, o tema fica até você trocar. Com data, a contagem aparece e o site volta ao clássico sozinho depois.';
+    };
+    desenharCapa();
+    const salvarTema = async () => {
+      await U.api('/api/config', { metodo: 'PUT', corpo: { catalogo_tema: corpo.querySelector('#cs-tema').value, catalogo_tema_fim: corpo.querySelector('#cs-tema-fim').value } });
+      st = await U.api('/api/catalogo/site');
+      desenharCapa();
+      recarregar();
+    };
+    corpo.querySelector('#cs-tema').onchange = () => { desenharCapa(); salvarTema().catch(erro); };
+    corpo.querySelector('#cs-tema-fim').onchange = () => salvarTema().catch(erro);
+    corpo.querySelector('#cs-capa-arq').onchange = async (ev) => {
+      const a = ev.target.files[0];
+      ev.target.value = '';
+      if (!a) return;
+      try {
+        await U.api('/api/catalogo/capa', { metodo: 'PUT', corpo: { imagem: await U.reduzirImagem(a, 1800) } });
+        st = await U.api('/api/catalogo/site');
+        desenharCapa();
+        recarregar();
+        aviso('Capa salva. Veja na prévia.');
+      } catch (e) { erro(e); }
+    };
+    corpo.querySelector('#cs-capa-tirar').onclick = async () => {
+      try {
+        await U.api('/api/catalogo/capa', { metodo: 'DELETE' });
+        st = await U.api('/api/catalogo/site');
+        desenharCapa();
+        recarregar();
+      } catch (e) { erro(e); }
+    };
 
     const salvarTextos = async (extra = {}) => {
       const corpoCfg = {

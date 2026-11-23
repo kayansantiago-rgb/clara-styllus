@@ -233,6 +233,71 @@ main { position: relative; z-index: 2; background: var(--creme); }
   transition: all .35s cubic-bezier(.2,.8,.2,1); pointer-events: none; box-shadow: 0 14px 30px -10px rgba(0,0,0,.5); }
 .toast.ver { opacity: 1; transform: translate(-50%, 0); }
 
+/* Foto de capa (escolhida no sistema) */
+.hero.com-capa { background: linear-gradient(100deg, rgba(20,12,15,.9) 0%, rgba(20,12,15,.62) 45%, rgba(20,12,15,.25) 100%), var(--capa) center / cover no-repeat; }
+.hero.com-capa::before { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 60% at 80% 40%, var(--brilho-tema, transparent), transparent 70%); pointer-events: none; }
+.hero-marca { position: absolute; z-index: 0; right: -2vw; bottom: 8%; font-family: var(--sans); font-weight: 900; font-size: clamp(90px, 19vw, 300px); line-height: .8; letter-spacing: -6px;
+  color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,.09); pointer-events: none; white-space: nowrap; user-select: none; }
+
+/* Contagem regressiva das datas especiais */
+.contagem { display: inline-flex; flex-direction: column; gap: 8px; margin: 0 0 26px; }
+.contagem small { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ouro-claro); }
+.contagem div { display: flex; gap: 8px; }
+.contagem span { min-width: 62px; padding: 8px 6px 6px; border-radius: 14px; text-align: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }
+.contagem b { display: block; font-family: var(--serif); font-size: 28px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.contagem i { font-style: normal; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.6); }
+
+/* Temas de época */
+body[data-tema=black_friday] { --vinho: #0e0c0d; --vinho-2: #231d1f; --rosa: #d1342b; --rosa-escuro: #c2281f; --rosa-claro: #f4efe9; --ouro: #ffcc00; --ouro-claro: #ffe266; --creme: #f7f4f1; --brilho-tema: rgba(255,204,0,.18); }
+body[data-tema=black_friday] .hero { background: radial-gradient(60% 55% at 78% 48%, rgba(255,204,0,.16), transparent 70%), radial-gradient(45% 45% at 8% 95%, rgba(209,52,43,.25), transparent 70%), linear-gradient(160deg, #1c1718, #0b0a0a 60%, #000); }
+body[data-tema=black_friday] .hero.com-capa { background: linear-gradient(100deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.66) 45%, rgba(0,0,0,.3) 100%), var(--capa) center / cover no-repeat; }
+body[data-tema=black_friday] .hero-marca { -webkit-text-stroke-color: rgba(255,204,0,.14); }
+body[data-tema=black_friday] .selo.desc { background: var(--ouro); color: #000; font-size: 12.5px; padding: 6px 11px; }
+body[data-tema=black_friday] .faixa { background: #000; color: var(--ouro); }
+body[data-tema=black_friday] .faixa div { font-family: var(--sans); font-style: normal; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 17px; }
+body[data-tema=black_friday] .bt-ouro, body[data-tema=black_friday] .bt-pedido { color: #000; }
+body[data-tema=black_friday] .contagem span { background: rgba(255,204,0,.08); border-color: rgba(255,204,0,.35); }
+
+body[data-tema=natal] { --vinho: #123524; --vinho-2: #1d4a33; --rosa: #b3262e; --rosa-escuro: #9b1d25; --rosa-claro: #f6efe9; --ouro: #d9a441; --ouro-claro: #f2d38a; --creme: #fbf8f3; --brilho-tema: rgba(217,164,65,.2); }
+body[data-tema=natal] .hero { background: radial-gradient(60% 55% at 78% 48%, rgba(179,38,46,.45), transparent 70%), radial-gradient(45% 45% at 8% 95%, rgba(217,164,65,.2), transparent 70%), linear-gradient(160deg, #1b4a33, #123524 60%, #0a2116); }
+body[data-tema=natal] .hero.com-capa { background: linear-gradient(100deg, rgba(10,33,22,.9) 0%, rgba(10,33,22,.6) 45%, rgba(10,33,22,.25) 100%), var(--capa) center / cover no-repeat; }
+body[data-tema=natal] .faixa { background: var(--rosa); color: #fff; }
+body[data-tema=natal] .faixa span::after { color: var(--ouro-claro); }
+
+body[data-tema=maes] { --vinho: #5a2140; --vinho-2: #7a3157; --rosa: #d0688f; --rosa-escuro: #b24c74; --rosa-claro: #fdf0f4; --ouro: #e2a8b9; --ouro-claro: #ffd9e4; --creme: #fffafb; --brilho-tema: rgba(255,217,228,.2); }
+body[data-tema=maes] .hero { background: radial-gradient(60% 55% at 78% 48%, rgba(208,104,143,.55), transparent 70%), radial-gradient(45% 45% at 8% 95%, rgba(255,217,228,.25), transparent 70%), linear-gradient(160deg, #7a3157, #5a2140 60%, #3b1229); }
+body[data-tema=maes] .hero.com-capa { background: linear-gradient(100deg, rgba(59,18,41,.88) 0%, rgba(59,18,41,.58) 45%, rgba(59,18,41,.2) 100%), var(--capa) center / cover no-repeat; }
+body[data-tema=maes] .bt-ouro, body[data-tema=maes] .bt-pedido { background: linear-gradient(135deg, #fff, var(--ouro-claro)); }
+
+body[data-tema=namorados] { --vinho: #4a0f1c; --vinho-2: #6b1628; --rosa: #d23a54; --rosa-escuro: #b42740; --rosa-claro: #fdf0f2; --ouro: #f08ba0; --ouro-claro: #ffc6d2; --creme: #fffafa; --brilho-tema: rgba(240,139,160,.22); }
+body[data-tema=namorados] .hero { background: radial-gradient(60% 55% at 78% 48%, rgba(210,58,84,.55), transparent 70%), linear-gradient(160deg, #6b1628, #4a0f1c 60%, #2b0711); }
+body[data-tema=namorados] .hero.com-capa { background: linear-gradient(100deg, rgba(43,7,17,.9) 0%, rgba(43,7,17,.6) 45%, rgba(43,7,17,.22) 100%), var(--capa) center / cover no-repeat; }
+
+body[data-tema=verao] { --vinho: #0f4c5c; --vinho-2: #17677a; --rosa: #e0704f; --rosa-escuro: #c9573a; --rosa-claro: #fdf3ea; --ouro: #f4b860; --ouro-claro: #ffe0a3; --creme: #fffaf3; --brilho-tema: rgba(255,224,163,.25); }
+body[data-tema=verao] .hero { background: radial-gradient(60% 55% at 78% 40%, rgba(244,184,96,.5), transparent 70%), radial-gradient(45% 45% at 8% 95%, rgba(224,112,79,.35), transparent 70%), linear-gradient(170deg, #17677a, #0f4c5c 60%, #0a3540); }
+body[data-tema=verao] .hero.com-capa { background: linear-gradient(100deg, rgba(10,53,64,.88) 0%, rgba(10,53,64,.55) 45%, rgba(10,53,64,.18) 100%), var(--capa) center / cover no-repeat; }
+body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
+
+/* Giro de 360° */
+.selo.giro { background: linear-gradient(135deg, var(--ouro-claro), var(--ouro)); color: var(--vinho); display: inline-flex; align-items: center; gap: 4px; }
+.giro360 { position: absolute; inset: 0; z-index: 1; background: var(--rosa-claro); cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.giro360:active { cursor: grabbing; }
+.giro360 img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.giro360-dica { position: absolute; left: 16px; top: 16px; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+  background: rgba(20,12,15,.72); color: #fff; font-size: 12.5px; font-weight: 600; backdrop-filter: blur(6px); white-space: nowrap; transition: opacity .4s; pointer-events: none; }
+.giro360-dica svg { width: 18px; height: 18px; animation: balanca 1.6s ease-in-out infinite; }
+.giro360.mexeu .giro360-dica { opacity: 0; }
+@keyframes balanca { 50% { transform: translateX(5px); } }
+.giro360-carga { position: absolute; left: 0; top: 0; height: 3px; background: var(--ouro); transition: width .2s, opacity .4s; }
+.prov-mini .bt-360 { display: grid; place-items: center; font-weight: 800; font-size: 13px; color: var(--vinho); background: linear-gradient(135deg, var(--ouro-claro), var(--ouro)); }
+
+/* Compartilhar a peça */
+.compartilhar { position: absolute; right: 64px; top: 14px; z-index: 3; height: 42px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255,255,255,.9); display: inline-flex; align-items: center; gap: 7px;
+  font-weight: 700; font-size: 13.5px; color: var(--vinho); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+.compartilhar svg { width: 17px; height: 17px; }
+@media (max-width: 600px) { .compartilhar { width: 42px; padding: 0; justify-content: center; } .compartilhar span { display: none; } }
+@media (max-width: 860px) { .contagem { align-items: center; } .contagem span { min-width: 56px; } .hero-marca { right: 50%; transform: translateX(50%); bottom: 2%; font-size: 26vw; } }
+
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; padding-top: 90px; text-align: center; min-height: auto; }
   .hero p { margin-left: auto; margin-right: auto; }
@@ -278,11 +343,13 @@ main { position: relative; z-index: 2; background: var(--creme); }
   <button class="bt-sacola" id="bt-sacola" aria-label="Minha sacola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><b id="sacola-n" hidden>0</b></button>
 </header>
 
-<section class="hero">
+<section class="hero" id="hero">
+  <span class="hero-marca" id="hero-marca" aria-hidden="true"></span>
   <div class="hero-txt">
     <span class="kicker" id="kicker"></span>
     <h1 id="titulo"></h1>
     <p id="subtitulo"></p>
+    <div class="contagem" id="contagem" hidden></div>
     <div class="hero-acoes">
       <a class="bt-ouro" href="#vitrine">Ver as peças <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></a>
       <a class="bt-vidro" id="hero-zap" target="_blank" rel="noopener">Falar com a loja</a>
@@ -339,16 +406,68 @@ main { position: relative; z-index: 2; background: var(--creme); }
   const ICONE_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   const ICONE_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
+  const ICONE_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
+  const ICONE_GIRO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 4 0 1 1-6-3.8"/><path d="m13 6 3 2.2L13.6 11"/></svg>';
+
+  // ---------- Tema de época (Black Friday, Natal...): cores, frases e contagem regressiva até o fim
+  const TEMAS = {
+    black_friday: { nome: 'Black Friday', titulo: 'Black Friday', marca: 'BLACK', cor: '#0e0c0d',
+      sub: 'Os melhores preços do ano na loja toda. Corre, que as peças são poucas!', frases: ['Black Friday', 'Descontos de verdade', 'Peças limitadas'],
+      contagem: 'As ofertas acabam em', particulas: { cores: ['255,204,0', '255,120,70'], sobe: true } },
+    natal: { nome: 'Natal', titulo: 'Presentes de Natal', marca: 'NATAL', cor: '#123524',
+      sub: 'O presente perfeito está aqui (e um mimo para você também). Separamos e embalamos para presente!', frases: ['Feliz Natal', 'Embalamos para presente', 'Troca garantida'],
+      contagem: 'Faltam para o Natal', particulas: { cores: ['255,255,255'], sobe: false } },
+    maes: { nome: 'Dia das Mães', titulo: 'Para a melhor mãe', marca: 'MÃE', cor: '#5a2140',
+      sub: 'Presentes lindos para quem merece tudo. Escolha, separe e a gente embala com carinho.', frases: ['Feliz Dia das Mães', 'Embalamos para presente', 'Troca garantida'],
+      contagem: 'Faltam para o Dia das Mães', particulas: { cores: ['255,217,228', '255,255,255'], sobe: true, coracao: true } },
+    namorados: { nome: 'Dia dos Namorados', titulo: 'Dia dos Namorados', marca: 'AMOR', cor: '#4a0f1c',
+      sub: 'Para arrasar no encontro ou presentear quem você ama. Separamos para você!', frases: ['Dia dos Namorados', 'Embalamos para presente'],
+      contagem: 'Faltam para o Dia dos Namorados', particulas: { cores: ['255,198,210', '255,255,255'], sobe: true, coracao: true } },
+    verao: { nome: 'Verão', titulo: 'Coleção Verão', marca: 'VERÃO', cor: '#0f4c5c',
+      sub: 'Leveza, cor e muito estilo para os dias de sol. Escolha as suas favoritas!', frases: ['Coleção Verão', 'Leveza e cor'],
+      contagem: 'A coleção acaba em', particulas: { cores: ['255,224,163', '255,255,255'], sobe: true } },
+  };
+  const fimTema = D.tema && D.tema.fim ? new Date(D.tema.fim) : null;
+  const T = D.tema && TEMAS[D.tema.id] && !(fimTema && fimTema <= new Date()) ? TEMAS[D.tema.id] : null;
+  if (T) {
+    document.body.dataset.tema = D.tema.id;
+    const meta = document.querySelector('meta[name=theme-color]');
+    if (meta) meta.content = T.cor;
+    $('#hero-marca').textContent = T.marca;
+  }
+  if (D.capa) {
+    $('#hero').classList.add('com-capa');
+    $('#hero').style.setProperty('--capa', `url("${D.capa}")`);
+  }
+  if (T && fimTema) {
+    const cont = $('#contagem');
+    cont.hidden = false;
+    const tic = () => {
+      const r = Math.max(0, fimTema - new Date());
+      if (!r) { cont.hidden = true; return; }
+      const d = Math.floor(r / 864e5);
+      const h = Math.floor(r / 36e5) % 24;
+      const m = Math.floor(r / 6e4) % 60;
+      const sg = Math.floor(r / 1e3) % 60;
+      const dd = (n) => String(n).padStart(2, '0');
+      cont.innerHTML = `<small>${esc(T.contagem)}</small><div>${[[d, d === 1 ? 'dia' : 'dias'], [dd(h), 'horas'], [dd(m), 'min'], [dd(sg), 'seg']]
+        .map(([n, t]) => `<span><b>${n}</b><i>${t}</i></span>`).join('')}</div>`;
+      setTimeout(tic, 1000 - (Date.now() % 1000));
+    };
+    tic();
+  }
+
   // ---------- Textos da loja
-  document.title = D.titulo ? `${D.titulo} · ${D.loja}` : D.loja;
-  $('#kicker').textContent = D.kicker;
-  $('#titulo').innerHTML = D.titulo
-    ? esc(D.titulo).replace(/(\S+)$/, '<em>$1</em>')
+  const titulo = D.titulo || (T ? T.titulo : '');
+  document.title = titulo ? `${titulo} · ${D.loja}` : D.loja;
+  $('#kicker').textContent = T ? `${T.nome} · ${D.loja}` : D.kicker;
+  $('#titulo').innerHTML = titulo
+    ? esc(titulo).replace(/(\S+)$/, '<em>$1</em>')
     : `${esc(D.loja).replace(/(\S+)$/, '<em>$1</em>')}`;
-  $('#subtitulo').textContent = D.subtitulo;
+  $('#subtitulo').textContent = T && !D.subtituloProprio ? T.sub : D.subtitulo;
   $('#hero-nums').innerHTML = [[D.pecas.length, D.pecas.length === 1 ? 'peça' : 'peças'], [D.categorias.length, D.categorias.length === 1 ? 'categoria' : 'categorias'],
     D.parcelas ? [`${D.parcelas}x`, 'sem juros'] : null].filter(Boolean).map(([n, t]) => `<div><b>${n}</b><span>${t}</span></div>`).join('');
-  const frases = [D.parcelas ? `Parcele em até ${D.parcelas}x sem juros` : null, 'Pix, cartão e dinheiro', 'Novidades toda semana', D.instagram ? `Siga ${D.instagram}` : null,
+  const frases = [...(T ? T.frases : []), D.parcelas ? `Parcele em até ${D.parcelas}x sem juros` : null, 'Pix, cartão e dinheiro', 'Novidades toda semana', D.instagram ? `Siga ${D.instagram}` : null,
     'Separamos a sua peça', 'Peça pelo WhatsApp'].filter(Boolean);
   $('#faixa').innerHTML = [...frases, ...frases, ...frases, ...frases].map((f) => `<span>${esc(f)}</span>`).join('');
   $('#rod-endereco').textContent = [D.endereco, D.cidade].filter(Boolean).join(' · ');
@@ -375,13 +494,15 @@ main { position: relative; z-index: 2; background: var(--creme); }
     const cv = $('#poeira');
     const ctx = cv.getContext('2d');
     let w; let h; let ps = [];
+    const P = (T && T.particulas) || { cores: ['243,207,114'], sobe: true };
+    const cores = P.cores;
     const tamanho = () => {
       const r = Math.min(2, devicePixelRatio || 1);
       w = innerWidth; h = innerHeight;
       cv.width = w * r; cv.height = h * r; cv.style.width = `${w}px`; cv.style.height = `${h}px`;
       ctx.setTransform(r, 0, 0, r, 0, 0);
       ps = Array.from({ length: Math.round(Math.min(70, w / 18)) }, () => ({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.8 + .4,
-        v: Math.random() * .35 + .1, d: Math.random() * Math.PI * 2, a: Math.random() * .5 + .2 }));
+        v: Math.random() * .35 + .1, d: Math.random() * Math.PI * 2, a: Math.random() * .5 + .2, c: cores[Math.floor(Math.random() * cores.length)] }));
     };
     tamanho();
     addEventListener('resize', tamanho);
@@ -390,13 +511,21 @@ main { position: relative; z-index: 2; background: var(--creme); }
       const fade = Math.max(0, 1 - scrollY / (h * .9));
       if (fade > 0) {
         for (const p of ps) {
-          p.y -= p.v; p.d += .01; p.x += Math.sin(p.d) * .3;
+          p.y += P.sobe ? -p.v : p.v * 1.6; p.d += .01; p.x += Math.sin(p.d) * .3;
           if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
+          if (p.y > h + 5) { p.y = -5; p.x = Math.random() * w; }
           ctx.beginPath();
-          ctx.fillStyle = `rgba(243,207,114,${p.a * fade})`;
-          ctx.shadowColor = 'rgba(243,207,114,.9)';
+          ctx.fillStyle = `rgba(${p.c},${p.a * fade})`;
+          ctx.shadowColor = `rgba(${p.c},.9)`;
           ctx.shadowBlur = 8;
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          if (P.coracao && p.r > 1.2) {
+            const k = p.r * 2.4;
+            ctx.moveTo(p.x, p.y + k * .9);
+            ctx.bezierCurveTo(p.x - k * 1.6, p.y - k * .2, p.x - k * .6, p.y - k * 1.3, p.x, p.y - k * .4);
+            ctx.bezierCurveTo(p.x + k * .6, p.y - k * 1.3, p.x + k * 1.6, p.y - k * .2, p.x, p.y + k * .9);
+          } else {
+            ctx.arc(p.x, p.y, P.sobe ? p.r : p.r * 1.3, 0, Math.PI * 2);
+          }
           ctx.fill();
         }
       }
@@ -469,7 +598,7 @@ main { position: relative; z-index: 2; background: var(--creme); }
   const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   $('#q').addEventListener('input', () => desenharGrade());
 
-  const selos = (p) => [p.novo && '<span class="selo novo">Novidade</span>', p.de && `<span class="selo desc">−${Math.round((1 - p.preco / p.de) * 100)}%</span>`,
+  const selos = (p) => [p.giro && p.giro.length && `<span class="selo giro">${ICONE_GIRO.replace('<svg', '<svg width="13" height="13"')} 360°</span>`, p.novo && '<span class="selo novo">Novidade</span>', p.de && `<span class="selo desc">−${Math.round((1 - p.preco / p.de) * 100)}%</span>`,
     p.top && '<span class="selo top">Mais vendida</span>', p.ultima && '<span class="selo ultima">Última peça</span>'].filter(Boolean).join('');
   const precoHtml = (p) => (D.mostrarPreco ? `<div class="preco">${p.de ? `<s>${brl(p.de)}</s>` : ''}<b>${p.varia ? 'a partir de ' : ''}${brl(p.preco)}</b>
     ${D.parcelas && p.preco >= D.parcelas * 1000 ? `<small>ou ${D.parcelas}x de ${brl(Math.ceil(p.preco / D.parcelas))} sem juros</small>` : ''}</div>` : '');
@@ -531,13 +660,15 @@ main { position: relative; z-index: 2; background: var(--creme); }
     let cor = p.cores.length === 1 ? p.cores[0] : '';
     let foto = 0;
     let virado = false;
+    const temGiro = !!(p.giro && p.giro.length > 1);
     provador.innerHTML = `
       <div class="prov-fotos">
         <div class="prov-cartao" id="prov-cartao">
           <div class="prov-face">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : '<div class="peca-foto"><div class="sem">foto em breve</div></div>'}</div>
           <div class="prov-face verso">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : ''}</div>
         </div>
-        ${p.fotos.length > 1 ? `<div class="prov-mini">${p.fotos.map((f, i) => `<button data-f="${i}" class="${i ? '' : 'sel'}"><img src="${f}" alt=""></button>`).join('')}</div>` : ''}
+        ${temGiro ? '<div class="giro360" id="giro360"></div>' : ''}
+        ${p.fotos.length > 1 || temGiro ? `<div class="prov-mini">${temGiro ? '<button data-g class="bt-360 sel" aria-label="Ver girando em 360°">360°</button>' : ''}${p.fotos.map((f, i) => `<button data-f="${i}" class="${i || temGiro ? '' : 'sel'}"><img src="${f}" alt=""></button>`).join('')}</div>` : ''}
       </div>
       <div class="prov-txt">
         <span class="peca-cat">${esc(p.categoria)} · nº ${p.num}</span>
@@ -552,13 +683,26 @@ main { position: relative; z-index: 2; background: var(--creme); }
           ${D.whatsapp || D.pedidos ? '<button class="bt-ouro" id="prov-quero">Quero essa!</button>' : ''}
         </div>
       </div>
+      <button class="compartilhar" id="prov-link" aria-label="Compartilhar esta peça">${ICONE_LINK}<span>Compartilhar</span></button>
       <button class="fechar" id="prov-fechar" aria-label="Fechar">${ICONE_X}</button>`;
     cortina.hidden = false;
     provador.scrollTop = 0;
     requestAnimationFrame(() => cortina.classList.add('aberta'));
     document.body.style.overflow = 'hidden';
     const cartao = provador.querySelector('#prov-cartao');
+    const giro = provador.querySelector('#giro360');
+    if (giro) montarGiro(giro, p.giro);
+    const verGiro = (sim) => {
+      if (!giro) return;
+      giro.hidden = !sim;
+      provador.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('sel', sim));
+      if (sim) provador.querySelectorAll('[data-f]').forEach((b) => b.classList.remove('sel'));
+    };
     const trocarFoto = (i) => {
+      if (giro && !giro.hidden) {
+        verGiro(false);
+        if (i === foto) { provador.querySelectorAll('[data-f]').forEach((b) => b.classList.toggle('sel', Number(b.dataset.f) === i)); return; }
+      }
       if (i === foto) return;
       foto = i;
       virado = !virado;
@@ -576,6 +720,8 @@ main { position: relative; z-index: 2; background: var(--creme); }
     provador.onclick = (e) => {
       const f = e.target.closest('[data-f]');
       if (f) return trocarFoto(Number(f.dataset.f));
+      if (e.target.closest('[data-g]')) return verGiro(true);
+      if (e.target.closest('#prov-link')) return compartilhar(p);
       const t = e.target.closest('[data-t]');
       if (t) { tam = t.dataset.t; provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b === t)); return; }
       const c = e.target.closest('#esc-cor [data-c]');
@@ -591,19 +737,74 @@ main { position: relative; z-index: 2; background: var(--creme); }
     // Inclinação da foto acompanhando o mouse.
     const fotos = provador.querySelector('.prov-fotos');
     fotos.onpointermove = (e) => {
-      if (calmo || e.pointerType === 'touch') return;
+      if (calmo || e.pointerType === 'touch' || (giro && !giro.hidden)) return;
       const r = fotos.getBoundingClientRect();
       cartao.style.transform = `${virado ? 'rotateY(180deg) ' : ''}rotateY(${((e.clientX - r.left) / r.width - .5) * 10}deg) rotateX(${(.5 - (e.clientY - r.top) / r.height) * 8}deg)`;
     };
     fotos.onpointerleave = () => { cartao.style.transform = ''; };
   }
+  /** Giro de 360°: as fotos em volta do manequim; gira sozinho até a cliente arrastar. */
+  function montarGiro(el, quadros) {
+    const n = quadros.length;
+    el.innerHTML = `<img alt="" draggable="false"><span class="giro360-carga" style="width:0"></span><span class="giro360-dica">${ICONE_GIRO} arraste para girar</span>`;
+    const img = el.querySelector('img');
+    const carga = el.querySelector('.giro360-carga');
+    let prontos = 0;
+    quadros.forEach((src) => {
+      const i = new Image();
+      i.onload = i.onerror = () => { prontos += 1; carga.style.width = `${(prontos / n) * 100}%`; if (prontos >= n) carga.style.opacity = 0; };
+      i.src = src;
+    });
+    let q = 0;
+    const mostrar = (i) => { q = ((i % n) + n) % n; img.src = quadros[q]; };
+    mostrar(0);
+    let auto = !calmo;
+    let t0 = 0;
+    const passo = (t) => {
+      if (!auto || !el.isConnected) return;
+      if (prontos < n || el.hidden) t0 = t - q * 110; else mostrar(Math.floor((t - t0) / 110));
+      requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+    let arr = null;
+    el.onpointerdown = (e) => { auto = false; el.classList.add('mexeu'); arr = { x: e.clientX, q }; el.setPointerCapture(e.pointerId); };
+    el.onpointermove = (e) => {
+      if (!arr) return;
+      const px = Math.max(6, (el.clientWidth * 1.2) / n);
+      mostrar(arr.q - Math.round((e.clientX - arr.x) / px));
+    };
+    el.onpointerup = el.onpointercancel = () => { arr = null; };
+  }
+
+  /** Link da peça (abre o catálogo já nela; no WhatsApp aparece a foto). */
+  function compartilhar(p) {
+    const base = location.href.split('#')[0].split('?')[0].replace(/index\.html$/, '');
+    const url = `${base}${base.endsWith('/') ? '' : '/'}p/${p.lk}/`;
+    const texto = `Olha essa peça da ${D.loja}: ${p.nome} 💕`;
+    if (navigator.share) { navigator.share({ title: p.nome, text: texto, url }).catch(() => {}); return; }
+    const copiado = () => toast('Link da peça copiado 🔗');
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(copiado, () => prompt('Copie o link da peça:', url));
+    else prompt('Copie o link da peça:', url);
+  }
+
   function fecharPeca() {
+    if (/^#peca-/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
     cortina.classList.remove('aberta');
     document.body.style.overflow = '';
     setTimeout(() => { cortina.hidden = true; }, 300);
   }
   cortina.addEventListener('click', (e) => { if (e.target === cortina) fecharPeca(); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!cortina.hidden) fecharPeca(); fecharGaveta(); } });
+  // Link direto da peça (…/#peca-123): abre o catálogo já nela.
+  const abrirDoLink = () => {
+    const m = /^#peca-(\d+)$/.exec(location.hash);
+    if (!m) return;
+    const p = D.pecas.find((x) => x.lk === Number(m[1]));
+    if (p) abrirPeca(p.id);
+    else { toast('Essa peça já foi vendida 😢 Veja as outras!'); history.replaceState(null, '', location.pathname + location.search); }
+  };
+  setTimeout(abrirDoLink, calmo ? 0 : 1100);
+  addEventListener('hashchange', abrirDoLink);
 
   // ---------- Sacola (vai para o WhatsApp numa mensagem só)
   const CHAVE = `sacola-${D.loja}`;
