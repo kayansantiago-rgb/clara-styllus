@@ -1144,12 +1144,14 @@ Telas.produtos = (() => {
         <button class="btn" id="pf-etq">${Icone('etiqueta')} Etiquetas</button>
         <button class="btn" id="pf-zap">${Icone('whatsapp')} Avisar clientes</button>
         <button class="btn" id="pf-link" title="Link desta peça no site da loja (abre já nela, com a foto na prévia do WhatsApp)">${Icone('loja')} Link no site</button>
+        <button class="btn so-admin" id="pf-mais" title="Costas, detalhe do tecido, peça vestida: aparecem no site junto com a foto principal">${Icone('imagem')} ${vars.some((x) => x.extras_n > 0) ? `Mais fotos (${vars.find((x) => x.extras_n > 0).extras_n})` : 'Mais fotos'}</button>
         <button class="btn so-admin" id="pf-360" title="Fotos em volta do manequim: no site a cliente gira a roupa com o dedo">${Icone('atualizar')} ${vars.some((x) => x.foto360_n > 1) ? 'Giro 360° ✓' : 'Giro 360°'}</button>
         <button class="btn so-admin" id="pf-grade">${Icone('grade')} Estoque por tamanho</button>
         <button class="btn btn-primario so-admin" id="pf-editar">${Icone('lapis')} Editar</button>
       </div>`, { largura: '900px', classe: 'modal-ficha-produto' });
     corpo.querySelector('#pf-editar').onclick = () => formulario(p);
     corpo.querySelector('#pf-grade').onclick = () => grade(p);
+    corpo.querySelector('#pf-mais').onclick = () => FotosExtras.abrir(vars.find((x) => x.extras_n > 0) || p0, { aoSalvar: () => carregar().catch(() => {}) });
     corpo.querySelector('#pf-360').onclick = () => Foto360.abrir(vars.find((x) => x.foto360_n > 1) || p0, { aoSalvar: () => carregar().catch(() => {}) });
     corpo.querySelector('#pf-link').onclick = async () => {
       try {

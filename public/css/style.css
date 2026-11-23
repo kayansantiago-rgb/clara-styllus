@@ -3894,3 +3894,17 @@ body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
 @media (max-width: 720px) { .f3 { grid-template-columns: 1fr; } .f3-palco { max-height: 52vh; } }
 .cs-bloco label.btn, .f3-lado label.btn { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; align-self: flex-start; font-size: 13.5px; }
 .f3-lado label.btn { margin: 0; }
+
+/* Mais fotos da peça (site) */
+.fx-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 14px 0 6px; }
+.fx-foto, .fx-mais { position: relative; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; }
+.fx-foto { background: #f7eef0; box-shadow: 0 6px 16px -10px rgba(77,49,57,.5); }
+.fx-foto img { width: 100%; height: 100%; object-fit: cover; }
+.fx-num { position: absolute; left: 8px; top: 8px; min-width: 24px; height: 24px; border-radius: 12px; background: rgba(255,255,255,.92); font-size: 12px; font-weight: 800; display: grid; place-items: center; color: var(--rosa-escuro, #703d4a); }
+.fx-bts { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.fx-bts button { width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(255,255,255,.94); display: grid; place-items: center; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+.fx-bts button .i { width: 15px; height: 15px; color: #b3372c; }
+.fx-mais { border: 2px dashed var(--borda); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--rosa, #955968); text-align: center; padding: 10px; background: #fcf9fa; transition: background .2s; }
+.fx-mais:hover { background: #f7eef0; }
+.fx-mais .i { width: 30px; height: 30px; }
+.fx-mais small { color: #8a7b82; font-size: 12px; }

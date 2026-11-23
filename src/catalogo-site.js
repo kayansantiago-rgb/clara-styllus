@@ -50,7 +50,7 @@ function parcelasSemJuros(cfg) {
 function montarPecas(db, { soEstoque = true } = {}) {
   const produtos = db.prepare(
     `SELECT p.id, p.nome, p.referencia, p.categoria, p.tamanho, p.cor, p.preco_venda, p.preco_anterior, p.estoque, p.foto_versao, p.criado_em,
-       p.foto360_versao, p.foto360_n, f.tipo AS foto_tipo
+       p.foto360_versao, p.foto360_n, p.extras_versao, p.extras_n, f.tipo AS foto_tipo
      FROM produtos p LEFT JOIN produto_fotos f ON f.produto_id = p.id
      WHERE p.ativo = 1 AND p.servico = 0 AND p.atalho = 0 AND p.excluido_em IS NULL ORDER BY p.id`
   ).all();
@@ -95,6 +95,14 @@ function montarPecas(db, { soEstoque = true } = {}) {
       fotos.set(arq, { id: g.id, ordem: i });
       return arq;
     }) : [];
+    // Mais fotos (costas, detalhe…), de uma das peças do modelo.
+    const ext = { 'image/png': 'png', 'image/webp': 'webp' };
+    const e = m.itens.find((p) => p.extras_versao && p.extras_n > 0);
+    const mais = e ? db.prepare('SELECT ordem, tipo FROM produto_fotos_extras WHERE produto_id = ? AND ordem < ? ORDER BY ordem').all(e.id, e.extras_n).map((r) => {
+      const arq = `mais/${e.id}-${e.extras_versao}-${r.ordem}.${ext[r.tipo] || 'jpg'}`;
+      fotos.set(arq, { id: e.id, extra: r.ordem });
+      return arq;
+    }) : [];
     const criado = m.itens.map((p) => p.criado_em).sort()[0];
     const dias = (Date.now() - new Date(String(criado).replace(' ', 'T')).getTime()) / 864e5;
     const estoque = disp.reduce((a, p) => a + p.estoque, 0);
@@ -109,9 +117,11 @@ function montarPecas(db, { soEstoque = true } = {}) {
       varia: new Set(precos).size > 1,
       fotos: fotosModelo,
       giro,
+      mais,
       // Número fixo do modelo para o link direto da peça (não muda quando um tamanho esgota).
       lk: m.itens[0].id,
       novo: dias <= 15,
+      chegou: dias <= 7,
       top: top.has(m.k),
       ultima: estoque === 1,
       // Cada tamanho × cor com estoque, para o pedido saber qual peça separar (sem dizer quantas tem).
@@ -226,6 +236,12 @@ function lerFoto(db, produtoId, ordem = null) {
   return f ? { tipo: f.tipo, dados: Buffer.from(f.dados) } : null;
 }
 
+/** Uma das "mais fotos" da peça (bytes), ou null. */
+function lerExtra(db, produtoId, ordem) {
+  const f = db.prepare('SELECT tipo, dados FROM produto_fotos_extras WHERE produto_id = ? AND ordem = ?').get(produtoId, ordem);
+  return f ? { tipo: f.tipo, dados: Buffer.from(f.dados) } : null;
+}
+
 /** A foto de capa (bytes), ou null. */
 function lerCapa(db) {
   const c = db.prepare(`SELECT tipo, dados FROM loja_arquivos WHERE chave = 'capa'`).get();
@@ -270,8 +286,8 @@ function arquivosDoSite(db, cfg, opcoes = {}) {
   for (const [nome, origem] of ASSETS) {
     if (fs.existsSync(origem)) lista.push({ nome, dados: fs.readFileSync(origem) });
   }
-  for (const [nome, { id, ordem }] of fotos) {
-    const f = lerFoto(db, id, ordem);
+  for (const [nome, { id, ordem, extra }] of fotos) {
+    const f = extra === undefined ? lerFoto(db, id, ordem) : lerExtra(db, id, extra);
     if (f) lista.push({ nome, dados: f.dados });
   }
   if (dados.capa) {
@@ -514,4 +530,4 @@ async function publicarGithub({ token, repo, nome, arquivos, loja = 'Clara Styll
 }
 
 module.exports = {
-  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, lerCapa, paginaDaPeca, temaDoSite, blackFriday, diaDasMaes, TEMAS, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };
+  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, lerExtra, lerCapa, paginaDaPeca, temaDoSite, blackFriday, diaDasMaes, TEMAS, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };

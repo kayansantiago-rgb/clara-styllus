@@ -554,6 +554,18 @@ function migrar(db) {
     db.exec('ALTER TABLE produtos ADD COLUMN foto360_versao INTEGER');
     db.exec('ALTER TABLE produtos ADD COLUMN foto360_n INTEGER NOT NULL DEFAULT 0');
   }
+  // Mais fotos da peça para o site (costas, detalhe do tecido…), além da foto de cada cor.
+  db.exec(`CREATE TABLE IF NOT EXISTS produto_fotos_extras (
+    produto_id INTEGER NOT NULL REFERENCES produtos(id),
+    ordem INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    dados BLOB NOT NULL,
+    PRIMARY KEY (produto_id, ordem)
+  )`);
+  if (!colunas('produtos').includes('extras_versao')) {
+    db.exec('ALTER TABLE produtos ADD COLUMN extras_versao INTEGER');
+    db.exec('ALTER TABLE produtos ADD COLUMN extras_n INTEGER NOT NULL DEFAULT 0');
+  }
   // Arquivos da loja (ex.: a foto de capa do site).
   db.exec(`CREATE TABLE IF NOT EXISTS loja_arquivos (
     chave TEXT PRIMARY KEY,

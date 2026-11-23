@@ -24,6 +24,12 @@ test('site: giro 360° no provador, link direto da peça, tema e capa', OPC, asy
       await U.api(`/api/produtos/${id}/360`, { metodo: 'POST', corpo: { quadros: 8 } });
       const f = document.createElement('canvas'); f.width = 60; f.height = 80;
       await U.api(`/api/produtos/${id}/foto`, { metodo: 'PUT', corpo: { imagem: f.toDataURL('image/jpeg', 0.9) } });
+      for (let i = 0; i < 2; i += 1) {
+        const m = document.createElement('canvas'); m.width = 60; m.height = 80;
+        const x = m.getContext('2d'); x.fillStyle = i ? '#0a0' : '#00a'; x.fillRect(0, 0, 60, 80);
+        await U.api(`/api/produtos/${id}/extras/${i}`, { metodo: 'PUT', corpo: { imagem: m.toDataURL('image/jpeg', 0.9) } });
+      }
+      await U.api(`/api/produtos/${id}/extras`, { metodo: 'POST', corpo: { quantidade: 2 } });
       const c = document.createElement('canvas'); c.width = 160; c.height = 90;
       c.getContext('2d').fillRect(0, 0, 160, 90);
       await U.api('/api/catalogo/capa', { metodo: 'PUT', corpo: { imagem: c.toDataURL('image/jpeg', 0.9) } });
@@ -32,8 +38,11 @@ test('site: giro 360° no provador, link direto da peça, tema e capa', OPC, asy
 
     // No sistema: a ficha da peça tem o giro e o link (sem site publicado, avisa).
     await sis.ir('produtos');
+    await sis.pagina.fill('#q', 'Vestido Midi');
+    await sis.pagina.waitForTimeout(600);
     await sis.pagina.locator('[data-acao=ficha]').first().click();
     await sis.pagina.waitForSelector('#pf-360');
+    assert.match(await sis.pagina.textContent('#pf-mais'), /Mais fotos \(2\)/);
     await sis.pagina.click('#pf-link');
     await sis.pagina.waitForSelector('text=ainda não foi publicado');
 
@@ -73,9 +82,39 @@ test('site: giro 360° no provador, link direto da peça, tema e capa', OPC, asy
     assert.equal(await site.isHidden('#giro360'), true);
     await site.click('.prov-mini [data-g]');
     assert.equal(await site.isVisible('#giro360'), true);
+    // Mais fotos: 1 da cor + 2 a mais; passar com o dedo troca a foto e a lupa abre.
+    assert.equal(await site.locator('.prov-mini [data-f]').count(), 3);
+    await site.click('.prov-mini [data-f="0"]');
+    assert.equal(await site.textContent('#prov-conta'), '1/3');
+    const fb = await site.locator('.prov-fotos').boundingBox();
+    await site.mouse.move(fb.x + fb.width - 60, fb.y + fb.height / 3);
+    await site.mouse.down();
+    await site.mouse.move(fb.x + 60, fb.y + fb.height / 3, { steps: 6 });
+    await site.mouse.up();
+    assert.equal(await site.textContent('#prov-conta'), '2/3');
+    await site.click('#prov-lupa');
+    await site.waitForSelector('#lupa.aberta');
+    assert.equal(await site.textContent('#lupa-conta'), '2 / 3');
+    await site.click('.lupa-seta.prox');
+    assert.equal(await site.textContent('#lupa-conta'), '3 / 3');
+    // Clique aproxima (mouse); outro clique volta.
+    await site.mouse.click(195, 300);
+    assert.match(await site.getAttribute('#lupa-img', 'style'), /scale\(2\.5\)/);
+    await site.mouse.click(195, 300);
+    assert.match(await site.getAttribute('#lupa-img', 'style'), /scale\(1\)/);
+    await site.keyboard.press('Escape');
+    await site.waitForSelector('#lupa', { state: 'hidden' });
+    assert.equal(await site.textContent('#prov-conta'), '3/3', 'a peça fica na foto vista na lupa');
     // Fechar tira o #peca do endereço.
     await site.click('#prov-fechar');
     assert.equal(new URL(site.url()).hash, '');
+    // Chegou essa semana: as peças cadastradas agora aparecem no trilho e abrem a peça.
+    await site.evaluate(() => document.querySelector('#chegou').scrollIntoView());
+    await site.waitForSelector('#chegou.visivel .nov');
+    assert.equal(await site.textContent('#chegou-titulo'), 'Chegou essa semana');
+    await site.locator('.nov').first().click();
+    await site.waitForSelector('#cortina.aberta');
+    await site.click('#prov-fechar');
     // Peça que não existe mais: avisa.
     await site.goto(`${previa}?x=2#peca-999999`);
     await site.waitForSelector('#toast.ver', { timeout: 5000 });

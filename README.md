@@ -9,6 +9,16 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Fotos do site**:
+  - **Mais fotos por peça**: na ficha da peça, **Mais fotos** guarda até 8 fotos além da foto de cada cor (costas,
+    detalhe do tecido, peça vestida), com a ordem que a loja quiser.
+  - No site, a cliente **passa as fotos com o dedo** e vê o contador (2/4). Tocando na foto (ou na lupa), ela abre
+    em **tela cheia com zoom**: dois dedos ou toque duplo no celular, clique ou rodinha do mouse no computador.
+  - **Chegou essa semana**: logo no começo da vitrine, um trilho com as peças cadastradas nos últimos 7 dias
+    (ou as novidades dos últimos 15).
+  - **Site mais leve**: as fotos carregam com um brilho no lugar e aparecem suavemente, as fotos da peça são
+    buscadas antes de a cliente tocar, e as animações param quando não estão na tela (economiza bateria).
+
 - **Site da loja ainda mais bonito**:
   - **Giro de 360°** só nas peças escolhidas: na ficha da peça, **Giro 360°** recebe de 12 a 36 fotos tiradas em
     volta do manequim. No site, a peça ganha o selo **360°** e a cliente arrasta o dedo para girar a roupa.

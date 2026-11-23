@@ -298,6 +298,65 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
 @media (max-width: 600px) { .compartilhar { width: 42px; padding: 0; justify-content: center; } .compartilhar span { display: none; } }
 @media (max-width: 860px) { .contagem { align-items: center; } .contagem span { min-width: 56px; } .hero-marca { right: 50%; transform: translateX(50%); bottom: 2%; font-size: 26vw; } }
 
+/* Fotos: brilho de carregamento e aparecem suavemente */
+@keyframes carregando { to { background-position: -200% 0; } }
+.peca-foto, .nov-foto, .anel figure { background: linear-gradient(100deg, var(--rosa-claro) 35%, #fff 50%, var(--rosa-claro) 65%) 0 0 / 200% 100%; animation: carregando 1.4s linear infinite; }
+.anel figure { background-color: #3a2a30; background-image: linear-gradient(100deg, #3a2a30 35%, #4a3740 50%, #3a2a30 65%); }
+.peca-foto:has(img.ok), .nov-foto:has(img.ok), .anel figure:has(img.ok), .peca-foto:has(.sem) { animation: none; }
+.peca-foto img, .nov-foto img, .anel figure img { opacity: 0; transition: opacity .5s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
+.peca-foto img.ok, .nov-foto img.ok, .anel figure img.ok { opacity: 1; }
+
+/* Galeria da peça: passar com o dedo, contador e lupa */
+.prov-fotos { touch-action: pan-y; cursor: zoom-in; }
+.prov-fotos.girando { cursor: default; }
+.prov-mini { right: 12px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.prov-mini::-webkit-scrollbar { display: none; }
+.prov-mini button { flex-shrink: 0; }
+.prov-conta { position: absolute; right: 14px; bottom: 92px; z-index: 2; padding: 5px 10px; border-radius: 999px; background: rgba(20,12,15,.6); color: #fff; font-size: 12px; font-weight: 700; backdrop-filter: blur(6px); }
+.bt-lupa { position: absolute; right: 12px; top: 50%; z-index: 2; width: 44px; height: 44px; margin-top: -22px; border-radius: 50%; border: 0; background: rgba(255,255,255,.9); color: var(--vinho); display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.18); transition: transform .2s; }
+.bt-lupa:hover { transform: scale(1.08); }
+.bt-lupa svg { width: 20px; height: 20px; }
+.prov-fotos.girando .bt-lupa, .prov-fotos.girando .prov-conta { display: none; }
+.prov-fotos:not(:has(.prov-mini)) .prov-conta { bottom: 14px; }
+
+.lupa { position: fixed; inset: 0; z-index: 90; background: rgba(12,8,10,.96); opacity: 0; transition: opacity .25s; }
+.lupa.aberta { opacity: 1; }
+.lupa-palco { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: zoom-in; user-select: none; -webkit-user-select: none; }
+.lupa.perto .lupa-palco { cursor: grab; }
+.lupa-palco img { width: 100%; height: 100%; object-fit: contain; transform-origin: center; will-change: transform; pointer-events: none; }
+.lupa-fechar { position: absolute; right: 16px; top: calc(16px + env(safe-area-inset-top)); z-index: 2; font-size: 18px; font-weight: 700; color: var(--vinho); }
+.lupa-seta { position: absolute; top: 50%; z-index: 2; width: 52px; height: 52px; margin-top: -26px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1); color: #fff; font-size: 30px; line-height: 1; display: grid; place-items: center; backdrop-filter: blur(6px); }
+.lupa-seta.ant { left: 16px; } .lupa-seta.prox { right: 16px; }
+.lupa.perto .lupa-seta, .lupa.perto .lupa-dica { opacity: 0; pointer-events: none; }
+.lupa-conta { position: absolute; left: 16px; top: calc(22px + env(safe-area-inset-top)); color: rgba(255,255,255,.75); font-weight: 700; font-size: 14px; }
+.lupa-dica { position: absolute; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.12); color: rgba(255,255,255,.85); font-size: 13px; white-space: nowrap; transition: opacity .3s; pointer-events: none; }
+
+/* Chegou essa semana */
+.chegou { padding: 64px 0 6px; max-width: 1400px; margin: 0 auto; }
+.chegou-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 0 clamp(16px, 5vw, 72px); margin-bottom: 20px; }
+.chegou-cab h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 4vw, 48px); margin: 6px 0 0; line-height: 1; }
+.chegou-cab .kicker { color: var(--rosa); }
+.chegou-cab .kicker::before { background: var(--rosa); }
+.chegou-setas { display: flex; gap: 8px; }
+.chegou-setas button { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--borda); background: #fff; font-size: 24px; line-height: 1; color: var(--vinho); display: grid; place-items: center; box-shadow: 0 6px 16px -10px rgba(77,49,57,.5); transition: all .2s; }
+.chegou-setas button:hover { background: var(--vinho); color: #fff; }
+.chegou-trilho { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px clamp(16px, 5vw, 72px) 30px; scroll-padding: 0 clamp(16px, 5vw, 72px); scrollbar-width: none; perspective: 1200px; }
+.chegou-trilho::-webkit-scrollbar { display: none; }
+.nov { position: relative; flex: 0 0 clamp(200px, 22vw, 270px); scroll-snap-align: start; border-radius: 26px; overflow: hidden; background: #fff; cursor: pointer; box-shadow: 0 16px 34px -20px rgba(77,49,57,.55);
+  opacity: 0; transform: translateX(60px) rotateY(-18deg); transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1), box-shadow .3s; transition-delay: var(--atraso, 0s); }
+.chegou.visivel .nov { opacity: 1; transform: none; }
+.nov:hover { box-shadow: 0 26px 44px -20px rgba(77,49,57,.6); }
+.nov-foto { position: relative; aspect-ratio: 3 / 4; overflow: hidden; }
+.nov-foto img { width: 100%; height: 100%; object-fit: cover; }
+.nov:hover .nov-foto img.ok { transform: scale(1.06); }
+.nov-foto .sem { width: 100%; height: 100%; display: grid; place-items: center; color: #c6a2ab; font-family: var(--serif); font-size: 18px; }
+.nov-tag { position: absolute; left: 12px; top: 12px; padding: 5px 11px; border-radius: 999px; background: var(--vinho); color: var(--ouro-claro); font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; }
+.nov-txt { position: absolute; left: 0; right: 0; bottom: 0; padding: 50px 16px 16px; background: linear-gradient(transparent, rgba(20,12,15,.82)); color: #fff; }
+.nov-txt b { display: block; font-size: 15px; font-weight: 650; line-height: 1.25; }
+.nov-txt span { font-size: 15px; font-weight: 800; color: var(--ouro-claro); }
+@media (max-width: 860px) { .chegou-setas { display: none; } .chegou { padding-top: 48px; } .nov { flex-basis: 62vw; } .prov-conta { bottom: 86px; } }
+@media (prefers-reduced-motion: reduce) { .nov { opacity: 1; transform: none; } .peca-foto, .nov-foto, .anel figure { animation: none; } }
+
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; padding-top: 90px; text-align: center; min-height: auto; }
   .hero p { margin-left: auto; margin-right: auto; }
@@ -366,6 +425,13 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
 <div class="faixa" aria-hidden="true"><div id="faixa"></div></div>
 
 <main id="vitrine">
+  <section class="chegou" id="chegou" hidden>
+    <div class="chegou-cab">
+      <div><span class="kicker">Novidades</span><h2 id="chegou-titulo">Chegou essa semana</h2></div>
+      <div class="chegou-setas"><button data-s="-1" aria-label="Anterior">‹</button><button data-s="1" aria-label="Próximas">›</button></div>
+    </div>
+    <div class="chegou-trilho" id="chegou-trilho"></div>
+  </section>
   <section class="secao">
     <div class="secao-cab">
       <div><span class="kicker">Vitrine</span><h2>Escolha a sua</h2></div>
@@ -393,6 +459,14 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   <div class="gaveta-pe" id="gaveta-pe"></div>
 </aside>
 <div class="toast" id="toast"></div>
+<div class="lupa" id="lupa" hidden role="dialog" aria-modal="true" aria-label="Foto de perto">
+  <div class="lupa-palco" id="lupa-palco"><img id="lupa-img" alt="" draggable="false"></div>
+  <button class="lupa-seta ant" data-l="-1" aria-label="Foto anterior">‹</button>
+  <button class="lupa-seta prox" data-l="1" aria-label="Próxima foto">›</button>
+  <span class="lupa-conta" id="lupa-conta"></span>
+  <span class="lupa-dica" id="lupa-dica"></span>
+  <button class="fechar lupa-fechar" id="lupa-fechar" aria-label="Fechar">✕</button>
+</div>
 
 <script id="dados" type="application/json">__DADOS__</script>
 <script>
@@ -406,6 +480,10 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   const ICONE_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   const ICONE_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
+  const ICONE_LUPA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
+  /** Todas as fotos da peça: uma por cor e depois as "mais fotos" (costas, detalhe…). */
+  const fotosDa = (p) => [...p.fotos, ...(p.mais || [])];
+  const OK = 'onload="this.classList.add(\'ok\')" onerror="this.classList.add(\'ok\')"';
   const ICONE_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
   const ICONE_GIRO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 4 0 1 1-6-3.8"/><path d="m13 6 3 2.2L13.6 11"/></svg>';
 
@@ -506,9 +584,16 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     };
     tamanho();
     addEventListener('resize', tamanho);
+    let limpo = false;
     const passo = () => {
-      ctx.clearRect(0, 0, w, h);
       const fade = Math.max(0, 1 - scrollY / (h * .9));
+      if (!fade || document.hidden) {
+        if (!limpo) { ctx.clearRect(0, 0, w, h); limpo = true; }
+        setTimeout(() => requestAnimationFrame(passo), 250);
+        return;
+      }
+      limpo = false;
+      ctx.clearRect(0, 0, w, h);
       if (fade > 0) {
         for (const p of ps) {
           p.y += P.sobe ? -p.v : p.v * 1.6; p.d += .01; p.x += Math.sin(p.d) * .3;
@@ -548,13 +633,17 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       raio = Math.round((lw / 2) / Math.tan(Math.PI / n) + 40);
       anel.style.setProperty('--w', `${lw}px`);
       anel.innerHTML = destaques.map((p, i) => `<figure data-id="${p.id}" style="transform: rotateY(${(360 / n) * i}deg) translateZ(${raio}px)">
-        <img src="${p.fotos[0]}" alt="${esc(p.nome)}" draggable="false"><figcaption>${esc(p.nome)}${D.mostrarPreco ? `<b>${brl(p.preco)}</b>` : ''}</figcaption></figure>`).join('');
+        <img src="${p.fotos[0]}" alt="${esc(p.nome)}" draggable="false" decoding="async" ${OK}><figcaption>${esc(p.nome)}${D.mostrarPreco ? `<b>${brl(p.preco)}</b>` : ''}</figcaption></figure>`).join('');
     };
     montar();
     addEventListener('resize', montar);
     let ang = 0; let vel = calmo ? 0 : -.12; let arrasto = null; let mexeu = 0;
     const desenhar = () => { anel.style.transform = `translateZ(${-raio}px) rotateX(-6deg) rotateY(${ang}deg)`; };
+    let palcoVisivel = true;
+    new IntersectionObserver((es) => { palcoVisivel = es[0].isIntersecting; }).observe(palco);
     const girar = () => {
+      // Fora da tela (ou com a peça aberta), o carrossel descansa: economiza bateria no celular.
+      if ((!palcoVisivel || !cortina.hidden || document.hidden) && !arrasto) { setTimeout(() => requestAnimationFrame(girar), 250); return; }
       if (!arrasto) { ang += vel; vel += ((calmo ? 0 : -.12) - vel) * .02; }
       desenhar();
       requestAnimationFrame(girar);
@@ -610,7 +699,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       && (!q || semAcento([p.nome, p.categoria, p.cores.join(' '), p.tamanhos.join(' '), p.num].join(' ')).includes(q)));
     const g = $('#grade');
     g.innerHTML = lista.map((p, i) => `<article class="peca" data-id="${p.id}" style="--atraso:${(i % 4) * 0.07}s" tabindex="0">
-      <div class="peca-foto">${p.fotos.length ? `<img src="${p.fotos[0]}" alt="${esc(p.nome)}" loading="lazy">` : '<div class="sem">foto em breve</div>'}
+      <div class="peca-foto">${p.fotos.length ? `<img src="${p.fotos[0]}" alt="${esc(p.nome)}" loading="lazy" decoding="async" ${OK}>` : '<div class="sem">foto em breve</div>'}
         <div class="selos">${selos(p)}</div><span class="num">${p.num}</span><span class="brilho"></span></div>
       <div class="peca-txt"><span class="peca-cat">${esc(p.categoria)}</span><h3>${esc(p.nome)}</h3>
         ${p.tamanhos.length ? `<div class="tams">${p.tamanhos.map((t) => `<i>${esc(t)}</i>`).join('')}</div>` : ''}${precoHtml(p)}</div>
@@ -621,6 +710,43 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     g.querySelectorAll('.peca').forEach((el) => (calmo ? el.classList.add('visivel') : observador.observe(el)));
   }
   desenharGrade();
+
+  // ---------- Chegou essa semana (ou as novidades dos últimos dias)
+  (() => {
+    let lista = D.pecas.filter((p) => p.chegou);
+    let titulo = 'Chegou essa semana';
+    if (lista.length < 2) { lista = D.pecas.filter((p) => p.novo); titulo = 'Novidades da loja'; }
+    if (lista.length < 2) return;
+    lista = lista.slice().sort((a, b) => (b.fotos.length > 0) - (a.fotos.length > 0)).slice(0, 12);
+    const sec = $('#chegou');
+    const trilho = $('#chegou-trilho');
+    sec.hidden = false;
+    $('#chegou-titulo').textContent = titulo;
+    trilho.innerHTML = lista.map((p, i) => `<article class="nov" data-id="${p.id}" style="--atraso:${Math.min(i, 6) * 0.08}s" tabindex="0">
+      <div class="nov-foto">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="${esc(p.nome)}" loading="lazy" decoding="async" ${OK}>` : '<div class="sem">foto em breve</div>'}
+        <span class="nov-tag">${p.chegou ? 'Chegou agora' : 'Novidade'}</span></div>
+      <div class="nov-txt"><b>${esc(p.nome)}</b>${D.mostrarPreco ? `<span>${p.varia ? 'a partir de ' : ''}${brl(p.preco)}</span>` : ''}</div>
+    </article>`).join('');
+    if (calmo) sec.classList.add('visivel');
+    else new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { sec.classList.add('visivel'); o.disconnect(); } }, { threshold: .15 }).observe(sec);
+    trilho.addEventListener('click', (e) => { const c = e.target.closest('.nov'); if (c) abrirPeca(Number(c.dataset.id)); });
+    trilho.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList.contains('nov')) abrirPeca(Number(e.target.dataset.id)); });
+    sec.querySelector('.chegou-setas').onclick = (e) => {
+      const b = e.target.closest('[data-s]');
+      if (b) trilho.scrollBy({ left: Number(b.dataset.s) * trilho.clientWidth * .8, behavior: calmo ? 'auto' : 'smooth' });
+    };
+  })();
+
+  // Ao chegar perto de uma peça, já vai buscando as fotos dela (a peça abre sem esperar).
+  const buscadas = new Set();
+  const preBuscar = (e) => {
+    const c = e.target.closest && e.target.closest('[data-id]');
+    if (!c || buscadas.has(c.dataset.id)) return;
+    buscadas.add(c.dataset.id);
+    const p = D.pecas.find((x) => x.id === Number(c.dataset.id));
+    if (p) fotosDa(p).slice(0, 4).forEach((src) => { const i = new Image(); i.decoding = 'async'; i.src = src; });
+  };
+  for (const ev of ['pointerover', 'focusin', 'touchstart']) document.addEventListener(ev, preBuscar, { passive: true });
 
   // Inclinação 3D do cartão seguindo o mouse (ou o dedo).
   const grade = $('#grade');
@@ -661,14 +787,17 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     let foto = 0;
     let virado = false;
     const temGiro = !!(p.giro && p.giro.length > 1);
+    const lista = fotosDa(p);
     provador.innerHTML = `
       <div class="prov-fotos">
         <div class="prov-cartao" id="prov-cartao">
-          <div class="prov-face">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : '<div class="peca-foto"><div class="sem">foto em breve</div></div>'}</div>
-          <div class="prov-face verso">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : ''}</div>
+          <div class="prov-face">${lista[0] ? `<img src="${lista[0]}" alt="" decoding="async" draggable="false">` : '<div class="peca-foto"><div class="sem">foto em breve</div></div>'}</div>
+          <div class="prov-face verso">${lista[0] ? `<img src="${lista[0]}" alt="" decoding="async" draggable="false">` : ''}</div>
         </div>
         ${temGiro ? '<div class="giro360" id="giro360"></div>' : ''}
-        ${p.fotos.length > 1 || temGiro ? `<div class="prov-mini">${temGiro ? '<button data-g class="bt-360 sel" aria-label="Ver girando em 360°">360°</button>' : ''}${p.fotos.map((f, i) => `<button data-f="${i}" class="${i || temGiro ? '' : 'sel'}"><img src="${f}" alt=""></button>`).join('')}</div>` : ''}
+        ${lista.length ? `<button class="bt-lupa" id="prov-lupa" aria-label="Ver a foto de perto">${ICONE_LUPA}</button>` : ''}
+        ${lista.length > 1 ? `<span class="prov-conta" id="prov-conta">1/${lista.length}</span>` : ''}
+        ${lista.length > 1 || temGiro ? `<div class="prov-mini">${temGiro ? '<button data-g class="bt-360 sel" aria-label="Ver girando em 360°">360°</button>' : ''}${lista.map((f, i) => `<button data-f="${i}" class="${i || temGiro ? '' : 'sel'}"><img src="${f}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>` : ''}
       </div>
       <div class="prov-txt">
         <span class="peca-cat">${esc(p.categoria)} · nº ${p.num}</span>
@@ -692,9 +821,12 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     const cartao = provador.querySelector('#prov-cartao');
     const giro = provador.querySelector('#giro360');
     if (giro) montarGiro(giro, p.giro);
+    const fotosEl = provador.querySelector('.prov-fotos');
+    fotosEl.classList.toggle('girando', !!giro);
     const verGiro = (sim) => {
       if (!giro) return;
       giro.hidden = !sim;
+      fotosEl.classList.toggle('girando', sim);
       provador.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('sel', sim));
       if (sim) provador.querySelectorAll('[data-f]').forEach((b) => b.classList.remove('sel'));
     };
@@ -703,13 +835,38 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
         verGiro(false);
         if (i === foto) { provador.querySelectorAll('[data-f]').forEach((b) => b.classList.toggle('sel', Number(b.dataset.f) === i)); return; }
       }
-      if (i === foto) return;
+      if (i === foto || !lista[i]) return;
       foto = i;
       virado = !virado;
-      cartao.querySelector(virado ? '.verso img' : '.prov-face:not(.verso) img').src = p.fotos[i];
+      cartao.querySelector(virado ? '.verso img' : '.prov-face:not(.verso) img').src = lista[i];
+      cartao.style.transform = ''; // a inclinação do mouse não pode segurar a foto antiga
       cartao.classList.toggle('virado', virado);
       provador.querySelectorAll('[data-f]').forEach((b) => b.classList.toggle('sel', Number(b.dataset.f) === i));
+      const sel = provador.querySelector(`[data-f="${i}"]`);
+      if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: calmo ? 'auto' : 'smooth' });
+      const conta = provador.querySelector('#prov-conta');
+      if (conta) conta.textContent = `${i + 1}/${lista.length}`;
     };
+    // Passar as fotos com o dedo (ou arrastando com o mouse); um toque sem arrastar abre a lupa.
+    let toque = null;
+    fotosEl.addEventListener('dragstart', (e) => e.preventDefault());
+    fotosEl.addEventListener('pointerdown', (e) => {
+      if ((giro && !giro.hidden) || e.target.closest('button')) return;
+      toque = { x: e.clientX, y: e.clientY, t: Date.now() };
+    });
+    fotosEl.addEventListener('pointerup', (e) => {
+      if (!toque) return;
+      const dx = e.clientX - toque.x;
+      const dy = e.clientY - toque.y;
+      const t = toque;
+      toque = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        if (lista.length > 1) trocarFoto((foto + (dx < 0 ? 1 : -1) + lista.length) % lista.length);
+      } else if (Math.abs(dx) < 8 && Math.abs(dy) < 8 && Date.now() - t.t < 400 && lista.length) {
+        abrirLupa(lista, foto, (i) => trocarFoto(i));
+      }
+    });
+    fotosEl.addEventListener('pointercancel', () => { toque = null; });
     const ok = () => {
       const falta = [p.tamanhos.length && !tam && 'o tamanho', p.cores.length && !cor && 'a cor'].filter(Boolean);
       const av = provador.querySelector('#aviso-escolha');
@@ -722,6 +879,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       if (f) return trocarFoto(Number(f.dataset.f));
       if (e.target.closest('[data-g]')) return verGiro(true);
       if (e.target.closest('#prov-link')) return compartilhar(p);
+      if (e.target.closest('#prov-lupa')) return abrirLupa(lista, foto, (i) => trocarFoto(i));
       const t = e.target.closest('[data-t]');
       if (t) { tam = t.dataset.t; provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b === t)); return; }
       const c = e.target.closest('#esc-cor [data-c]');
@@ -787,6 +945,129 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     else prompt('Copie o link da peça:', url);
   }
 
+  // ---------- Lupa: a foto em tela cheia; dois dedos (ou duplo toque, clique, rodinha) aproximam
+  const lupa = $('#lupa');
+  const lpalco = $('#lupa-palco');
+  const limg = $('#lupa-img');
+  let L = null;
+  const limite = (v, a, b) => Math.min(b, Math.max(a, v));
+  const toqueTela = matchMedia('(pointer: coarse)').matches;
+  function aplicarLupa(anim = true) {
+    const w = lpalco.clientWidth;
+    const h = lpalco.clientHeight;
+    L.x = limite(L.x, -w * (L.s - 1) / 2, w * (L.s - 1) / 2);
+    L.y = limite(L.y, -h * (L.s - 1) / 2, h * (L.s - 1) / 2);
+    limg.style.transition = anim && !calmo ? 'transform .25s cubic-bezier(.2,.8,.2,1)' : 'none';
+    limg.style.transform = `translate(${L.x}px, ${L.y}px) scale(${L.s})`;
+    lupa.classList.toggle('perto', L.s > 1.01);
+  }
+  /** Aproxima mantendo parado o ponto debaixo do dedo/mouse. */
+  function zoomEm(cx, cy, s) {
+    const r = lpalco.getBoundingClientRect();
+    const px = cx - r.left - r.width / 2;
+    const py = cy - r.top - r.height / 2;
+    L.x = px - ((px - L.x) * s) / L.s;
+    L.y = py - ((py - L.y) * s) / L.s;
+    L.s = s;
+  }
+  function mostrarLupa() {
+    limg.src = L.lista[L.i];
+    L.s = 1; L.x = 0; L.y = 0;
+    aplicarLupa(false);
+    const varias = L.lista.length > 1;
+    lupa.querySelectorAll('.lupa-seta').forEach((b) => { b.hidden = !varias; });
+    $('#lupa-conta').textContent = varias ? `${L.i + 1} / ${L.lista.length}` : '';
+  }
+  function irLupa(d) {
+    if (!L || L.lista.length < 2) return;
+    L.i = (L.i + d + L.lista.length) % L.lista.length;
+    mostrarLupa();
+  }
+  function abrirLupa(lista, i, aoFechar) {
+    if (!lista.length) return;
+    L = { lista, i, aoFechar, s: 1, x: 0, y: 0 };
+    lupa.hidden = false;
+    $('#lupa-dica').textContent = toqueTela ? 'Use dois dedos ou toque duas vezes para aproximar' : 'Clique ou use a rodinha do mouse para aproximar';
+    mostrarLupa();
+    requestAnimationFrame(() => lupa.classList.add('aberta'));
+  }
+  function fecharLupa() {
+    if (!L) return;
+    const { aoFechar, i } = L;
+    L = null;
+    lupa.classList.remove('aberta');
+    setTimeout(() => { if (!L) lupa.hidden = true; }, 260);
+    if (aoFechar) aoFechar(i);
+  }
+  $('#lupa-fechar').onclick = fecharLupa;
+  lupa.querySelectorAll('.lupa-seta').forEach((b) => { b.onclick = () => irLupa(Number(b.dataset.l)); });
+  const dedos = new Map();
+  let gesto = null;
+  let ultimoToque = 0;
+  const centroDedos = () => { const [a, b] = [...dedos.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1 }; };
+  const comecarGesto = () => {
+    if (dedos.size >= 2) { const c = centroDedos(); gesto = { tipo: 'pinca', c, s: L.s, x: L.x, y: L.y }; return; }
+    const [d] = [...dedos.values()];
+    gesto = d ? { tipo: 'um', x0: d.x, y0: d.y, x: L.x, y: L.y, t: Date.now(), moveu: false } : null;
+  };
+  lpalco.addEventListener('pointerdown', (e) => {
+    if (!L) return;
+    lpalco.setPointerCapture(e.pointerId);
+    dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    comecarGesto();
+  });
+  lpalco.addEventListener('pointermove', (e) => {
+    if (!L || !dedos.has(e.pointerId) || !gesto) return;
+    dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesto.tipo === 'pinca' && dedos.size >= 2) {
+      const c = centroDedos();
+      L.s = gesto.s; L.x = gesto.x; L.y = gesto.y;
+      zoomEm(gesto.c.x, gesto.c.y, limite((gesto.s * c.d) / gesto.c.d, 1, 4));
+      L.x += c.x - gesto.c.x;
+      L.y += c.y - gesto.c.y;
+      aplicarLupa(false);
+      return;
+    }
+    if (gesto.tipo !== 'um') return;
+    const dx = e.clientX - gesto.x0;
+    const dy = e.clientY - gesto.y0;
+    if (Math.abs(dx) + Math.abs(dy) > 6) gesto.moveu = true;
+    if (L.s > 1.01) { L.x = gesto.x + dx; L.y = gesto.y + dy; aplicarLupa(false); } else if (L.lista.length > 1) {
+      limg.style.transition = 'none';
+      limg.style.transform = `translateX(${dx * .6}px)`;
+    }
+  });
+  const soltarDedo = (e) => {
+    if (!L || !dedos.has(e.pointerId)) return;
+    const pos = dedos.get(e.pointerId);
+    dedos.delete(e.pointerId);
+    const g = gesto;
+    if (g && g.tipo === 'um') {
+      const dx = pos.x - g.x0;
+      if (!g.moveu) {
+        const agora = Date.now();
+        const duplo = agora - ultimoToque < 320;
+        ultimoToque = duplo ? 0 : agora;
+        if (e.pointerType === 'mouse' || duplo) {
+          if (L.s > 1.01) { L.s = 1; L.x = 0; L.y = 0; } else zoomEm(pos.x, pos.y, 2.5);
+          aplicarLupa();
+        }
+      } else if (L.s <= 1.01) {
+        if (Math.abs(dx) > 50 && L.lista.length > 1) irLupa(dx < 0 ? 1 : -1); else aplicarLupa();
+      }
+    }
+    if (dedos.size) comecarGesto(); else gesto = null;
+    if (L && L.s < 1.05 && !dedos.size) { L.s = 1; aplicarLupa(); }
+  };
+  lpalco.addEventListener('pointerup', soltarDedo);
+  lpalco.addEventListener('pointercancel', soltarDedo);
+  lpalco.addEventListener('wheel', (e) => {
+    if (!L) return;
+    e.preventDefault();
+    zoomEm(e.clientX, e.clientY, limite(L.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 1, 4));
+    aplicarLupa(false);
+  }, { passive: false });
+
   function fecharPeca() {
     if (/^#peca-/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
     cortina.classList.remove('aberta');
@@ -794,7 +1075,15 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     setTimeout(() => { cortina.hidden = true; }, 300);
   }
   cortina.addEventListener('click', (e) => { if (e.target === cortina) fecharPeca(); });
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!cortina.hidden) fecharPeca(); fecharGaveta(); } });
+  addEventListener('keydown', (e) => {
+    if (L) {
+      if (e.key === 'Escape') fecharLupa();
+      else if (e.key === 'ArrowRight') irLupa(1);
+      else if (e.key === 'ArrowLeft') irLupa(-1);
+      return;
+    }
+    if (e.key === 'Escape') { if (!cortina.hidden) fecharPeca(); fecharGaveta(); }
+  });
   // Link direto da peça (…/#peca-123): abre o catálogo já nela.
   const abrirDoLink = () => {
     const m = /^#peca-(\d+)$/.exec(location.hash);

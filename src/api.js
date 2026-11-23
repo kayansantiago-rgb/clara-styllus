@@ -376,6 +376,12 @@ function criarApi(db, opcoes = {}) {
       if (!c) throw erro(404, 'Arquivo não encontrado.');
       return { __arquivo: true, inline: true, tipo: c.tipo, conteudo: c.dados };
     }
+    if (params.pasta === 'mais') {
+      const g = /^(\d+)-\d+-(\d+)\.(jpg|png|webp)$/.exec(params.arq || '');
+      const f = g && catalogoSite.lerExtra(db, Number(g[1]), Number(g[2]));
+      if (!f) throw erro(404, 'Foto não encontrada.');
+      return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: f.dados };
+    }
     if (params.pasta === 'giro') {
       const g = /^(\d+)-\d+-(\d+)\.jpg$/.exec(params.arq || '');
       const f = g && catalogoSite.lerFoto(db, Number(g[1]), Number(g[2]));
@@ -609,6 +615,7 @@ function criarApi(db, opcoes = {}) {
       for (const p of alvo) {
         db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(p.id);
+        db.prepare('DELETE FROM produto_fotos_extras WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
       }
     });
@@ -766,6 +773,36 @@ function criarApi(db, opcoes = {}) {
     transacao(db, () => {
       db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(params.id);
       db.prepare('UPDATE produtos SET foto360_versao = NULL, foto360_n = 0 WHERE id = ?').run(params.id);
+    });
+    return buscarProduto(params.id);
+  }, 'admin');
+
+  // Mais fotos da peça (costas, detalhe…): sobem uma por vez e depois fecha com a quantidade (0 tira todas).
+  rota('GET', '/api/produtos/:id/extras/:n', ({ params }) => {
+    const f = catalogoSite.lerExtra(db, Number(params.id), Number(params.n));
+    if (!f) throw erro(404, 'Foto não encontrada.');
+    return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: f.dados };
+  });
+  rota('PUT', '/api/produtos/:id/extras/:n', ({ params, corpo }) => {
+    buscarProduto(params.id);
+    const n = Number(params.n);
+    if (!Number.isInteger(n) || n < 0 || n >= 8) throw erro(400, 'No máximo 8 fotos a mais.');
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec((corpo && corpo.imagem) || '');
+    if (!m) throw erro(400, 'Imagem inválida (use JPG, PNG ou WEBP).');
+    const dados = Buffer.from(m[2], 'base64');
+    if (dados.length > 1.5e6) throw erro(400, 'Imagem muito grande.');
+    db.prepare('INSERT OR REPLACE INTO produto_fotos_extras (produto_id, ordem, tipo, dados) VALUES (?,?,?,?)').run(params.id, n, m[1], dados);
+    return { ok: true };
+  }, 'admin');
+  rota('POST', '/api/produtos/:id/extras', ({ params, corpo }) => {
+    buscarProduto(params.id);
+    const n = Number(corpo && corpo.quantidade);
+    if (!Number.isInteger(n) || n < 0 || n > 8) throw erro(400, 'No máximo 8 fotos a mais.');
+    const tem = db.prepare('SELECT COUNT(*) AS n FROM produto_fotos_extras WHERE produto_id = ? AND ordem < ?').get(params.id, n).n;
+    if (tem !== n) throw erro(400, 'Faltou enviar alguma foto. Tente de novo.');
+    transacao(db, () => {
+      db.prepare('DELETE FROM produto_fotos_extras WHERE produto_id = ? AND ordem >= ?').run(params.id, n);
+      db.prepare('UPDATE produtos SET extras_versao = ?, extras_n = ? WHERE id = ?').run(n ? Date.now() : null, n, params.id);
     });
     return buscarProduto(params.id);
   }, 'admin');
@@ -962,12 +999,13 @@ function criarApi(db, opcoes = {}) {
         produto_id = NULL WHERE produto_id = ?`).run(p.nome, p.tamanho, p.cor, p.id);
       db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
       db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(p.id);
+      db.prepare('DELETE FROM produto_fotos_extras WHERE produto_id = ?').run(p.id);
       if (!historico) {
         db.prepare('DELETE FROM estoque_movimentos WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
         return { ok: true, apagado: true, nome: p.nome };
       }
-      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, foto360_versao = NULL, foto360_n = 0, codigo = codigo || '#excluido' || id,
+      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, foto360_versao = NULL, foto360_n = 0, extras_versao = NULL, extras_n = 0, codigo = codigo || '#excluido' || id,
         excluido_em = datetime('now','localtime') WHERE id = ?`).run(p.id);
       return { ok: true, apagado: false, nome: p.nome };
     });

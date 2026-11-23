@@ -256,4 +256,21 @@ test('site: giro de 360°, foto de capa, tema de época e link direto da peça',
   chamar('PUT', '/api/config', { catalogo_site_url: 'https://loja.github.io/cat/' });
   assert.equal(chamar('GET', `/api/catalogo/site/link/${p40.id}`).corpo.url, `https://loja.github.io/cat/p/${p38.id}/`);
   assert.equal(chamar('DELETE', `/api/produtos/${p40.id}/360`).corpo.foto360_n, 0);
+
+  // Mais fotos: sobem uma por vez, fecham com a quantidade e entram no site depois das fotos de cada cor.
+  for (let i = 0; i < 3; i += 1) assert.equal(chamar('PUT', `/api/produtos/${p38.id}/extras/${i}`, { imagem: jpg }).status, 200);
+  assert.equal(chamar('PUT', `/api/produtos/${p38.id}/extras/8`, { imagem: jpg }).status, 400, 'no máximo 8');
+  assert.equal(chamar('POST', `/api/produtos/${p38.id}/extras`, { quantidade: 4 }).status, 400, 'faltou foto');
+  assert.equal(chamar('POST', `/api/produtos/${p38.id}/extras`, { quantidade: 3 }).corpo.extras_n, 3);
+  const cfg2 = chamar('GET', '/api/config').corpo;
+  const p2 = catalogoSite.montarDados(db, cfg2).dados.pecas.find((p) => p.nome === 'Vestido Midi');
+  assert.equal(p2.mais.length, 3);
+  assert.match(p2.mais[0], /^mais\/\d+-\d+-0\.jpg$/);
+  assert.equal(p2.chegou, true, 'cadastrada hoje: entra em "Chegou essa semana"');
+  assert.ok(catalogoSite.arquivosDoSite(db, cfg2).arquivos.some((a) => a.nome === p2.mais[2]));
+  assert.equal(chamar('GET', `/api/catalogo/site/previa/mais/${p2.mais[1].split('/')[1]}`).status, 200);
+  // Tirar uma: fica com 2.
+  assert.equal(chamar('POST', `/api/produtos/${p38.id}/extras`, { quantidade: 2 }).corpo.extras_n, 2);
+  assert.equal(catalogoSite.montarDados(db, cfg2).dados.pecas.find((p) => p.nome === 'Vestido Midi').mais.length, 2);
+  assert.equal(chamar('POST', `/api/produtos/${p38.id}/extras`, { quantidade: 0 }).corpo.extras_n, 0);
 });
