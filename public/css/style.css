@@ -3760,3 +3760,50 @@ body.modo-pdv .menu:not(:hover) .menu-rodape { flex-direction: column; }
 @media (prefers-reduced-motion: reduce) { .esq-linha { animation: none; } }
 .g-cal i.futuro { background: transparent; border: 1.5px dashed #ece5e8; } .g-cal i.futuro b { opacity: .35; }
 .g-col-area i[style*="height:0%"]::after { display: none; }
+
+/* =================== Site da loja (catálogo online) =================== */
+.btn-site { background: linear-gradient(135deg, #3b2730, #2b1d22); color: #f3d48a; border-color: transparent; }
+.btn-site .i { color: #f3d48a; }
+.btn-site:hover { filter: brightness(1.15); }
+.cs { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 22px; align-items: start; }
+.cs-previa { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cs-telas { align-self: center; }
+.cs-moldura { position: relative; background: #1d1316; box-shadow: 0 24px 50px -20px rgba(43,29,34,.6); transition: width .4s cubic-bezier(.2,.8,.2,1), height .4s, border-radius .4s; overflow: hidden; }
+.cs-moldura.celular { width: 340px; height: 640px; border-radius: 40px; padding: 12px; }
+.cs-moldura.celular::before { content: ''; position: absolute; top: 18px; left: 50%; width: 90px; height: 22px; margin-left: -45px; border-radius: 12px; background: #1d1316; z-index: 2; }
+.cs-moldura.pc { width: 100%; height: 560px; border-radius: 14px; padding: 26px 8px 8px; }
+.cs-moldura.pc::before { content: '● ● ●'; position: absolute; top: 5px; left: 12px; color: #6b5058; font-size: 11px; letter-spacing: 2px; }
+.cs-moldura iframe { width: 100%; height: 100%; border: 0; border-radius: 30px; background: #fbf7f4; }
+.cs-moldura.pc iframe { border-radius: 6px; }
+.cs-lado { display: flex; flex-direction: column; gap: 12px; }
+.cs-link { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 18px; color: #fff;
+  background: radial-gradient(80% 120% at 100% 0%, rgba(212,162,74,.3), transparent 60%), linear-gradient(140deg, #4a2e36, #2b1d22); }
+.cs-link small { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #f3d48a; font-weight: 700; }
+.cs-url { font-size: 18px; font-weight: 800; color: #fff; text-decoration: none; word-break: break-all; }
+.cs-url:hover { text-decoration: underline; }
+.cs-sem { font-size: 18px; }
+.cs-quando { font-size: 12.5px; color: rgba(255,255,255,.65); }
+.cs-link-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.cs-link-acoes .btn-claro { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.2); }
+.cs-avisos { display: flex; flex-direction: column; gap: 8px; }
+.cs-avisos:empty { display: none; }
+.cs-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--ouro-claro); color: #6b4d12; font-size: 13px; }
+.cs-aviso.perigo { background: #fdeceb; color: #8f2f26; }
+.cs-aviso .i { width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px; }
+.cs-bloco { background: #faf7f8; border: 1px solid var(--borda); border-radius: 16px; padding: 4px 14px; }
+.cs-bloco[open] { padding-bottom: 14px; }
+.cs-bloco summary { cursor: pointer; font-weight: 700; padding: 10px 0; display: flex; align-items: center; gap: 8px; list-style: none; }
+.cs-bloco summary::-webkit-details-marker { display: none; }
+.cs-bloco summary .i { width: 17px; height: 17px; color: var(--rosa); }
+.cs-bloco label { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 13px; font-weight: 600; }
+.cs-bloco label.check { flex-direction: row; align-items: center; font-weight: 500; }
+.cs-bloco .btn { margin-top: 10px; }
+.cs-passos { margin: 4px 0 6px; padding-left: 20px; font-size: 13px; color: var(--suave); display: flex; flex-direction: column; gap: 4px; }
+.cs-passos b { color: var(--texto); }
+.cs-end { display: flex; align-items: center; gap: 6px; }
+.cs-end input { flex: 1; }
+.cs-end span { color: var(--suave); font-weight: 600; }
+.cs-acoes { display: flex; flex-direction: column; gap: 8px; }
+.cs-acoes .btn-grande { min-height: 56px; background: linear-gradient(135deg, #f3d48a, #d4a24a); color: #2b1d22; border: 0; box-shadow: 0 14px 28px -12px rgba(212,162,74,.8); }
+.cs-acoes .btn-grande .i { color: #2b1d22; }
+@media (max-width: 1000px) { .cs { grid-template-columns: 1fr; } }

@@ -18,6 +18,7 @@ Telas.produtos = (() => {
         <div class="cabecalho-tela pr2-topo">
           <div><h1>Produtos</h1><p class="subtitulo" id="pr-resumo">Estoque, preços e etiquetas da loja.</p></div>
           <div class="ferramentas pr2-acoes">
+            <button class="btn btn-site" id="site-loja" title="Site 3D com todas as peças, para mandar o link às clientes">${Icone('nuvem')} Site da loja</button>
             <button class="btn" id="catalogo" title="Imagens das peças da lista para postar no Instagram e mandar no WhatsApp">${Icone('imagem')} Catálogo</button>
             <button class="btn so-admin" id="liquidacao" title="Aplicar ou encerrar liquidação nos produtos da lista">${Icone('fogo')} Liquidação</button>
             <button class="btn so-admin" id="entrada" title="Somar estoque bipando as peças que chegaram">${Icone('codigo')} Entrada por bipagem</button>
@@ -70,6 +71,7 @@ Telas.produtos = (() => {
     raiz.querySelector('#liquidacao').onclick = liquidacao;
     raiz.querySelector('#entrada').onclick = entradaBipagem;
     raiz.querySelector('#catalogo').onclick = () => Catalogo.abrir(lista);
+    raiz.querySelector('#site-loja').onclick = () => Catalogo.site();
     raiz.querySelector('#lista').onclick = acao;
     // Vindo de outra tela (ex.: Relatórios → peças paradas) com uma busca pronta.
     const pedida = (/[?&]q=([^&]*)/.exec(location.hash) || [])[1];

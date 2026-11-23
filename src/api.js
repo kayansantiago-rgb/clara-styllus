@@ -18,6 +18,7 @@ const { instalarCelular, enderecosLocais } = require('./celular');
 const { instalarGiro } = require('./giro');
 const { instalarAuditoria } = require('./auditoria');
 const { instalarAtualizacao, VERSAO } = require('./atualizacao');
+const catalogoSite = require('./catalogo-site');
 const documentos = require('./impressao/documentos');
 const { gerarEtiquetas, gerarEtiquetasImagem } = require('./impressao/etiquetas');
 const impressora = require('./impressao/impressora');
@@ -317,23 +318,95 @@ function criarApi(db, opcoes = {}) {
 
   // ---------------------------------------------------------------- config
   const OCULTO = '••••••••';
+  // Chaves guardadas nas configurações que nunca voltam para a tela (nem para quem é administradora).
+  const SEGREDOS = ['atualizacao_token', 'catalogo_netlify_token'];
+  const ocultarSegredos = (c) => { for (const k of SEGREDOS) if (c[k]) c[k] = OCULTO; return c; };
   // O token de atualização nunca volta para a tela (só aparece que está preenchido).
   rota('GET', '/api/config', () => {
-    const c = config();
-    if (c.atualizacao_token) c.atualizacao_token = OCULTO;
-    return c;
+    return ocultarSegredos(config());
   });
 
   rota('PUT', '/api/config', ({ corpo }) => {
     const atual = config();
-    if (corpo && corpo.atualizacao_token === OCULTO) delete corpo.atualizacao_token;
+    for (const k of SEGREDOS) if (corpo && corpo[k] === OCULTO) delete corpo[k];
     const up = db.prepare('UPDATE config SET valor = ? WHERE chave = ?');
     transacao(db, () => {
       for (const [k, v] of Object.entries(corpo || {})) {
         if (k in atual) up.run(v === null || v === undefined ? '' : String(v), k);
       }
     });
-    return config();
+    return ocultarSegredos(config());
+  }, 'admin');
+
+  // ---------------------------------------------------- catálogo online (site 3D)
+  const opcoesCatalogo = (cfg) => ({ soEstoque: cfg.catalogo_so_estoque !== '0', urlSite: cfg.catalogo_site_url || '' });
+
+  /** Como está o catálogo: quantas peças entram, quantas sem foto, link publicado e se a chave está guardada. */
+  rota('GET', '/api/catalogo/site', () => {
+    const cfg = config();
+    const { dados } = catalogoSite.montarDados(db, cfg, opcoesCatalogo(cfg));
+    return {
+      pecas: dados.pecas.length,
+      sem_foto: dados.pecas.filter((p) => !p.fotos.length).length,
+      categorias: dados.categorias,
+      whatsapp_ok: !!dados.whatsapp,
+      tem_chave: !!cfg.catalogo_netlify_token,
+      url: cfg.catalogo_site_url || null,
+      publicado_em: cfg.catalogo_publicado_em || null,
+      nome_site: catalogoSite.nomeSite(cfg.catalogo_nome_site || cfg.loja_nome),
+    };
+  });
+
+  /** Prévia do site dentro do sistema (as fotos e a logo vêm das rotas abaixo). */
+  rota('GET', '/api/catalogo/site/previa/index.html', () => {
+    const cfg = config();
+    const { dados } = catalogoSite.montarDados(db, cfg, opcoesCatalogo(cfg));
+    return { __arquivo: true, inline: true, semCache: true, tipo: 'text/html; charset=utf-8', conteudo: Buffer.from(catalogoSite.montarHtml(dados, opcoesCatalogo(cfg)), 'utf8') };
+  });
+  rota('GET', '/api/catalogo/site/previa/:pasta/:arq', ({ params }) => {
+    if (params.pasta === 'assets') {
+      const a = catalogoSite.ASSETS.find(([nome]) => nome === `assets/${params.arq}`);
+      if (!a || !fs.existsSync(a[1])) throw erro(404, 'Arquivo não encontrado.');
+      const tipo = { png: 'image/png', woff2: 'font/woff2' }[a[1].split('.').pop()] || 'application/octet-stream';
+      return { __arquivo: true, inline: true, tipo, conteudo: fs.readFileSync(a[1]) };
+    }
+    const m = /^(\d+)-\d+\.(jpg|png|webp)$/.exec(params.arq || '');
+    if (params.pasta !== 'fotos' || !m) throw erro(404, 'Arquivo não encontrado.');
+    const f = catalogoSite.lerFoto(db, Number(m[1]));
+    if (!f) throw erro(404, 'Foto não encontrada.');
+    return { __arquivo: true, inline: true, tipo: f.tipo, conteudo: f.dados };
+  });
+
+  /** O site inteiro em .zip (para publicar em qualquer hospedagem). */
+  rota('GET', '/api/catalogo/site.zip', () => {
+    const cfg = config();
+    const { arquivos } = catalogoSite.arquivosDoSite(db, cfg, opcoesCatalogo(cfg));
+    return { __arquivo: true, nome: `catalogo-${catalogoSite.nomeSite(cfg.loja_nome)}.zip`, tipo: 'application/zip', conteudo: catalogoSite.zipar(arquivos) };
+  }, 'admin');
+
+  /** Publica (ou atualiza) o site na Netlify e guarda o link. */
+  rota('POST', '/api/catalogo/site/publicar', async () => {
+    const cfg = config();
+    const { arquivos, dados } = catalogoSite.arquivosDoSite(db, cfg, opcoesCatalogo(cfg));
+    if (!dados.pecas.length) throw erro(400, 'Nenhuma peça com estoque para pôr no catálogo.');
+    let r;
+    try {
+      r = await catalogoSite.publicar({
+        token: cfg.catalogo_netlify_token, siteId: cfg.catalogo_site_id,
+        nome: cfg.catalogo_nome_site || cfg.loja_nome, zip: catalogoSite.zipar(arquivos),
+      });
+    } catch (e) {
+      if (e.cause || /fetch failed|ENOTFOUND|ECONN/i.test(e.message)) throw erro(502, 'Sem internet neste computador agora. Confira a conexão e tente de novo.');
+      throw erro(e.status === 401 ? 400 : 502, e.message);
+    }
+    const agora = new Date().toLocaleString('sv-SE').replace('T', ' ');
+    const up = db.prepare('UPDATE config SET valor = ? WHERE chave = ?');
+    transacao(db, () => {
+      up.run(r.site_id, 'catalogo_site_id');
+      up.run(r.url, 'catalogo_site_url');
+      up.run(agora, 'catalogo_publicado_em');
+    });
+    return { url: r.url, pecas: dados.pecas.length, publicado_em: agora };
   }, 'admin');
 
   /** Outros computadores da loja: se está liberado e o endereço deste computador na rede. */

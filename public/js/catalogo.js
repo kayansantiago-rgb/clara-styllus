@@ -431,5 +431,129 @@ const Catalogo = (() => {
     gerar();
   }
 
-  return { abrir, modelos, parcelasSemJuros };
+  // ------------------------------------------------------ site online (3D)
+  /**
+   * Catálogo online: prévia do site 3D com as peças da loja, ajustes (título, preço) e publicação na
+   * Netlify com um clique. Quem não é administradora só vê, copia e manda o link.
+   */
+  async function site() {
+    const admin = U.sessao.ehAdmin();
+    let st;
+    let cfg;
+    try { [st, cfg] = await Promise.all([U.api('/api/catalogo/site'), U.config(true)]); } catch (e) { return erro(e); }
+    const corpo = abrirModal('Site da loja (catálogo online)', `
+      <div class="cs">
+        <div class="cs-previa">
+          <div class="cs-telas segmentos" id="cs-tela"><button type="button" class="segmento sel" data-t="celular">${Icone('telefone')} Celular</button><button type="button" class="segmento" data-t="pc">${Icone('grafico')} Computador</button></div>
+          <div class="cs-moldura celular" id="cs-moldura"><iframe id="cs-frame" title="Prévia do site" src="/api/catalogo/site/previa/index.html"></iframe></div>
+          <small class="dica">Prévia ao vivo: é assim que a cliente vê. Gire o carrossel, toque nas peças e monte a sacola.</small>
+        </div>
+        <div class="cs-lado">
+          <div class="cs-link" id="cs-link"></div>
+          <div class="cs-avisos" id="cs-avisos"></div>
+          ${admin ? `
+          <details class="cs-bloco" ${st.tem_chave ? '' : 'open'}><summary>${Icone('ajustes')} Textos do site</summary>
+            <label>Título<input id="cs-titulo" maxlength="40" value="${esc(cfg.catalogo_titulo || '')}" placeholder="${esc(cfg.loja_nome || 'Clara Styllus')}"></label>
+            <label>Frase de apresentação<textarea id="cs-sub" rows="2" maxlength="160" placeholder="Escolha suas peças favoritas, monte a sua sacola e mande o pedido direto no nosso WhatsApp.">${esc(cfg.catalogo_subtitulo || '')}</textarea></label>
+            <label class="check"><input type="checkbox" id="cs-preco" ${cfg.catalogo_mostrar_preco !== '0' ? 'checked' : ''}> Mostrar os preços</label>
+            <label class="check"><input type="checkbox" id="cs-esgot" ${cfg.catalogo_so_estoque !== '0' ? '' : 'checked'}> Mostrar também peças esgotadas</label>
+            <button type="button" class="btn btn-claro btn-peq" id="cs-salvar">${Icone('check')} Salvar e atualizar a prévia</button>
+          </details>
+          <details class="cs-bloco" ${st.tem_chave ? '' : 'open'}><summary>${Icone('chave')} Publicação (Netlify, grátis) ${st.tem_chave ? '<span class="selo ok">ligada</span>' : ''}</summary>
+            <ol class="cs-passos">
+              <li>Crie uma conta grátis em <b>app.netlify.com</b> (pode entrar com o Google).</li>
+              <li>Clique na sua foto → <b>User settings</b> → <b>Applications</b> → <b>Personal access tokens</b> → <b>New access token</b>.</li>
+              <li>Dê um nome (ex.: "loja"), escolha <b>No expiration</b>, gere e copie a chave.</li>
+              <li>Cole aqui embaixo e clique em <b>Publicar</b>. Pronto: o sistema cria o site sozinho.</li>
+            </ol>
+            <label>Chave da Netlify<input id="cs-chave" type="password" autocomplete="off" placeholder="${st.tem_chave ? 'chave guardada (cole outra para trocar)' : 'cole a chave aqui'}"></label>
+            <label>Endereço do site<div class="cs-end"><input id="cs-nome" value="${esc(cfg.catalogo_nome_site || st.nome_site)}" ${st.url ? 'disabled' : ''}><span>.netlify.app</span></div></label>
+            ${st.url ? '<small class="dica">O endereço já foi criado e não muda nas próximas atualizações.</small>' : ''}
+          </details>
+          <div class="cs-acoes">
+            <button type="button" class="btn btn-primario btn-grande" id="cs-publicar">${Icone('nuvem')} ${st.url ? 'Atualizar o site' : 'Publicar o site'}</button>
+            <a class="btn btn-fantasma" href="/api/catalogo/site.zip" download>${Icone('caixa')} Baixar o site (.zip)</a>
+          </div>` : '<p class="dica">Só a administradora publica ou atualiza o site. Você pode copiar e mandar o link.</p>'}
+        </div>
+      </div>`, { largura: '1180px', classe: 'modal-site' });
+
+    const frame = corpo.querySelector('#cs-frame');
+    corpo.querySelector('#cs-tela').onclick = (ev) => {
+      const b = ev.target.closest('[data-t]');
+      if (!b) return;
+      corpo.querySelectorAll('#cs-tela .segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      corpo.querySelector('#cs-moldura').className = `cs-moldura ${b.dataset.t}`;
+    };
+    const recarregar = () => { frame.src = `/api/catalogo/site/previa/index.html?t=${Date.now()}`; };
+    const desenhar = () => {
+      const link = corpo.querySelector('#cs-link');
+      const quando = st.publicado_em ? new Date(st.publicado_em.replace(' ', 'T')).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+      link.innerHTML = st.url ? `
+        <small>Link do catálogo</small>
+        <a href="${esc(st.url)}" target="_blank" rel="noopener" class="cs-url">${esc(st.url.replace(/^https?:\/\//, ''))}</a>
+        <span class="cs-quando">atualizado em ${quando} · ${st.pecas} peça(s)</span>
+        <div class="cs-link-acoes">
+          <button type="button" class="btn btn-claro btn-peq" id="cs-copiar">${Icone('recibo')} Copiar link</button>
+          <a class="btn btn-peq cl-btn-zap" data-zap-direto target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(`Oi! Olha o nosso catálogo com todas as peças da loja 💕\n${st.url}`)}">${Icone('whatsapp')} Mandar no WhatsApp</a>
+        </div>`
+        : `<small>Link do catálogo</small><b class="cs-sem">Ainda não publicado</b><span class="cs-quando">${st.pecas} peça(s) vão entrar no site</span>`;
+      const c = link.querySelector('#cs-copiar');
+      if (c) {
+        c.onclick = async () => {
+          try { await navigator.clipboard.writeText(st.url); aviso('Link copiado. Cole no WhatsApp com Ctrl+V.'); } catch { aviso(st.url); }
+        };
+      }
+      corpo.querySelector('#cs-avisos').innerHTML = [
+        !st.whatsapp_ok && `<div class="cs-aviso perigo">${Icone('whatsapp')}<span>Coloque o <b>telefone da loja</b> em Configurações → Loja: é para ele que os pedidos do site vão.</span></div>`,
+        st.sem_foto && `<div class="cs-aviso">${Icone('camera')}<span><b>${st.sem_foto}</b> peça(s) sem foto aparecem com "foto em breve". Tire a foto pelo celular no cadastro.</span></div>`,
+        !st.pecas && `<div class="cs-aviso perigo">${Icone('alerta')}<span>Nenhuma peça com estoque para mostrar.</span></div>`,
+      ].filter(Boolean).join('');
+    };
+    desenhar();
+    if (!admin) return;
+
+    const salvarTextos = async (extra = {}) => {
+      const corpoCfg = {
+        catalogo_titulo: corpo.querySelector('#cs-titulo').value.trim(),
+        catalogo_subtitulo: corpo.querySelector('#cs-sub').value.trim(),
+        catalogo_mostrar_preco: corpo.querySelector('#cs-preco').checked ? '1' : '0',
+        catalogo_so_estoque: corpo.querySelector('#cs-esgot').checked ? '0' : '1',
+        ...extra,
+      };
+      const chave = corpo.querySelector('#cs-chave').value.trim();
+      if (chave) corpoCfg.catalogo_netlify_token = chave;
+      const nome = corpo.querySelector('#cs-nome');
+      if (!nome.disabled && nome.value.trim()) corpoCfg.catalogo_nome_site = nome.value.trim();
+      await U.api('/api/config', { metodo: 'PUT', corpo: corpoCfg });
+      U.config(true).catch(() => {});
+      st = await U.api('/api/catalogo/site');
+      corpo.querySelector('#cs-chave').value = '';
+      desenhar();
+    };
+    corpo.querySelector('#cs-salvar').onclick = async () => {
+      try { await salvarTextos(); recarregar(); aviso('Textos salvos. A prévia foi atualizada.'); } catch (e) { erro(e); }
+    };
+    const bPub = corpo.querySelector('#cs-publicar');
+    bPub.onclick = async () => {
+      try {
+        await salvarTextos();
+        if (!st.tem_chave) return aviso('Cole a chave da Netlify (passo a passo logo acima) e clique de novo.', 'alerta');
+        bPub.disabled = true;
+        bPub.innerHTML = `${Icone('nuvem')} Publicando… (pode levar até 1 minuto)`;
+        const r = await U.api('/api/catalogo/site/publicar', { metodo: 'POST' });
+        st = await U.api('/api/catalogo/site');
+        desenhar();
+        recarregar();
+        Animacoes.confete();
+        U.avisoAcao(`Site no ar com ${r.pecas} peça(s)!`, 'Abrir', () => window.open(r.url, '_blank'));
+        const nome = corpo.querySelector('#cs-nome');
+        if (nome) nome.disabled = true;
+      } catch (e) { erro(e); } finally {
+        bPub.disabled = false;
+        bPub.innerHTML = `${Icone('nuvem')} ${st.url ? 'Atualizar o site' : 'Publicar o site'}`;
+      }
+    };
+  }
+
+  return { abrir, site, modelos, parcelasSemJuros };
 })();

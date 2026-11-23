@@ -9,6 +9,12 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Site da loja (catálogo online 3D)**: em Produtos → **Site da loja**, o sistema monta um site animado com todas
+  as peças em estoque (carrossel 3D, cartões que inclinam, fotos por cor, tamanhos, preços De/Por e parcelas) e
+  publica na Netlify (grátis) com um clique. A cliente abre o link no celular, escolhe tamanho e cor, monta a
+  sacola e manda o pedido pronto no WhatsApp da loja. Para atualizar, é só clicar em **Atualizar o site**: o link
+  continua o mesmo. Custo, quantidade em estoque e dados de clientes nunca vão para o site.
+
 - **Produtos e relatórios mais visuais**:
   - **Ficha da peça**: clique na foto ou no nome para ver a foto grande, a grade de tamanhos colorida, quanto
     vendeu em 30 dias, há quanto tempo está na loja, o lucro por peça e as vendas das últimas 8 semanas.

@@ -141,7 +141,7 @@ function criarServidor(db, opcoes = {}) {
           }
           if (r.corpo && r.corpo.__arquivo) {
             res.writeHead(200, r.corpo.inline
-              ? { 'Content-Type': r.corpo.tipo, 'Cache-Control': 'private, max-age=31536000' }
+              ? { 'Content-Type': r.corpo.tipo, 'Cache-Control': r.corpo.semCache ? 'no-store' : 'private, max-age=31536000' }
               : { 'Content-Type': r.corpo.tipo, 'Content-Disposition': `attachment; filename="${r.corpo.nome}"` });
             return res.end(r.corpo.conteudo);
           }

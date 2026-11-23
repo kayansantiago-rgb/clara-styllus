@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITULO__</title>
+<meta name="description" content="__DESCRICAO__">
+<meta property="og:title" content="__TITULO__">
+<meta property="og:description" content="__DESCRICAO__">
+<meta property="og:image" content="__OG_IMAGEM__">
+<meta name="theme-color" content="#2b1d22">
+<link rel="icon" href="assets/icone.png">
+<style>
+@font-face { font-family: 'Inter'; src: url('assets/inter.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Playfair Display'; src: url('assets/playfair-display.woff2') format('woff2'); font-weight: 400 900; font-display: swap; }
+:root {
+  --vinho: #2b1d22; --vinho-2: #4a2e36; --rosa: #955968; --rosa-escuro: #703d4a; --rosa-claro: #f7eef0;
+  --ouro: #d4a24a; --ouro-claro: #f3d48a; --creme: #fbf7f4; --texto: #241c1f; --suave: #7a6d74; --borda: #ece3e6;
+  --serif: 'Playfair Display', Georgia, serif; --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: var(--sans); color: var(--texto); background: var(--creme); overflow-x: hidden; }
+img { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; }
+[hidden] { display: none !important; }
+
+/* Abertura */
+#abertura { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(60% 50% at 50% 45%, rgba(212,162,74,.25), transparent 70%), var(--vinho);
+  transition: opacity .7s ease, visibility .7s; }
+#abertura.fora { opacity: 0; visibility: hidden; }
+#abertura img { width: min(300px, 64vw); animation: logo-entra 1.1s cubic-bezier(.2,.8,.2,1) both; filter: drop-shadow(0 10px 30px rgba(0,0,0,.4)); }
+#abertura i { position: absolute; bottom: 22%; width: 140px; height: 2px; background: rgba(255,255,255,.12); overflow: hidden; border-radius: 2px; }
+#abertura i::after { content: ''; position: absolute; inset: 0; background: var(--ouro); transform: scaleX(0); transform-origin: left; animation: carga 1.1s .2s ease forwards; }
+@keyframes logo-entra { from { opacity: 0; transform: scale(.9) translateY(12px); filter: blur(8px); } }
+@keyframes carga { to { transform: scaleX(1); } }
+
+/* Poeira dourada */
+#poeira { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+/* Topo */
+.topo { position: fixed; top: 0; left: 0; right: 0; z-index: 40; display: flex; align-items: center; gap: 14px; padding: 12px clamp(16px, 4vw, 48px);
+  transition: background .3s, box-shadow .3s, padding .3s; }
+.topo.solido { background: rgba(43,29,34,.86); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); box-shadow: 0 10px 30px rgba(0,0,0,.18); padding-top: 8px; padding-bottom: 8px; }
+.topo-logo { height: 42px; width: auto; }
+.topo .espaco { flex: 1; }
+.bt-zap { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; background: #25d366; color: #fff; font-weight: 700; font-size: 14px;
+  padding: 10px 16px; text-decoration: none; box-shadow: 0 8px 20px -8px rgba(37,211,102,.8); transition: transform .2s; }
+.bt-zap:hover { transform: translateY(-2px); }
+.bt-zap svg { width: 18px; height: 18px; }
+.bt-sacola { position: relative; width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; }
+.bt-sacola svg { width: 21px; height: 21px; }
+.bt-sacola b { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--ouro); color: var(--vinho); font-size: 11.5px; display: grid; place-items: center; padding: 0 5px; }
+.bt-sacola.pula { animation: pula .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pula { 40% { transform: scale(1.25); } }
+
+/* Abertura da página (hero) */
+.hero { position: relative; z-index: 1; min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: 20px;
+  padding: 110px clamp(16px, 5vw, 72px) 60px; color: #fff; overflow: hidden;
+  background: radial-gradient(70% 60% at 75% 50%, rgba(149,89,104,.55), transparent 70%), radial-gradient(50% 50% at 10% 90%, rgba(212,162,74,.18), transparent 70%), linear-gradient(160deg, #3b2730, var(--vinho) 60%, #1d1316); }
+.hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 120px; background: linear-gradient(transparent, var(--creme)); pointer-events: none; }
+.hero-txt { position: relative; z-index: 2; }
+.kicker { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--ouro-claro); }
+.kicker::before { content: ''; width: 34px; height: 1.5px; background: var(--ouro); }
+.hero h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(44px, 7vw, 96px); line-height: .98; margin: 18px 0 18px; letter-spacing: -1px; }
+.hero h1 em { font-style: italic; color: var(--ouro-claro); }
+.hero p { font-size: clamp(16px, 1.6vw, 19px); color: rgba(255,255,255,.78); max-width: 480px; line-height: 1.55; margin: 0 0 28px; }
+.hero-acoes { display: flex; gap: 12px; flex-wrap: wrap; }
+.bt-ouro { display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 999px; padding: 15px 26px; font-weight: 700; font-size: 15.5px; text-decoration: none;
+  background: linear-gradient(135deg, var(--ouro-claro), var(--ouro)); color: var(--vinho); box-shadow: 0 14px 30px -12px rgba(212,162,74,.8); transition: transform .2s, box-shadow .2s; }
+.bt-ouro:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -12px rgba(212,162,74,.9); }
+.bt-vidro { display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; padding: 14px 24px; font-weight: 600; font-size: 15px; text-decoration: none;
+  border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: #fff; backdrop-filter: blur(8px); }
+.hero-nums { display: flex; gap: 28px; margin-top: 38px; }
+.hero-nums b { display: block; font-family: var(--serif); font-size: 34px; color: #fff; }
+.hero-nums span { font-size: 12.5px; color: rgba(255,255,255,.6); letter-spacing: .5px; }
+
+/* Carrossel 3D */
+.palco { position: relative; z-index: 1; height: min(620px, 72vh); perspective: 1500px; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.palco:active { cursor: grabbing; }
+.anel { position: absolute; left: 50%; top: 46%; width: 0; height: 0; transform-style: preserve-3d; }
+.anel figure { position: absolute; margin: 0; width: var(--w); height: calc(var(--w) * 1.33); left: calc(var(--w) / -2); top: calc(var(--w) * -.665);
+  border-radius: 22px; overflow: hidden; background: #3a2a30; box-shadow: 0 30px 60px -20px rgba(0,0,0,.65); backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border: 1px solid rgba(255,255,255,.14); }
+.anel figure img { width: 100%; height: 100%; object-fit: cover; }
+.anel figure figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 36px 14px 12px; background: linear-gradient(transparent, rgba(20,12,15,.85)); font-size: 13px; font-weight: 600; }
+.anel figure figcaption b { display: block; color: var(--ouro-claro); font-size: 15px; }
+.chao { position: absolute; left: 50%; bottom: 4%; width: 70%; height: 60px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.45), transparent); filter: blur(6px); }
+.palco-dica { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); font-size: 12px; color: rgba(255,255,255,.55); letter-spacing: 1px; white-space: nowrap; }
+
+/* Faixa corrida */
+.faixa { position: relative; z-index: 2; overflow: hidden; background: var(--vinho); color: var(--ouro-claro); padding: 14px 0; transform: rotate(-1.2deg); margin: -10px -10px 0; box-shadow: 0 10px 30px rgba(43,29,34,.2); }
+.faixa div { display: flex; gap: 44px; width: max-content; animation: corre 32s linear infinite; font-family: var(--serif); font-size: 20px; font-style: italic; }
+.faixa span::after { content: '✦'; margin-left: 44px; font-style: normal; color: var(--ouro); }
+@keyframes corre { to { transform: translateX(-50%); } }
+
+/* Vitrine */
+main { position: relative; z-index: 2; background: var(--creme); }
+.secao { padding: 70px clamp(16px, 5vw, 72px) 40px; max-width: 1400px; margin: 0 auto; }
+.secao-cab { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+.secao-cab h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(32px, 4vw, 52px); margin: 6px 0 0; line-height: 1; }
+.secao-cab .kicker { color: var(--rosa); }
+.secao-cab .kicker::before { background: var(--rosa); }
+.busca { position: relative; flex: 0 1 340px; }
+.busca input { width: 100%; font: inherit; font-size: 15px; padding: 14px 18px 14px 46px; border-radius: 999px; border: 1px solid var(--borda); background: #fff; outline: none; box-shadow: 0 6px 20px -12px rgba(77,49,57,.3); }
+.busca input:focus { border-color: var(--rosa); box-shadow: 0 0 0 4px rgba(149,89,104,.14); }
+.busca svg { position: absolute; left: 17px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--suave); }
+.cats { position: sticky; top: 66px; z-index: 30; display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px; margin: 0 -2px 18px; scrollbar-width: none; background: linear-gradient(var(--creme) 70%, transparent); }
+.cats::-webkit-scrollbar { display: none; }
+.cats button { flex-shrink: 0; border: 1px solid var(--borda); background: #fff; border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 600; color: var(--texto); transition: all .2s; }
+.cats button small { color: var(--suave); font-weight: 600; margin-left: 4px; }
+.cats button.sel { background: var(--vinho); color: #fff; border-color: var(--vinho); box-shadow: 0 8px 18px -8px rgba(43,29,34,.6); }
+.cats button.sel small { color: var(--ouro-claro); }
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: clamp(12px, 2vw, 26px); }
+
+/* Cartão com inclinação 3D */
+.peca { position: relative; border-radius: 24px; background: #fff; transform-style: preserve-3d; transition: transform .25s ease, box-shadow .25s ease; box-shadow: 0 12px 30px -18px rgba(77,49,57,.45);
+  opacity: 0; transform: perspective(900px) translateY(40px) rotateX(18deg); will-change: transform; }
+.peca.visivel { opacity: 1; transform: none; transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1), box-shadow .25s; transition-delay: var(--atraso, 0s); }
+.peca.visivel.mexendo { transition: transform .08s linear, box-shadow .25s; }
+.peca:hover { box-shadow: 0 30px 50px -22px rgba(77,49,57,.55); }
+.peca-foto { position: relative; aspect-ratio: 3 / 4; border-radius: 24px 24px 0 0; overflow: hidden; background: var(--rosa-claro); }
+.peca-foto img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+.peca:hover .peca-foto img { transform: scale(1.06); }
+.peca-foto .sem { width: 100%; height: 100%; display: grid; place-items: center; color: #c6a2ab; font-family: var(--serif); font-size: 20px; }
+.brilho { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(circle at var(--bx, 50%) var(--by, 0%), rgba(255,255,255,.45), transparent 50%); opacity: 0; transition: opacity .3s; mix-blend-mode: soft-light; }
+.peca:hover .brilho { opacity: 1; }
+.num { position: absolute; left: 12px; bottom: 12px; font-family: var(--serif); font-size: 15px; font-weight: 700; background: rgba(255,255,255,.92); color: var(--vinho); border-radius: 999px; padding: 4px 11px; }
+.selos { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.selo { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.selo.novo { background: #fff; color: var(--rosa-escuro); }
+.selo.desc { background: #c2372b; color: #fff; }
+.selo.ultima { background: var(--ouro); color: var(--vinho); }
+.selo.top { background: var(--vinho); color: var(--ouro-claro); }
+.peca-txt { padding: 14px 64px 16px 16px; }
+.peca-cat { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ouro); }
+.peca-txt h3 { margin: 4px 0 8px; font-size: 16px; font-weight: 650; line-height: 1.3; }
+.tams { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.tams i { font-style: normal; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: #f4eef0; }
+.preco { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.preco s { color: var(--suave); font-size: 13px; }
+.preco b { font-size: 20px; font-weight: 800; color: var(--rosa-escuro); }
+.preco small { width: 100%; font-size: 12px; color: var(--suave); }
+.bt-add { position: absolute; right: 12px; bottom: 12px; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--vinho); color: #fff; display: grid; place-items: center;
+  box-shadow: 0 10px 20px -8px rgba(43,29,34,.7); transition: transform .2s, background .2s; }
+.bt-add:hover { background: var(--rosa); transform: scale(1.08); }
+.bt-add svg { width: 20px; height: 20px; }
+.nada { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--suave); font-size: 16px; }
+
+/* Provador (detalhe da peça) */
+.cortina { position: fixed; inset: 0; z-index: 60; background: rgba(20,12,15,.65); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; opacity: 0; transition: opacity .3s; }
+.cortina.aberta { opacity: 1; }
+.provador { position: relative; width: min(980px, 100%); max-height: calc(100svh - 32px); overflow: auto; background: var(--creme); border-radius: 28px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  transform: perspective(1400px) rotateY(-14deg) scale(.92); transition: transform .5s cubic-bezier(.2,.8,.2,1); box-shadow: 0 40px 80px -20px rgba(0,0,0,.6); }
+.cortina.aberta .provador { transform: none; }
+.prov-fotos { position: relative; background: var(--rosa-claro); perspective: 1200px; min-height: 360px; overflow: hidden; }
+.prov-face .peca-foto { aspect-ratio: auto; height: 100%; border-radius: 0; }
+.prov-cartao { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+.prov-cartao.virado { transform: rotateY(180deg); }
+.prov-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.prov-face img { width: 100%; height: 100%; object-fit: cover; }
+.prov-face.verso { transform: rotateY(180deg); }
+.prov-mini { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 8px; z-index: 2; }
+.prov-mini button { width: 52px; height: 66px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,.8); padding: 0; background: #fff; opacity: .75; }
+.prov-mini button.sel { border-color: var(--ouro); opacity: 1; }
+.prov-mini img { width: 100%; height: 100%; object-fit: cover; }
+.prov-txt { padding: 34px 30px 28px; display: flex; flex-direction: column; gap: 14px; }
+.prov-txt h2 { font-family: var(--serif); font-weight: 600; font-size: 34px; margin: 0; line-height: 1.05; }
+.prov-txt .preco b { font-size: 30px; }
+.prov-txt h4 { margin: 4px 0 0; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--suave); }
+.escolha { display: flex; flex-wrap: wrap; gap: 8px; }
+.escolha button { min-width: 52px; padding: 11px 14px; border-radius: 14px; border: 1.5px solid var(--borda); background: #fff; font-weight: 700; transition: all .15s; }
+.escolha button.sel { border-color: var(--vinho); background: var(--vinho); color: #fff; transform: translateY(-2px); box-shadow: 0 8px 16px -8px rgba(43,29,34,.6); }
+.prov-acoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 8px; }
+.prov-acoes .bt-ouro { flex: 1; justify-content: center; }
+.prov-acoes svg { width: 18px; height: 18px; flex-shrink: 0; }
+.bt-linha { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; border-radius: 999px; padding: 14px 20px; font-weight: 700; border: 1.5px solid var(--vinho); background: transparent; color: var(--vinho); }
+.fechar { position: absolute; right: 14px; top: 14px; z-index: 3; width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.9); display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+.fechar svg { width: 18px; height: 18px; }
+.aviso-escolha { color: #b3372c; font-size: 13px; font-weight: 600; }
+
+/* Sacola */
+.gaveta { position: fixed; top: 0; right: 0; bottom: 0; z-index: 70; width: min(420px, 100%); background: var(--creme); box-shadow: -30px 0 60px rgba(0,0,0,.25); display: flex; flex-direction: column;
+  transform: translateX(105%); transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+.gaveta.aberta { transform: none; }
+.gaveta-cab { display: flex; align-items: center; justify-content: space-between; padding: 22px 22px 12px; }
+.gaveta-cab h3 { font-family: var(--serif); font-size: 28px; font-weight: 600; margin: 0; }
+.gaveta-cab .fechar { position: static; }
+.gaveta-lista { flex: 1; overflow: auto; padding: 4px 22px; display: flex; flex-direction: column; gap: 10px; }
+.item { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: #fff; border-radius: 16px; padding: 8px; box-shadow: 0 6px 16px -12px rgba(77,49,57,.4); animation: entra-item .4s cubic-bezier(.2,.8,.2,1); }
+@keyframes entra-item { from { opacity: 0; transform: translateX(30px); } }
+.item img, .item .sem { width: 64px; height: 80px; border-radius: 12px; object-fit: cover; background: var(--rosa-claro); }
+.item b { font-size: 14px; display: block; }
+.item small { color: var(--suave); font-size: 12.5px; }
+.item button { border: 0; background: none; color: var(--suave); padding: 8px; }
+.gaveta-pe { padding: 18px 22px calc(22px + env(safe-area-inset-bottom)); border-top: 1px solid var(--borda); display: flex; flex-direction: column; gap: 12px; }
+.gaveta-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }
+.gaveta-total b { font-size: 24px; color: var(--rosa-escuro); }
+.gaveta-pe .bt-zap { justify-content: center; padding: 16px; font-size: 16px; }
+.gaveta-vazia { text-align: center; color: var(--suave); padding: 50px 10px; }
+
+/* Rodapé */
+.rodape { position: relative; z-index: 2; background: var(--vinho); color: rgba(255,255,255,.75); padding: 60px clamp(16px, 5vw, 72px) 40px; text-align: center; }
+.rodape img { height: 70px; margin: 0 auto 18px; }
+.rodape p { margin: 6px 0; font-size: 14.5px; }
+.rodape a { color: var(--ouro-claro); text-decoration: none; font-weight: 600; }
+.rodape small { display: block; margin-top: 24px; color: rgba(255,255,255,.4); font-size: 12px; }
+.zap-flutuante { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 45; width: 60px; height: 60px; border-radius: 50%; background: #25d366; color: #fff; display: grid; place-items: center;
+  box-shadow: 0 14px 30px -10px rgba(37,211,102,.9); animation: respira 2.6s ease-in-out infinite; }
+.zap-flutuante svg { width: 30px; height: 30px; }
+@keyframes respira { 50% { transform: scale(1.07); } }
+.toast { position: fixed; left: 50%; bottom: 96px; z-index: 65; transform: translate(-50%, 30px); opacity: 0; background: var(--vinho); color: #fff; padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 14px;
+  transition: all .35s cubic-bezier(.2,.8,.2,1); pointer-events: none; box-shadow: 0 14px 30px -10px rgba(0,0,0,.5); }
+.toast.ver { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; padding-top: 90px; text-align: center; min-height: auto; }
+  .hero p { margin-left: auto; margin-right: auto; }
+  .hero-acoes, .hero-nums { justify-content: center; }
+  .palco { height: 420px; order: -1; margin-top: 10px; }
+  .kicker { justify-content: center; }
+  .provador { grid-template-columns: 1fr; }
+  .prov-fotos { min-height: 0; aspect-ratio: 1 / 1; }
+  .prov-txt { padding: 22px 20px 24px; }
+  .topo .bt-zap span { display: none; }
+  .cats { top: 60px; }
+  .peca-txt h3 { font-size: 14.5px; }
+  .bt-add { width: 40px; height: 40px; }
+}
+@media (max-width: 600px) {
+  .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .peca, .peca-foto { border-radius: 18px; }
+  .peca-foto { border-radius: 18px 18px 0 0; }
+  .peca-txt { padding: 10px 10px 12px; }
+  .peca-txt h3 { font-size: 13.5px; margin-bottom: 6px; }
+  .preco b { font-size: 16.5px; }
+  .preco small { font-size: 11px; }
+  .bt-add { width: 38px; height: 38px; right: 8px; bottom: auto; top: 8px; }
+  .bt-add svg { width: 17px; height: 17px; }
+  .selo { font-size: 9.5px; padding: 4px 8px; }
+  .tams i { font-size: 10.5px; padding: 2px 6px; }
+  .anel figure figcaption { font-size: 11.5px; padding: 30px 10px 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .peca { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<div id="abertura"><img src="assets/logo.png" alt=""><i></i></div>
+<canvas id="poeira" aria-hidden="true"></canvas>
+
+<header class="topo" id="topo">
+  <img class="topo-logo" src="assets/logo.png" alt="__LOJA__">
+  <span class="espaco"></span>
+  <a class="bt-zap" id="topo-zap" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.6-3.9-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.6.7.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.7 0-3.4-.5-4.9-1.3l-.4-.2-3.6.9 1-3.5-.2-.4C2.9 15.8 2.4 14 2.4 12.1 2.4 6.8 6.7 2.4 12 2.4c2.6 0 5 1 6.8 2.8 1.8 1.8 2.8 4.2 2.8 6.8 0 5.4-4.3 9.8-9.6 9.8zM20.5 3.5C18.2 1.2 15.2 0 12 0 5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6c1.8 1 3.8 1.5 5.8 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4z"/></svg><span>Chamar no WhatsApp</span></a>
+  <button class="bt-sacola" id="bt-sacola" aria-label="Minha sacola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><b id="sacola-n" hidden>0</b></button>
+</header>
+
+<section class="hero">
+  <div class="hero-txt">
+    <span class="kicker" id="kicker"></span>
+    <h1 id="titulo"></h1>
+    <p id="subtitulo"></p>
+    <div class="hero-acoes">
+      <a class="bt-ouro" href="#vitrine">Ver as peças <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></a>
+      <a class="bt-vidro" id="hero-zap" target="_blank" rel="noopener">Falar com a loja</a>
+    </div>
+    <div class="hero-nums" id="hero-nums"></div>
+  </div>
+  <div class="palco" id="palco" aria-label="Destaques da loja">
+    <div class="anel" id="anel"></div>
+    <div class="chao"></div>
+    <span class="palco-dica">arraste para girar ↔</span>
+  </div>
+</section>
+
+<div class="faixa" aria-hidden="true"><div id="faixa"></div></div>
+
+<main id="vitrine">
+  <section class="secao">
+    <div class="secao-cab">
+      <div><span class="kicker">Vitrine</span><h2>Escolha a sua</h2></div>
+      <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q" type="search" placeholder="Procurar peça, cor ou tamanho" autocomplete="off"></label>
+    </div>
+    <nav class="cats" id="cats"></nav>
+    <div class="grade" id="grade"></div>
+  </section>
+</main>
+
+<footer class="rodape">
+  <img src="assets/logo.png" alt="">
+  <p id="rod-endereco"></p>
+  <p id="rod-contato"></p>
+  <small id="rod-atualizado"></small>
+</footer>
+
+<a class="zap-flutuante" id="zap-flutuante" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.6-3.9-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.6.7.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.7 0-3.4-.5-4.9-1.3l-.4-.2-3.6.9 1-3.5-.2-.4C2.9 15.8 2.4 14 2.4 12.1 2.4 6.8 6.7 2.4 12 2.4c2.6 0 5 1 6.8 2.8 1.8 1.8 2.8 4.2 2.8 6.8 0 5.4-4.3 9.8-9.6 9.8zM20.5 3.5C18.2 1.2 15.2 0 12 0 5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6c1.8 1 3.8 1.5 5.8 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4z"/></svg></a>
+
+<div class="cortina" id="cortina" hidden><div class="provador" id="provador" role="dialog" aria-modal="true"></div></div>
+<aside class="gaveta" id="gaveta" aria-label="Minha sacola">
+  <div class="gaveta-cab"><h3>Minha sacola</h3><button class="fechar" id="fechar-gaveta" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="gaveta-lista" id="gaveta-lista"></div>
+  <div class="gaveta-pe" id="gaveta-pe"></div>
+</aside>
+<div class="toast" id="toast"></div>
+
+<script id="dados" type="application/json">__DADOS__</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('dados').textContent);
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const brl = (c) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const zap = (texto) => (D.whatsapp ? `https://wa.me/${D.whatsapp}${texto ? `?text=${encodeURIComponent(texto)}` : ''}` : null);
+  const ICONE_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  const ICONE_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+  // ---------- Textos da loja
+  document.title = D.titulo ? `${D.titulo} · ${D.loja}` : D.loja;
+  $('#kicker').textContent = D.kicker;
+  $('#titulo').innerHTML = D.titulo
+    ? esc(D.titulo).replace(/(\S+)$/, '<em>$1</em>')
+    : `${esc(D.loja).replace(/(\S+)$/, '<em>$1</em>')}`;
+  $('#subtitulo').textContent = D.subtitulo;
+  $('#hero-nums').innerHTML = [[D.pecas.length, D.pecas.length === 1 ? 'peça' : 'peças'], [D.categorias.length, D.categorias.length === 1 ? 'categoria' : 'categorias'],
+    D.parcelas ? [`${D.parcelas}x`, 'sem juros'] : null].filter(Boolean).map(([n, t]) => `<div><b>${n}</b><span>${t}</span></div>`).join('');
+  const frases = [D.parcelas ? `Parcele em até ${D.parcelas}x sem juros` : null, 'Pix, cartão e dinheiro', 'Novidades toda semana', D.instagram ? `Siga ${D.instagram}` : null,
+    'Separamos a sua peça', 'Peça pelo WhatsApp'].filter(Boolean);
+  $('#faixa').innerHTML = [...frases, ...frases, ...frases, ...frases].map((f) => `<span>${esc(f)}</span>`).join('');
+  $('#rod-endereco').textContent = [D.endereco, D.cidade].filter(Boolean).join(' · ');
+  $('#rod-contato').innerHTML = [D.telefone && `<a href="${zap('Oi! Vim pelo catálogo.')}" target="_blank" rel="noopener">WhatsApp ${esc(D.telefone)}</a>`,
+    D.instagram && `<a href="https://instagram.com/${encodeURIComponent(D.instagram.replace(/^@/, ''))}" target="_blank" rel="noopener">${esc(D.instagram)}</a>`].filter(Boolean).join(' · ');
+  $('#rod-atualizado').textContent = `Catálogo atualizado em ${D.atualizado}. Preços e tamanhos sujeitos à disponibilidade.`;
+  for (const id of ['#topo-zap', '#hero-zap', '#zap-flutuante']) {
+    const a = $(id);
+    const url = zap('Oi! Vim pelo catálogo e quero saber mais.');
+    if (url) a.href = url; else a.hidden = true;
+  }
+
+  // ---------- Abertura
+  addEventListener('load', () => setTimeout(() => $('#abertura').classList.add('fora'), calmo ? 0 : 900));
+  setTimeout(() => $('#abertura').classList.add('fora'), 3500);
+
+  // ---------- Topo fica sólido ao rolar
+  const topo = $('#topo');
+  addEventListener('scroll', () => topo.classList.toggle('solido', scrollY > 40), { passive: true });
+
+  // ---------- Poeira dourada (canvas leve)
+  (() => {
+    if (calmo) return;
+    const cv = $('#poeira');
+    const ctx = cv.getContext('2d');
+    let w; let h; let ps = [];
+    const tamanho = () => {
+      const r = Math.min(2, devicePixelRatio || 1);
+      w = innerWidth; h = innerHeight;
+      cv.width = w * r; cv.height = h * r; cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+      ctx.setTransform(r, 0, 0, r, 0, 0);
+      ps = Array.from({ length: Math.round(Math.min(70, w / 18)) }, () => ({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.8 + .4,
+        v: Math.random() * .35 + .1, d: Math.random() * Math.PI * 2, a: Math.random() * .5 + .2 }));
+    };
+    tamanho();
+    addEventListener('resize', tamanho);
+    const passo = () => {
+      ctx.clearRect(0, 0, w, h);
+      const fade = Math.max(0, 1 - scrollY / (h * .9));
+      if (fade > 0) {
+        for (const p of ps) {
+          p.y -= p.v; p.d += .01; p.x += Math.sin(p.d) * .3;
+          if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(243,207,114,${p.a * fade})`;
+          ctx.shadowColor = 'rgba(243,207,114,.9)';
+          ctx.shadowBlur = 8;
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      requestAnimationFrame(passo);
+    };
+    requestAnimationFrame(passo);
+  })();
+
+  // ---------- Carrossel 3D (gira sozinho; arraste para girar)
+  (() => {
+    const destaques = D.pecas.filter((p) => p.fotos.length).sort((a, b) => (b.destaque - a.destaque)).slice(0, 10);
+    const anel = $('#anel');
+    const palco = $('#palco');
+    if (destaques.length < 3) { palco.hidden = true; return; }
+    const n = destaques.length;
+    const largura = () => Math.min(240, Math.max(150, innerWidth * (innerWidth < 860 ? .38 : .16)));
+    let raio = 0;
+    const montar = () => {
+      const lw = largura();
+      raio = Math.round((lw / 2) / Math.tan(Math.PI / n) + 40);
+      anel.style.setProperty('--w', `${lw}px`);
+      anel.innerHTML = destaques.map((p, i) => `<figure data-id="${p.id}" style="transform: rotateY(${(360 / n) * i}deg) translateZ(${raio}px)">
+        <img src="${p.fotos[0]}" alt="${esc(p.nome)}" draggable="false"><figcaption>${esc(p.nome)}${D.mostrarPreco ? `<b>${brl(p.preco)}</b>` : ''}</figcaption></figure>`).join('');
+    };
+    montar();
+    addEventListener('resize', montar);
+    let ang = 0; let vel = calmo ? 0 : -.12; let arrasto = null; let mexeu = 0;
+    const desenhar = () => { anel.style.transform = `translateZ(${-raio}px) rotateX(-6deg) rotateY(${ang}deg)`; };
+    const girar = () => {
+      if (!arrasto) { ang += vel; vel += ((calmo ? 0 : -.12) - vel) * .02; }
+      desenhar();
+      requestAnimationFrame(girar);
+    };
+    requestAnimationFrame(girar);
+    palco.addEventListener('pointerdown', (e) => { arrasto = { x: e.clientX, a: ang, t: performance.now(), ultX: e.clientX }; mexeu = 0; palco.setPointerCapture(e.pointerId); });
+    palco.addEventListener('pointermove', (e) => {
+      if (!arrasto) return;
+      const dx = e.clientX - arrasto.x;
+      mexeu = Math.max(mexeu, Math.abs(dx));
+      ang = arrasto.a + dx * .35;
+      vel = (e.clientX - arrasto.ultX) * .35;
+      arrasto.ultX = e.clientX;
+    });
+    const soltar = (e) => {
+      if (!arrasto) return;
+      arrasto = null;
+      if (mexeu < 6) {
+        const f = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.closest && el.closest('figure[data-id]'));
+        if (f) abrirPeca(Number(f.closest('figure').dataset.id));
+      }
+    };
+    palco.addEventListener('pointerup', soltar);
+    palco.addEventListener('pointercancel', () => { arrasto = null; });
+  })();
+
+  // ---------- Vitrine
+  let categoria = '';
+  const cats = $('#cats');
+  const contar = (c) => D.pecas.filter((p) => !c || p.categoria === c).length;
+  cats.innerHTML = [['', 'Todas'], ...D.categorias.map((c) => [c, c])].map(([k, t]) => `<button data-c="${esc(k)}" class="${k === categoria ? 'sel' : ''}">${esc(t)}<small>${contar(k)}</small></button>`).join('');
+  cats.onclick = (e) => {
+    const b = e.target.closest('[data-c]');
+    if (!b) return;
+    categoria = b.dataset.c;
+    cats.querySelectorAll('button').forEach((x) => x.classList.toggle('sel', x === b));
+    desenharGrade();
+    const g = $('#vitrine');
+    if (g.getBoundingClientRect().top < 0) scrollTo({ top: g.offsetTop + 40, behavior: calmo ? 'auto' : 'smooth' });
+  };
+  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  $('#q').addEventListener('input', () => desenharGrade());
+
+  const selos = (p) => [p.novo && '<span class="selo novo">Novidade</span>', p.de && `<span class="selo desc">−${Math.round((1 - p.preco / p.de) * 100)}%</span>`,
+    p.top && '<span class="selo top">Mais vendida</span>', p.ultima && '<span class="selo ultima">Última peça</span>'].filter(Boolean).join('');
+  const precoHtml = (p) => (D.mostrarPreco ? `<div class="preco">${p.de ? `<s>${brl(p.de)}</s>` : ''}<b>${p.varia ? 'a partir de ' : ''}${brl(p.preco)}</b>
+    ${D.parcelas && p.preco >= D.parcelas * 1000 ? `<small>ou ${D.parcelas}x de ${brl(Math.ceil(p.preco / D.parcelas))} sem juros</small>` : ''}</div>` : '');
+
+  let observador = null;
+  function desenharGrade() {
+    const q = semAcento($('#q').value.trim());
+    const lista = D.pecas.filter((p) => (!categoria || p.categoria === categoria)
+      && (!q || semAcento([p.nome, p.categoria, p.cores.join(' '), p.tamanhos.join(' '), p.num].join(' ')).includes(q)));
+    const g = $('#grade');
+    g.innerHTML = lista.map((p, i) => `<article class="peca" data-id="${p.id}" style="--atraso:${(i % 4) * 0.07}s" tabindex="0">
+      <div class="peca-foto">${p.fotos.length ? `<img src="${p.fotos[0]}" alt="${esc(p.nome)}" loading="lazy">` : '<div class="sem">foto em breve</div>'}
+        <div class="selos">${selos(p)}</div><span class="num">${p.num}</span><span class="brilho"></span></div>
+      <div class="peca-txt"><span class="peca-cat">${esc(p.categoria)}</span><h3>${esc(p.nome)}</h3>
+        ${p.tamanhos.length ? `<div class="tams">${p.tamanhos.map((t) => `<i>${esc(t)}</i>`).join('')}</div>` : ''}${precoHtml(p)}</div>
+      <button class="bt-add" data-add="${p.id}" aria-label="Pôr na sacola">${ICONE_MAIS}</button>
+    </article>`).join('') || '<div class="nada">Nenhuma peça encontrada. Tente outra busca ou fale com a gente no WhatsApp 💬</div>';
+    if (observador) observador.disconnect();
+    observador = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('visivel'); observador.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    g.querySelectorAll('.peca').forEach((el) => (calmo ? el.classList.add('visivel') : observador.observe(el)));
+  }
+  desenharGrade();
+
+  // Inclinação 3D do cartão seguindo o mouse (ou o dedo).
+  const grade = $('#grade');
+  grade.addEventListener('pointermove', (e) => {
+    if (calmo || e.pointerType === 'touch') return;
+    const c = e.target.closest('.peca.visivel');
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    c.classList.add('mexendo');
+    c.style.transform = `perspective(900px) rotateY(${(x - .5) * 14}deg) rotateX(${(.5 - y) * 12}deg) scale(1.02)`;
+    c.style.setProperty('--bx', `${x * 100}%`);
+    c.style.setProperty('--by', `${y * 100}%`);
+  });
+  grade.addEventListener('pointerout', (e) => {
+    const c = e.target.closest('.peca');
+    if (c && !c.contains(e.relatedTarget)) { c.classList.remove('mexendo'); c.style.transform = ''; }
+  });
+  grade.addEventListener('click', (e) => {
+    const add = e.target.closest('[data-add]');
+    const c = e.target.closest('.peca');
+    if (!c) return;
+    const p = D.pecas.find((x) => x.id === Number(c.dataset.id));
+    if (add && p.tamanhos.length <= 1 && p.cores.length <= 1) return porNaSacola(p, p.tamanhos[0] || '', p.cores[0] || '');
+    abrirPeca(p.id);
+  });
+  grade.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList.contains('peca')) abrirPeca(Number(e.target.dataset.id)); });
+
+  // ---------- Provador (detalhe com foto que vira em 3D)
+  const cortina = $('#cortina');
+  const provador = $('#provador');
+  function abrirPeca(id) {
+    const p = D.pecas.find((x) => x.id === id);
+    if (!p) return;
+    let tam = p.tamanhos.length === 1 ? p.tamanhos[0] : '';
+    let cor = p.cores.length === 1 ? p.cores[0] : '';
+    let foto = 0;
+    let virado = false;
+    provador.innerHTML = `
+      <div class="prov-fotos">
+        <div class="prov-cartao" id="prov-cartao">
+          <div class="prov-face">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : '<div class="peca-foto"><div class="sem">foto em breve</div></div>'}</div>
+          <div class="prov-face verso">${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : ''}</div>
+        </div>
+        ${p.fotos.length > 1 ? `<div class="prov-mini">${p.fotos.map((f, i) => `<button data-f="${i}" class="${i ? '' : 'sel'}"><img src="${f}" alt=""></button>`).join('')}</div>` : ''}
+      </div>
+      <div class="prov-txt">
+        <span class="peca-cat">${esc(p.categoria)} · nº ${p.num}</span>
+        <h2>${esc(p.nome)}</h2>
+        <div class="selos" style="position:static;flex-direction:row;transform:none">${selos(p)}</div>
+        ${precoHtml(p)}
+        ${p.tamanhos.length ? `<h4>Tamanho</h4><div class="escolha" id="esc-tam">${p.tamanhos.map((t) => `<button data-t="${esc(t)}" class="${t === tam ? 'sel' : ''}">${esc(t)}</button>`).join('')}</div>` : ''}
+        ${p.cores.length ? `<h4>Cor</h4><div class="escolha" id="esc-cor">${p.cores.map((c) => `<button data-c="${esc(c)}" class="${c === cor ? 'sel' : ''}">${esc(c)}</button>`).join('')}</div>` : ''}
+        <span class="aviso-escolha" id="aviso-escolha" hidden></span>
+        <div class="prov-acoes">
+          <button class="bt-linha" id="prov-sacola">${ICONE_MAIS} Pôr na sacola</button>
+          ${D.whatsapp ? '<button class="bt-ouro" id="prov-quero">Quero essa!</button>' : ''}
+        </div>
+      </div>
+      <button class="fechar" id="prov-fechar" aria-label="Fechar">${ICONE_X}</button>`;
+    cortina.hidden = false;
+    provador.scrollTop = 0;
+    requestAnimationFrame(() => cortina.classList.add('aberta'));
+    document.body.style.overflow = 'hidden';
+    const cartao = provador.querySelector('#prov-cartao');
+    const trocarFoto = (i) => {
+      if (i === foto) return;
+      foto = i;
+      virado = !virado;
+      cartao.querySelector(virado ? '.verso img' : '.prov-face:not(.verso) img').src = p.fotos[i];
+      cartao.classList.toggle('virado', virado);
+      provador.querySelectorAll('[data-f]').forEach((b) => b.classList.toggle('sel', Number(b.dataset.f) === i));
+    };
+    const ok = () => {
+      const falta = [p.tamanhos.length && !tam && 'o tamanho', p.cores.length && !cor && 'a cor'].filter(Boolean);
+      const av = provador.querySelector('#aviso-escolha');
+      av.hidden = !falta.length;
+      av.textContent = falta.length ? `Escolha ${falta.join(' e ')} 😉` : '';
+      return !falta.length;
+    };
+    provador.onclick = (e) => {
+      const f = e.target.closest('[data-f]');
+      if (f) return trocarFoto(Number(f.dataset.f));
+      const t = e.target.closest('[data-t]');
+      if (t) { tam = t.dataset.t; provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b === t)); return; }
+      const c = e.target.closest('#esc-cor [data-c]');
+      if (c) { cor = c.dataset.c; provador.querySelectorAll('#esc-cor [data-c]').forEach((b) => b.classList.toggle('sel', b === c)); return; }
+      if (e.target.closest('#prov-fechar')) return fecharPeca();
+      if (e.target.closest('#prov-sacola')) { if (ok()) { porNaSacola(p, tam, cor); fecharPeca(); } return; }
+      if (e.target.closest('#prov-quero')) {
+        if (!ok()) return;
+        window.open(zap(`Oi! Vi no catálogo e quero:\n• nº ${p.num} ${p.nome}${tam ? ` — Tam ${tam}` : ''}${cor ? ` · ${cor}` : ''}${D.mostrarPreco ? ` — ${brl(p.preco)}` : ''}`), '_blank');
+      }
+    };
+    // Inclinação da foto acompanhando o mouse.
+    const fotos = provador.querySelector('.prov-fotos');
+    fotos.onpointermove = (e) => {
+      if (calmo || e.pointerType === 'touch') return;
+      const r = fotos.getBoundingClientRect();
+      cartao.style.transform = `${virado ? 'rotateY(180deg) ' : ''}rotateY(${((e.clientX - r.left) / r.width - .5) * 10}deg) rotateX(${(.5 - (e.clientY - r.top) / r.height) * 8}deg)`;
+    };
+    fotos.onpointerleave = () => { cartao.style.transform = ''; };
+  }
+  function fecharPeca() {
+    cortina.classList.remove('aberta');
+    document.body.style.overflow = '';
+    setTimeout(() => { cortina.hidden = true; }, 300);
+  }
+  cortina.addEventListener('click', (e) => { if (e.target === cortina) fecharPeca(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!cortina.hidden) fecharPeca(); fecharGaveta(); } });
+
+  // ---------- Sacola (vai para o WhatsApp numa mensagem só)
+  const CHAVE = `sacola-${D.loja}`;
+  let sacola = [];
+  try { sacola = JSON.parse(localStorage.getItem(CHAVE) || '[]').filter((x) => D.pecas.some((p) => p.id === x.id)); } catch { sacola = []; }
+  const gravar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(sacola)); } catch { /* só nesta visita */ } };
+  const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('ver'), 2200); };
+  function porNaSacola(p, tam, cor) {
+    sacola.push({ id: p.id, tam, cor });
+    gravar();
+    desenharSacola();
+    const b = $('#bt-sacola');
+    b.classList.remove('pula'); void b.offsetWidth; b.classList.add('pula');
+    toast(`${p.nome} está na sacola 🛍️`);
+  }
+  function desenharSacola() {
+    const n = sacola.length;
+    $('#sacola-n').hidden = !n;
+    $('#sacola-n').textContent = n;
+    const itens = sacola.map((x, i) => ({ ...x, i, p: D.pecas.find((p) => p.id === x.id) }));
+    $('#gaveta-lista').innerHTML = itens.length ? itens.map(({ p, tam, cor, i }) => `<div class="item">
+      ${p.fotos[0] ? `<img src="${p.fotos[0]}" alt="">` : '<span class="sem"></span>'}
+      <div><b>${esc(p.nome)}</b><small>nº ${p.num}${tam ? ` · Tam ${esc(tam)}` : ''}${cor ? ` · ${esc(cor)}` : ''}${D.mostrarPreco ? ` · ${brl(p.preco)}` : ''}</small></div>
+      <button data-rm="${i}" aria-label="Tirar">${ICONE_X}</button></div>`).join('')
+      : '<div class="gaveta-vazia">Sua sacola está vazia.<br>Toque no <b>+</b> das peças que gostar.</div>';
+    const total = itens.reduce((a, x) => a + x.p.preco, 0);
+    $('#gaveta-pe').innerHTML = itens.length ? `${D.mostrarPreco ? `<div class="gaveta-total"><span>${n} peça${n === 1 ? '' : 's'}</span><b>${brl(total)}</b></div>` : ''}
+      ${D.whatsapp ? '<button class="bt-zap" id="enviar-pedido">Enviar pedido no WhatsApp</button>' : ''}` : '';
+  }
+  desenharSacola();
+  const gaveta = $('#gaveta');
+  const fecharGaveta = () => gaveta.classList.remove('aberta');
+  $('#bt-sacola').onclick = () => gaveta.classList.add('aberta');
+  $('#fechar-gaveta').onclick = fecharGaveta;
+  gaveta.addEventListener('click', (e) => {
+    const rm = e.target.closest('[data-rm]');
+    if (rm) { sacola.splice(Number(rm.dataset.rm), 1); gravar(); return desenharSacola(); }
+    if (e.target.closest('#enviar-pedido')) {
+      const linhas = sacola.map((x) => {
+        const p = D.pecas.find((y) => y.id === x.id);
+        return `• nº ${p.num} ${p.nome}${x.tam ? ` — Tam ${x.tam}` : ''}${x.cor ? ` · ${x.cor}` : ''}${D.mostrarPreco ? ` — ${brl(p.preco)}` : ''}`;
+      });
+      const total = sacola.reduce((a, x) => a + (D.pecas.find((y) => y.id === x.id) || { preco: 0 }).preco, 0);
+      window.open(zap(`Oi! Vi o catálogo e quero estas peças:\n${linhas.join('\n')}${D.mostrarPreco ? `\nTotal: ${brl(total)}` : ''}`), '_blank');
+    }
+  });
+})();
+</script>
+</body>
+</html>
