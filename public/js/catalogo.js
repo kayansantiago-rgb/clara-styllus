@@ -477,6 +477,8 @@ const Catalogo = (() => {
             <label>Título<input id="cs-titulo" maxlength="40" value="${esc(cfg.catalogo_titulo || '')}" placeholder="${esc(cfg.loja_nome || 'Clara Styllus')}"></label>
             <label>Frase de apresentação<textarea id="cs-sub" rows="2" maxlength="160" placeholder="Escolha suas peças favoritas, monte a sua sacola e mande o pedido direto no nosso WhatsApp.">${esc(cfg.catalogo_subtitulo || '')}</textarea></label>
             <label class="check"><input type="checkbox" id="cs-preco" ${cfg.catalogo_mostrar_preco !== '0' ? 'checked' : ''}> Mostrar os preços</label>
+            <label>Desconto no Pix e no dinheiro (%)<input id="cs-pix" type="number" min="0" max="30" step="1" inputmode="numeric" value="${esc(cfg.catalogo_desconto_pix || '0')}" placeholder="0"></label>
+            <p class="dica">O site mostra o preço no Pix ao lado do preço normal (0 = sem desconto). No caixa, dê o desconto na hora de receber.</p>
             <label class="check"><input type="checkbox" id="cs-esgot" ${cfg.catalogo_so_estoque !== '0' ? '' : 'checked'}> Mostrar também peças esgotadas</label>
             <button type="button" class="btn btn-claro btn-peq" id="cs-salvar">${Icone('check')} Salvar e atualizar a prévia</button>
           </details>
@@ -647,6 +649,7 @@ const Catalogo = (() => {
         catalogo_titulo: corpo.querySelector('#cs-titulo').value.trim(),
         catalogo_subtitulo: corpo.querySelector('#cs-sub').value.trim(),
         catalogo_mostrar_preco: corpo.querySelector('#cs-preco').checked ? '1' : '0',
+        catalogo_desconto_pix: String(Math.min(30, Math.max(0, Math.round(Number(corpo.querySelector('#cs-pix').value) || 0)))),
         catalogo_so_estoque: corpo.querySelector('#cs-esgot').checked ? '0' : '1',
         ...extra,
       };

@@ -173,7 +173,7 @@ Telas.pedidos = (() => {
         <li>Copie o <b>URL do app da Web</b> (termina com <code>/exec</code>), cole aqui e clique em <b>Ligar</b>:</li>
       </ol>
       <div class="po-url"><input id="po-url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"><button type="button" class="btn btn-primario" id="po-ligar">${Icone('check')} Ligar</button></div>
-      <p class="dica">Depois de ligar, clique em <b>Site da loja → Atualizar o site</b> para o botão "Finalizar pedido" aparecer no site.</p>
+      <p class="dica">Depois de ligar, clique em <b>Site da loja → Atualizar o site</b> para o botão "Reservar na loja" aparecer no site.</p>
     </div>`;
   }
 
@@ -195,7 +195,7 @@ Telas.pedidos = (() => {
         U.config(true).catch(() => {});
         await api('/api/pedidos-site/sincronizar', { metodo: 'POST' });
         aviso('Caixa de pedidos ligada! Agora atualize o site da loja.');
-        U.avisoAcao('Atualize o site para mostrar o botão "Finalizar pedido".', 'Site da loja', () => Catalogo.site());
+        U.avisoAcao('Atualize o site para mostrar o botão "Reservar na loja".', 'Site da loja', () => Catalogo.site());
         carregar();
       } catch (e) {
         erro(e);

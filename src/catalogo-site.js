@@ -210,6 +210,8 @@ function montarDados(db, cfg, opcoes = {}) {
     cidade: cfg.loja_cidade || '',
     parcelas: parcelasSemJuros(cfg),
     mostrarPreco: cfg.catalogo_mostrar_preco !== '0',
+    // Desconto no Pix e no dinheiro (%), de 0 a 30.
+    descontoPix: Math.min(30, Math.max(0, Math.round(Number(String(cfg.catalogo_desconto_pix || '0').replace(',', '.')) || 0))),
     // Caixa de pedidos (Google Apps Script): com ela, a sacola vira pedido que cai no sistema.
     pedidos: /^https:\/\/script\.google(usercontent)?\.com\//.test(cfg.pedidos_url || '') ? cfg.pedidos_url : '',
     prazoReserva: Number(cfg.reserva_prazo_dias) || 7,

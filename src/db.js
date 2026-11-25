@@ -185,6 +185,8 @@ const CONFIG_PADRAO = {
   catalogo_titulo: '',
   catalogo_subtitulo: '',
   catalogo_mostrar_preco: '1',
+  // Desconto (%) mostrado no site para quem paga no Pix ou em dinheiro; 0 = sem desconto.
+  catalogo_desconto_pix: '0',
   catalogo_so_estoque: '1',
   catalogo_nome_site: '',
   catalogo_netlify_token: '',
