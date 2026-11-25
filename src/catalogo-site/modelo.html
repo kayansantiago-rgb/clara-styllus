@@ -19,8 +19,9 @@
   --serif: 'Playfair Display', Georgia, serif; --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-body { margin: 0; font-family: var(--sans); color: var(--texto); background: var(--creme); overflow-x: hidden; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; }
+/* A faixa inclinada e a sacola escondida passam da largura da tela: corta sem criar rolagem para o lado. */
+body { margin: 0; font-family: var(--sans); color: var(--texto); background: var(--creme); overflow-x: hidden; overflow-x: clip; max-width: 100%; }
 img { display: block; max-width: 100%; }
 button { font: inherit; color: inherit; cursor: pointer; }
 a { color: inherit; }
@@ -156,6 +157,20 @@ main { position: relative; z-index: 2; background: var(--creme); }
 .pagamentos .pg-cartao svg { color: var(--rosa); }
 .gaveta-pix { display: flex; justify-content: space-between; align-items: center; margin-top: -6px; font-size: 13.5px; font-weight: 700; color: #138a5e; }
 .gaveta-pix b { font-size: 16px; }
+/* Cartão "Formas de pagamento" com o valor em cada forma */
+.pg-cartao-box { background: #fff; border: 1px solid var(--borda); border-radius: 18px; padding: 6px 14px; box-shadow: 0 14px 30px -24px rgba(43,29,34,.5); }
+.pg-cartao-box h5 { margin: 8px 0 2px; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--suave); }
+.pg-linha { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px dashed var(--borda); }
+.pg-cartao-box h5 + .pg-linha { border-top: 0; }
+.pg-linha i { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--rosa-claro); color: var(--rosa-escuro); }
+.pg-linha i svg { width: 18px; height: 18px; }
+.pg-linha.pix i { background: #e8f8f3; color: #1d9b83; }
+.pg-linha.din i { background: #edf7ef; color: #2f8f4e; }
+.pg-linha span { font-size: 13.5px; font-weight: 700; line-height: 1.2; }
+.pg-linha span small { display: block; font-weight: 500; font-size: 11.5px; color: var(--suave); }
+.pg-linha b { font-size: 15px; white-space: nowrap; }
+.pg-linha.pix b, .pg-linha.din b { color: #138a5e; }
+.pg-linha em { font-style: normal; font-size: 10.5px; font-weight: 800; color: #fff; background: #1d9b83; border-radius: 999px; padding: 2px 7px; margin-left: 4px; vertical-align: 2px; }
 /* Faixa de benefícios */
 .beneficios { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; max-width: 1180px; margin: 34px auto 0; padding: 0 22px; }
 .beneficio { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 20px; background: #fff; border: 1px solid var(--borda); box-shadow: 0 12px 30px -22px rgba(43,29,34,.45); }
@@ -202,6 +217,25 @@ main { position: relative; z-index: 2; background: var(--creme); }
 .fechar { position: absolute; right: 14px; top: 14px; z-index: 3; width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.9); display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
 .fechar svg { width: 18px; height: 18px; }
 .aviso-escolha { color: #b3372c; font-size: 13px; font-weight: 600; }
+.prov-txt .preco .pix, .prov-txt .preco small { display: none; }
+.prov-txt .preco-pix-g { display: flex; align-items: center; gap: 6px; margin-top: -6px; font-size: 14.5px; font-weight: 800; color: #138a5e; }
+.prov-txt .preco-pix-g svg { width: 16px; height: 16px; }
+.prov-txt .preco-pix-g em { font-style: normal; font-weight: 600; color: var(--suave); }
+.h4-tam b { color: var(--vinho); letter-spacing: 0; text-transform: none; font-size: 13px; margin-left: 4px; }
+#esc-tam button { min-width: 50px; height: 50px; padding: 0 12px; border-radius: 16px; font-size: 15px; }
+.prov-acoes { position: sticky; bottom: 0; z-index: 4; margin: 6px -30px -28px; padding: 14px 30px 18px; background: var(--creme); box-shadow: 0 -14px 24px -16px rgba(43,29,34,.35); border-top: 1px solid var(--borda); }
+.prov-acoes .bt-reservar { flex: 1 1 100%; order: 3; justify-content: center; font-size: 16px; padding: 16px 22px; }
+.prov-acoes .bt-reservar svg { width: 20px; height: 20px; }
+.prov-retira { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1 1 100%; order: 4; font-size: 12px; color: var(--suave); }
+.prov-retira svg { width: 14px; height: 14px; }
+@media (max-width: 860px) {
+  .cortina { padding: 0; place-items: end center; }
+  .provador { width: 100%; max-height: 94svh; border-radius: 26px 26px 0 0; transform: translateY(60px); box-shadow: 0 -20px 60px -20px rgba(0,0,0,.5); }
+  .prov-fotos { aspect-ratio: 4 / 5 !important; max-height: 62svh; width: 100%; }
+  .prov-txt { padding: 20px 18px 0; gap: 12px; }
+  .prov-txt h2 { font-size: 28px; }
+  .prov-acoes { margin: 4px -18px 0; padding: 12px 18px calc(14px + env(safe-area-inset-bottom)); }
+}
 
 /* Sacola */
 .gaveta { position: fixed; top: 0; right: 0; bottom: 0; z-index: 70; width: min(420px, 100%); background: var(--creme); box-shadow: -30px 0 60px rgba(0,0,0,.25); display: flex; flex-direction: column;
@@ -655,6 +689,15 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     <span class="pg-pix">${ICONE_PIX} Pix${D.descontoPix ? ` −${D.descontoPix}%` : ''}</span>
     <span class="pg-din">${ICONE_DINHEIRO} Dinheiro${D.descontoPix ? ` −${D.descontoPix}%` : ''}</span>
     <span class="pg-cartao">${ICONE_CARTAO} Cartão${D.parcelas ? ` até ${D.parcelas}x sem juros` : ''}</span></div>`;
+  /** Cartão "Formas de pagamento" com quanto fica em cada forma (valor em centavos). */
+  const pagamentosValorHtml = (v) => {
+    const off = D.descontoPix ? `<em>−${D.descontoPix}%</em>` : '';
+    const parc = D.parcelas > 1 && v >= D.parcelas * 1000 ? D.parcelas : 1;
+    return `<div class="pg-cartao-box"><h5>Formas de pagamento</h5>
+      <div class="pg-linha pix"><i>${ICONE_PIX}</i><span>Pix${off}<small>na loja, na hora de retirar</small></span><b>${brl(precoPix(v))}</b></div>
+      <div class="pg-linha din"><i>${ICONE_DINHEIRO}</i><span>Dinheiro${off}<small>à vista</small></span><b>${brl(precoPix(v))}</b></div>
+      <div class="pg-linha"><i>${ICONE_CARTAO}</i><span>Cartão<small>${parc > 1 ? 'crédito, sem juros' : 'débito ou crédito'}</small></span><b>${parc > 1 ? `${parc}x de ${brl(Math.ceil(v / parc))}` : brl(v)}</b></div></div>`;
+  };
 
   // ---------- Tema de época (Black Friday, Natal...): cores, frases e contagem regressiva até o fim
   const TEMAS = {
@@ -1224,15 +1267,18 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
         <h2>${esc(p.nome)}</h2>
         <div class="selos" style="position:static;flex-direction:row;transform:none">${selos(p)}</div>
         ${precoHtml(p)}
-        ${D.mostrarPreco ? pagamentosHtml() : ''}
-        ${p.tamanhos.length ? `<h4 class="h4-tam">Tamanho${tabMedidas ? '<button class="link-medidas" id="prov-medidas" type="button">📏 Qual o meu tamanho?</button>' : ''}</h4>
+        ${D.mostrarPreco && D.descontoPix ? `<span class="preco-pix-g">${ICONE_PIX}${brl(precoPix(p.preco))} <em>no Pix ou dinheiro</em></span>` : ''}
+        ${p.tamanhos.length ? `<h4 class="h4-tam">Tamanho<b id="tam-esc">${tam ? `· ${esc(tam)}` : ''}</b>${tabMedidas ? '<button class="link-medidas" id="prov-medidas" type="button">📏 Qual o meu tamanho?</button>' : ''}</h4>
           ${tabMedidas ? `<div class="medidas" id="medidas" hidden>${medidasHtml(tabMedidas, p)}</div>` : ''}<div class="escolha" id="esc-tam">${p.tamanhos.map((t) => `<button data-t="${esc(t)}" class="${t === tam ? 'sel' : ''}">${esc(t)}</button>`).join('')}</div>` : ''}
         ${p.cores.length ? `<h4>Cor</h4><div class="escolha" id="esc-cor">${p.cores.map((c) => `<button data-c="${esc(c)}" class="${c === cor ? 'sel' : ''}">${esc(c)}</button>`).join('')}</div>` : ''}
+        ${D.mostrarPreco ? pagamentosValorHtml(p.preco) : ''}
         <span class="aviso-escolha" id="aviso-escolha" hidden></span>
         <div class="prov-acoes">
           ${coracao(p, 'bt-fav bt-fav-g')}
           <button class="bt-linha" id="prov-sacola">${ICONE_MAIS} Pôr na sacola</button>
-          ${D.whatsapp || D.pedidos ? '<button class="bt-ouro" id="prov-quero">Quero essa!</button>' : ''}
+          ${D.pedidos ? `<button class="bt-ouro bt-reservar" id="prov-quero">${ICONE_LOJA} Finalizar reserva</button>`
+            : D.whatsapp ? '<button class="bt-ouro bt-reservar" id="prov-quero">Quero essa! (WhatsApp)</button>' : ''}
+          ${D.pedidos ? `<span class="prov-retira">${ICONE_RELOGIO} Separamos por ${D.prazoReserva} dias · você paga na loja</span>` : ''}
         </div>
       </div>
       <button class="compartilhar" id="prov-link" aria-label="Compartilhar esta peça">${ICONE_LINK}<span>Compartilhar</span></button>
@@ -1316,6 +1362,11 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       }
     });
     fotosEl.addEventListener('pointercancel', () => { toque = null; });
+    const marcarTam = () => {
+      const el = provador.querySelector('#tam-esc');
+      if (el) el.textContent = tam ? `· ${tam}` : '';
+      if (tam) provador.querySelector('#aviso-escolha').hidden = true;
+    };
     const ok = () => {
       const falta = [p.tamanhos.length && !tam && 'o tamanho', p.cores.length && !cor && 'a cor'].filter(Boolean);
       const av = provador.querySelector('#aviso-escolha');
@@ -1339,14 +1390,19 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       if (e.target.closest('#prov-link')) return compartilhar(p);
       if (e.target.closest('#prov-lupa')) return abrirLupa(lista, foto, (i) => trocarFoto(i));
       const t = e.target.closest('[data-t]');
-      if (t) { tam = t.dataset.t; provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b === t)); return; }
+      if (t) { tam = t.dataset.t; provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b === t)); marcarTam(); return; }
       const c = e.target.closest('#esc-cor [data-c]');
       if (c) { cor = c.dataset.c; provador.querySelectorAll('#esc-cor [data-c]').forEach((b) => b.classList.toggle('sel', b === c)); return; }
       if (e.target.closest('#prov-fechar')) return fecharPeca();
       if (e.target.closest('#prov-sacola')) { if (ok()) { porNaSacola(p, tam, cor); fecharPeca(); } return; }
       if (e.target.closest('#prov-quero')) {
         if (!ok()) return;
-        if (D.pedidos) { porNaSacola(p, tam, cor); fecharPeca(); return abrirGaveta('sacola'); }
+        if (D.pedidos) {
+          porNaSacola(p, tam, cor);
+          fecharPeca();
+          abrirGaveta('dados');
+          return setTimeout(() => { const i = $('#form-pedido [name=nome]'); if (i && !i.value && !toqueTela) i.focus(); }, 350);
+        }
         window.open(zap(`Oi! Vi no catálogo e quero:\n• nº ${p.num} ${p.nome}${tam ? ` — Tam ${tam}` : ''}${cor ? ` · ${cor}` : ''}${D.mostrarPreco ? ` — ${brl(p.preco)}` : ''}`), '_blank');
       }
     };
@@ -1365,6 +1421,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
         if (tem) {
           tam = sug;
           provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b.dataset.t === sug));
+          marcarTam();
         }
       });
     }
@@ -1644,9 +1701,8 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       <button data-rm="${i}" aria-label="Tirar">${ICONE_X}</button></div>`).join('')
       : '<div class="gaveta-vazia">Sua sacola está vazia.<br>Toque no <b>+</b> das peças que gostar.</div>';
     pe.innerHTML = itens.length ? `${D.mostrarPreco ? `<div class="gaveta-total"><span>${n} peça${n === 1 ? '' : 's'}</span><b>${brl(total)}</b></div>
-      ${D.descontoPix ? `<div class="gaveta-pix"><span>No Pix ou dinheiro (−${D.descontoPix}%)</span><b>${brl(itens.reduce((a, x) => a + precoPix(x.p.preco), 0))}</b></div>` : ''}
-      ${pagamentosHtml()}` : ''}
-      ${D.pedidos ? `<button class="bt-pedido" id="finalizar">${ICONE_LOJA.replace('<svg', '<svg width="20" height="20"')} Reservar na loja</button>` : ''}
+      ${pagamentosValorHtml(total)}` : ''}
+      ${D.pedidos ? `<button class="bt-pedido" id="finalizar">${ICONE_LOJA.replace('<svg', '<svg width="20" height="20"')} Finalizar reserva</button>` : ''}
       ${D.whatsapp ? `<button class="bt-zap" id="enviar-pedido" ${D.pedidos ? 'style="background:#fff;color:#1a7f45;border:1.5px solid #25d366;box-shadow:none"' : ''}>${D.pedidos ? 'Ou mandar a lista no WhatsApp' : 'Enviar pedido no WhatsApp'}</button>` : ''}` : '';
   }
 
