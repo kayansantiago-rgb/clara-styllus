@@ -93,6 +93,26 @@ function resposta_(obj) {
 
 const digitos = (t) => String(t || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
 
+/** CPF com os dígitos verificadores certos (só números) ou ''. */
+function cpfDoPedido(t) {
+  const d = String(t || '').replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return '';
+  for (const n of [9, 10]) {
+    let soma = 0;
+    for (let i = 0; i < n; i++) soma += Number(d[i]) * (n + 1 - i);
+    if (((soma * 10) % 11) % 10 !== Number(d[n])) return '';
+  }
+  return d;
+}
+
+/** Foto que a cliente mandou pelo site (data URL pequena) → { tipo, dados } ou null. */
+function fotoDoPedido(t) {
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(t || ''));
+  if (!m) return null;
+  const dados = Buffer.from(m[2], 'base64');
+  return dados.length > 100 && dados.length < 200000 ? { tipo: m[1], dados } : null;
+}
+
 function instalarPedidosSite({ db, rota, erro, texto, plano, planos, transacao, config, reservas }) {
   const gravar = db.prepare('UPDATE config SET valor = ? WHERE chave = ?');
   const chave = () => {
@@ -104,17 +124,34 @@ function instalarPedidosSite({ db, rota, erro, texto, plano, planos, transacao, 
     return c;
   };
 
-  /** Cliente pelo WhatsApp (mesmos dígitos); se não existir, cadastra. */
-  function clienteDoPedido(nome, telefone) {
+  /**
+   * Cliente pelo CPF ou pelo WhatsApp (mesmos dígitos); se não existir, cadastra com o que veio do site.
+   * Se já existir, só completa o que falta no cadastro (CPF, telefone, foto): nada que a loja escreveu é trocado.
+   */
+  function clienteDoPedido(nome, telefone, cpf, foto) {
     const d = digitos(telefone);
-    if (d.length >= 10) {
-      const achou = db.prepare('SELECT id, telefone FROM clientes WHERE excluido_em IS NULL AND telefone IS NOT NULL').all()
+    let achou = cpf ? db.prepare('SELECT id, cpf, telefone, foto_versao FROM clientes WHERE excluido_em IS NULL AND cpf = ?').get(cpf) : null;
+    if (!achou && d.length >= 10) {
+      achou = db.prepare('SELECT id, cpf, telefone, foto_versao FROM clientes WHERE excluido_em IS NULL AND telefone IS NOT NULL').all()
         .find((c) => digitos(c.telefone) === d);
-      if (achou) return Number(achou.id);
     }
-    const r = db.prepare('INSERT INTO clientes (nome, telefone, observacao) VALUES (?,?,?)')
-      .run(nome || 'Cliente do site', telefone || null, 'Cadastrada por um pedido do site.');
-    return Number(r.lastInsertRowid);
+    let id;
+    if (achou) {
+      id = Number(achou.id);
+      if (cpf && !achou.cpf && !db.prepare('SELECT 1 FROM clientes WHERE cpf = ? AND id <> ? AND excluido_em IS NULL').get(cpf, id)) {
+        db.prepare('UPDATE clientes SET cpf = ? WHERE id = ?').run(cpf, id);
+      }
+      if (telefone && !achou.telefone) db.prepare('UPDATE clientes SET telefone = ? WHERE id = ?').run(telefone, id);
+      if (achou.foto_versao) foto = null; // a foto que a loja tirou fica
+    } else {
+      id = Number(db.prepare('INSERT INTO clientes (nome, cpf, telefone, observacao) VALUES (?,?,?,?)')
+        .run(nome || 'Cliente do site', cpf || null, telefone || null, 'Cadastrada por um pedido do site.').lastInsertRowid);
+    }
+    if (foto) {
+      db.prepare('INSERT OR REPLACE INTO cliente_fotos (cliente_id, tipo, dados) VALUES (?,?,?)').run(id, foto.tipo, foto.dados);
+      db.prepare('UPDATE clientes SET foto_versao = ? WHERE id = ?').run(Date.now(), id);
+    }
+    return id;
   }
 
   /** Transforma um pedido recebido em reserva (só com as peças que ainda têm estoque). */
@@ -127,6 +164,8 @@ function instalarPedidosSite({ db, rota, erro, texto, plano, planos, transacao, 
     const nome = texto(d.nome, 80) || 'Cliente do site';
     const telefone = texto(d.telefone, 30);
     const obs = texto(d.observacao, 300);
+    const cpf = cpfDoPedido(d.cpf);
+    const foto = fotoDoPedido(d.foto);
     // Junta as peças iguais e confere no estoque (o preço vale o da loja, não o que veio do site).
     const pedidas = new Map();
     for (const it of d.itens.slice(0, 40)) {
@@ -152,7 +191,7 @@ function instalarPedidosSite({ db, rota, erro, texto, plano, planos, transacao, 
       resumo.push({ produto_id: id, descricao, quantidade: qtd, separadas: temos, preco: prod ? prod.preco_venda : null, foto_versao: prod ? prod.foto_versao : null });
     }
     return transacao(db, () => {
-      const clienteId = clienteDoPedido(nome, telefone);
+      const clienteId = clienteDoPedido(nome, telefone, cpf, foto);
       let reservaId = null;
       if (separar.length) {
         const r = reservas.criarReserva({

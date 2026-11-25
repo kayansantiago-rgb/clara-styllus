@@ -272,6 +272,17 @@ main { position: relative; z-index: 2; background: var(--creme); }
 .form-pedido input, .form-pedido textarea { font: inherit; font-size: 16px; font-weight: 500; color: var(--texto); padding: 13px 14px; border-radius: 14px; border: 1.5px solid var(--borda); background: #fff; outline: none; resize: none; }
 .form-pedido input:focus, .form-pedido textarea:focus { border-color: var(--rosa); box-shadow: 0 0 0 4px rgba(149,89,104,.14); }
 .form-pedido .erro { color: #b3372c; font-size: 13px; font-weight: 600; }
+.foto-cliente { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 16px; border: 1.5px dashed var(--borda); background: #fff; }
+.form-pedido label.foto-cliente-bola { flex: none; width: 66px; height: 66px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--rosa-claro); color: var(--rosa-escuro); cursor: pointer; }
+.foto-cliente-bola svg { width: 28px; height: 28px; }
+.foto-cliente-bola img { width: 100%; height: 100%; object-fit: cover; }
+.foto-cliente b { display: block; font-size: 14px; color: var(--texto); }
+.foto-cliente b small { font-weight: 500; color: var(--suave); }
+.foto-cliente span { display: block; font-size: 12px; color: var(--suave); margin: 2px 0 6px; }
+.form-pedido label.foto-cliente-bt, .foto-cliente-tirar { display: inline-block; font-size: 13px; font-weight: 700; color: var(--vinho); text-decoration: underline; cursor: pointer; background: none; border: 0; padding: 0; }
+.foto-cliente-tirar { color: var(--suave); margin-left: 10px; }
+.form-pedido label.consente { flex-direction: row; align-items: flex-start; gap: 10px; font-weight: 500; font-size: 12.5px; line-height: 1.4; }
+.form-pedido label.consente input { width: 20px; height: 20px; padding: 0; margin: 1px 0 0; flex: none; accent-color: var(--vinho); }
 .bt-pedido { display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 999px; padding: 16px; font-weight: 800; font-size: 16px; color: var(--vinho);
   background: linear-gradient(135deg, var(--ouro-claro), var(--ouro)); box-shadow: 0 14px 30px -12px rgba(212,162,74,.8); }
 .bt-pedido[disabled] { opacity: .6; }
@@ -690,7 +701,8 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   const ICONE_DINHEIRO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01"/></svg>';
   const ICONE_CARTAO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>';
   const ICONE_LOJA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
-  const ICONE_RELOGIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  const ICONE_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13.5" r="3.5"/></svg>';
+  const ICONE_RELOGIO ='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
   /** Preço no Pix e no dinheiro (com o desconto da loja), em centavos. */
   const precoPix = (c) => Math.round(c * (100 - (D.descontoPix || 0)) / 100);
   /** Selos com as formas de pagamento aceitas. */
@@ -1675,6 +1687,43 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   let etapa = 'sacola'; // sacola → dados → feito
   let ultimoPedido = null;
   const ICONE_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+  let fotoCliente = null; // foto da cliente (data URL pequena), só nesta visita
+  const cpfValido = (d) => {
+    if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+    for (const n of [9, 10]) {
+      let soma = 0;
+      for (let i = 0; i < n; i++) soma += Number(d[i]) * (n + 1 - i);
+      if (((soma * 10) % 11) % 10 !== Number(d[n])) return false;
+    }
+    return true;
+  };
+  const mascaraCpf = (v) => v.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  /** Diminui a foto para um quadrado de rosto (pequeno, para caber no pedido). */
+  function reduzirFoto(arquivo) {
+    return new Promise((ok, falha) => {
+      const url = URL.createObjectURL(arquivo);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const lado = Math.min(img.naturalWidth, img.naturalHeight);
+        const tela = document.createElement('canvas');
+        let tam = 200;
+        let q = 0.72;
+        let dados = '';
+        for (let tentativa = 0; tentativa < 8; tentativa++) {
+          tela.width = tela.height = tam;
+          const ctx = tela.getContext('2d');
+          ctx.drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 3, lado, lado, 0, 0, tam, tam);
+          dados = tela.toDataURL('image/jpeg', q);
+          if (dados.length <= 12000) return ok(dados);
+          if (q > 0.5) q -= 0.1; else tam = Math.round(tam * 0.85);
+        }
+        ok(dados.length <= 14000 ? dados : null);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); falha(new Error('foto')); };
+      img.src = url;
+    });
+  }
   const lembrar = (() => { try { return JSON.parse(localStorage.getItem(`${CHAVE}-cliente`) || '{}'); } catch { return {}; } })();
   function desenharSacola() {
     const n = sacola.length;
@@ -1697,7 +1746,15 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
         <p style="margin:0;color:var(--suave)">${n} peça${n === 1 ? '' : 's'}${D.mostrarPreco ? ` · <b style="color:var(--rosa-escuro)">${brl(total)}</b>` : ''}. Seus dados para a loja falar com você:</p>
         <label>Seu nome<input name="nome" autocomplete="name" maxlength="80" value="${esc(lembrar.nome || '')}" required></label>
         <label>WhatsApp (com DDD)<input name="telefone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="(63) 99999-9999" value="${esc(lembrar.telefone || '')}" required></label>
+        <label>CPF<input name="cpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00" required></label>
+        <div class="foto-cliente">
+          <label class="foto-cliente-bola" for="foto-cliente" aria-label="Escolher sua foto">${fotoCliente ? `<img src="${fotoCliente}" alt="">` : ICONE_CAMERA}</label>
+          <div><b>Sua foto <small>(opcional)</small></b><span>Ajuda a loja a te reconhecer na retirada.</span>
+            <label class="foto-cliente-bt" for="foto-cliente">${fotoCliente ? 'Trocar foto' : 'Tirar ou escolher foto'}</label>${fotoCliente ? ' <button type="button" class="foto-cliente-tirar" id="foto-tirar">Remover</button>' : ''}</div>
+          <input type="file" id="foto-cliente" accept="image/*" capture="user" hidden>
+        </div>
         <label>Observação (opcional)<textarea name="observacao" rows="3" maxlength="300" placeholder="Ex.: vou buscar no sábado / quero entrega no centro"></textarea></label>
+        <label class="consente"><input type="checkbox" name="consente"> <span>Autorizo a ${esc(D.loja)} a guardar meus dados no cadastro de clientes para esta reserva.</span></label>
         <span class="erro" id="erro-pedido" hidden></span>
       </form>`;
       pe.innerHTML = '<button class="bt-pedido" id="confirmar-pedido">Confirmar reserva</button><button class="bt-voltar" id="voltar-sacola">← Voltar para a sacola</button>';
@@ -1739,7 +1796,9 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     const nome = f.nome.value.trim();
     const tel = f.telefone.value.trim();
     const dig = tel.replace(/\D/g, '');
-    const falta = !nome ? 'Escreva seu nome.' : dig.length < 10 || dig.length > 13 ? 'Escreva seu WhatsApp com DDD.' : '';
+    const cpf = f.cpf.value.replace(/\D/g, '');
+    const falta = !nome ? 'Escreva seu nome.' : dig.length < 10 || dig.length > 13 ? 'Escreva seu WhatsApp com DDD.'
+      : !cpfValido(cpf) ? 'Confira o seu CPF (11 números).' : !f.consente.checked ? 'Marque a autorização para a loja guardar seus dados.' : '';
     err.hidden = !falta;
     err.textContent = falta;
     if (falta) return;
@@ -1751,7 +1810,9 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       const v = p.variantes.find((y) => y.t === (x.tam || '') && y.c === (x.cor || '')) || p.variantes.find((y) => y.t === (x.tam || '')) || p.variantes[0] || { id: p.id };
       return { id: v.id, nome: p.nome, tam: x.tam || '', cor: x.cor || '', preco: p.preco };
     });
-    const pedido = { codigo: novoCodigo(), nome, telefone: tel, observacao: f.observacao.value.trim(), itens, total: itens.reduce((a, x) => a + x.preco, 0), enviado: new Date().toISOString() };
+    const pedido = { codigo: novoCodigo(), nome, telefone: tel, cpf, observacao: f.observacao.value.trim(), itens, total: itens.reduce((a, x) => a + x.preco, 0), enviado: new Date().toISOString() };
+    // A caixa de pedidos aceita até 20 mil letras por pedido: a foto vai junto só se couber.
+    if (fotoCliente && JSON.stringify({ ...pedido, foto: fotoCliente }).length < 19500) pedido.foto = fotoCliente;
     const ok = await enviarPedido(pedido);
     if (!ok) {
       b.disabled = false;
@@ -1778,11 +1839,38 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   $('#bt-sacola').onclick = () => abrirGaveta(etapa === 'feito' ? 'feito' : 'sacola');
   $('#fechar-gaveta').onclick = fecharGaveta;
   gaveta.addEventListener('submit', (e) => { e.preventDefault(); confirmarPedido(); });
+  gaveta.addEventListener('input', (e) => {
+    if (e.target.name === 'cpf') e.target.value = mascaraCpf(e.target.value);
+  });
+  gaveta.addEventListener('change', async (e) => {
+    if (e.target.id !== 'foto-cliente' || !e.target.files[0]) return;
+    const f = $('#form-pedido');
+    const guardar = f ? Object.fromEntries(['nome', 'telefone', 'cpf', 'observacao'].map((k) => [k, f[k].value])) : null;
+    const consente = f && f.consente.checked;
+    try {
+      fotoCliente = await reduzirFoto(e.target.files[0]);
+      if (!fotoCliente) toast('Não consegui usar essa foto. Tente outra 📷');
+    } catch { toast('Não consegui abrir essa foto. Tente outra 📷'); }
+    desenharSacola();
+    const g = $('#form-pedido');
+    if (g && guardar) { for (const [k, v] of Object.entries(guardar)) g[k].value = v; g.consente.checked = consente; }
+  });
   gaveta.addEventListener('click', (e) => {
     const rm = e.target.closest('[data-rm]');
     if (rm) { sacola.splice(Number(rm.dataset.rm), 1); gravar(); return desenharSacola(); }
     if (e.target.closest('#finalizar')) { etapa = 'dados'; desenharSacola(); setTimeout(() => { const i = $('#form-pedido [name=nome]'); if (i && !i.value) i.focus(); }, 300); return; }
     if (e.target.closest('#voltar-sacola')) { etapa = 'sacola'; return desenharSacola(); }
+    if (e.target.closest('#foto-tirar')) {
+      const f = $('#form-pedido');
+      const guardar = Object.fromEntries(['nome', 'telefone', 'cpf', 'observacao'].map((k) => [k, f[k].value]));
+      const consente = f.consente.checked;
+      fotoCliente = null;
+      desenharSacola();
+      const g = $('#form-pedido');
+      for (const [k, v] of Object.entries(guardar)) g[k].value = v;
+      g.consente.checked = consente;
+      return;
+    }
     if (e.target.closest('#confirmar-pedido')) { confirmarPedido(); return; }
     if (e.target.closest('#enviar-pedido')) {
       const linhas = sacola.map((x) => {

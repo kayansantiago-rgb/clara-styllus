@@ -5,6 +5,10 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 ## O que ele faz
 
+- **Mini cadastro na reserva do site**: para reservar, a cliente escreve nome, WhatsApp e CPF (conferido), pode
+  tirar ou escolher uma foto (opcional) e marca a autorização para a loja guardar os dados. Quando o pedido chega,
+  o sistema acha a cliente pelo CPF ou pelo WhatsApp e só completa o que falta (CPF, telefone, foto); se for nova,
+  cadastra em **Clientes** já com CPF e foto. A foto que a loja tirou nunca é trocada.
 - **Site da loja melhor no celular**: a página não arrasta mais para o lado; a peça abre como uma folha que sobe
   de baixo, com foto grande, tamanho escolhido à vista, um quadro "Formas de pagamento" com o valor no Pix, no
   dinheiro e no cartão, e uma barra fixa numa linha só: coração, sacola e **Finalizar reserva** (que já leva para os

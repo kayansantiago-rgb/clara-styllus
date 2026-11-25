@@ -121,3 +121,50 @@ test('pedido do site vira reserva: acha a cliente pelo WhatsApp (ou cadastra), s
     srv.close();
   }
 });
+
+test('cadastro da reserva: CPF e foto da cliente vão para o cadastro de clientes', async () => {
+  const { chamar, blusa, calca38, ana, db } = preparar();
+  const chave = chamar('GET', '/api/pedidos-site/script').corpo.codigo.match(/const CHAVE = '([^']+)'/)[1];
+  const g = caixaGoogle(chave);
+  const srv = http.createServer((req, res) => {
+    const url = new URL(req.url, 'http://x');
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(g.doGet(Object.fromEntries(url.searchParams))));
+  });
+  await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
+  const fetchOriginal = global.fetch;
+  global.fetch = (u, o) => fetchOriginal(String(u).replace('https://', 'http://'), o);
+  try {
+    db.prepare(`UPDATE config SET valor = ? WHERE chave = 'pedidos_url'`).run(`https://127.0.0.1:${srv.address().port}/exec`);
+    const foto = `data:image/jpeg;base64,${Buffer.alloc(3000, 7).toString('base64')}`;
+    // Nova cliente com CPF e foto; Ana (já cadastrada, sem CPF) manda o CPF; CPF inválido é ignorado.
+    assert.equal(g.doPost(JSON.stringify({ codigo: 'CPF001', nome: 'Carla Dias', telefone: '63 96666-3333', cpf: '529.982.247-25', foto, itens: [{ id: blusa.id }] })).ok, true);
+    g.doPost(JSON.stringify({ codigo: 'CPF002', nome: 'Ana', telefone: '63988881111', cpf: '11144477735', itens: [{ id: calca38.id }] }));
+    g.doPost(JSON.stringify({ codigo: 'CPF003', nome: 'Duda', telefone: '63 95555-4444', cpf: '111.111.111-11', foto: 'data:text/html;base64,AAAA', itens: [{ id: calca38.id }] }));
+    const r = await chamar('POST', '/api/pedidos-site/sincronizar');
+    assert.equal(r.corpo.novos.length, 3, JSON.stringify(r.corpo));
+
+    const carla = db.prepare(`SELECT * FROM clientes WHERE nome = 'Carla Dias'`).get();
+    assert.equal(carla.cpf, '52998224725');
+    assert.ok(carla.foto_versao, 'ficou com foto');
+    const f = await chamar('GET', `/api/clientes/${carla.id}/foto`);
+    assert.equal(f.status, 200);
+    assert.equal(db.prepare('SELECT length(dados) AS n FROM cliente_fotos WHERE cliente_id = ?').get(carla.id).n, 3000);
+
+    assert.equal(db.prepare('SELECT cpf FROM clientes WHERE id = ?').get(ana.id).cpf, '11144477735', 'completou o CPF da Ana');
+    assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM clientes WHERE nome LIKE 'Ana%'`).get().n, 1);
+    const duda = db.prepare(`SELECT * FROM clientes WHERE nome = 'Duda'`).get();
+    assert.equal(duda.cpf, null, 'CPF inválido não entra');
+    assert.equal(duda.foto_versao, null, 'arquivo que não é foto não entra');
+
+    // Pedido seguinte com o mesmo CPF e outro telefone: acha a Carla pelo CPF e não troca a foto.
+    const versao = carla.foto_versao;
+    g.doPost(JSON.stringify({ codigo: 'CPF004', nome: 'Carla', telefone: '61 90000-0000', cpf: '52998224725', foto, itens: [{ id: blusa.id }] }));
+    await chamar('POST', '/api/pedidos-site/sincronizar');
+    assert.equal(db.prepare(`SELECT cliente_id FROM pedidos_site WHERE codigo = 'CPF004'`).get().cliente_id, carla.id);
+    assert.equal(db.prepare('SELECT foto_versao FROM clientes WHERE id = ?').get(carla.id).foto_versao, versao);
+  } finally {
+    global.fetch = fetchOriginal;
+    srv.close();
+  }
+});
