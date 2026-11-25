@@ -274,3 +274,41 @@ test('site: giro de 360°, foto de capa, tema de época e link direto da peça',
   assert.equal(catalogoSite.montarDados(db, cfg2).dados.pecas.find((p) => p.nome === 'Vestido Midi').mais.length, 2);
   assert.equal(chamar('POST', `/api/produtos/${p38.id}/extras`, { quantidade: 0 }).corpo.extras_n, 0);
 });
+
+test('site: vídeo da peça (MP4/WEBM conferido pelo conteúdo), tabela de medidas e listas dos filtros', () => {
+  const { chamar, db } = novaApi();
+  const [p1] = chamar('POST', '/api/produtos/grade', { nome: 'Vestido Midi', cor: 'Preto', preco_venda: 25990, variantes: [{ tamanho: 'P', cor: 'Preto', quantidade: 1 }, { tamanho: 'M', cor: 'Vinho', quantidade: 1 }] }).corpo;
+  chamar('POST', '/api/produtos/grade', { nome: 'Calça Wide', preco_venda: 18990, variantes: [{ tamanho: '40', cor: 'Preto', quantidade: 1 }, { tamanho: '38', cor: 'Azul', quantidade: 1 }] });
+  // Vídeo: só aceita MP4/MOV/WEBM de verdade.
+  assert.equal(chamar('POST', `/api/produtos/${p1.id}/video`, { arquivo: Buffer.from('<html>não é vídeo</html>') }).status, 400);
+  const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), Buffer.alloc(40)]);
+  const r = chamar('POST', `/api/produtos/${p1.id}/video`, { arquivo: mp4 });
+  assert.equal(r.status, 200, JSON.stringify(r.corpo));
+  assert.ok(r.corpo.video_versao);
+  const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(40)]);
+  assert.equal(chamar('POST', `/api/produtos/${p1.id}/video`, { arquivo: webm }).status, 200);
+  let cfg = chamar('GET', '/api/config').corpo;
+  let dados = catalogoSite.montarDados(db, cfg).dados;
+  const peca = dados.pecas.find((p) => p.nome === 'Vestido Midi');
+  assert.match(peca.video, /^videos\/\d+-\d+\.webm$/);
+  const v = chamar('GET', `/api/catalogo/site/previa/videos/${peca.video.split('/')[1]}`);
+  assert.equal(v.corpo.tipo, 'video/webm');
+  assert.ok(catalogoSite.arquivosDoSite(db, cfg).arquivos.some((a) => a.nome === peca.video && a.dados.length === webm.length));
+  assert.equal(chamar('DELETE', `/api/produtos/${p1.id}/video`).corpo.video_versao, null);
+
+  // Filtros: tamanhos em ordem (números e letras) e cores das mais comuns para as menos.
+  assert.deepEqual(dados.tamanhos, ['P', 'M', '38', '40']);
+  assert.equal(dados.cores[0], 'Preto');
+
+  // Tabela de medidas: vazia não aparece; só vai o que for válido.
+  assert.equal(dados.medidas, null);
+  chamar('PUT', '/api/config', { catalogo_medidas: JSON.stringify({ letras: { colunas: ['Busto', ' ', 'Quadril'], linhas: [['P', '86', '94'], ['', '1', '2'], ['M', '<b>90</b>', '98']] }, numeros: { colunas: [], linhas: [] } }) });
+  cfg = chamar('GET', '/api/config').corpo;
+  dados = catalogoSite.montarDados(db, cfg).dados;
+  assert.deepEqual(dados.medidas.letras.colunas, ['Busto', 'Quadril']);
+  assert.deepEqual(dados.medidas.letras.linhas.map((l) => l[0]), ['P', 'M']);
+  assert.equal(dados.medidas.numeros, null);
+  assert.doesNotMatch(catalogoSite.montarHtml(dados), /<b>90<\/b>/, 'texto da tabela vai escapado no HTML');
+  chamar('PUT', '/api/config', { catalogo_medidas: 'isso não é json' });
+  assert.equal(catalogoSite.montarDados(db, chamar('GET', '/api/config').corpo).dados.medidas, null);
+});

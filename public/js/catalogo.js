@@ -466,6 +466,13 @@ const Catalogo = (() => {
             <label id="cs-tema-fim-l">Termina em (para a contagem regressiva)<input type="date" id="cs-tema-fim" value="${esc(cfg.catalogo_tema_fim || '')}"></label>
             <small class="dica" id="cs-tema-info"></small>
           </details>
+          <details class="cs-bloco"><summary>${Icone('grade')} Tabela de medidas ${cfg.catalogo_medidas ? '<span class="selo ok">no site</span>' : ''}</summary>
+            <p class="dica">Aparece na peça como <b>"Qual o meu tamanho?"</b>: a cliente vê a tabela e, escrevendo as medidas dela, o site já sugere o tamanho. Medidas do corpo, em cm.</p>
+            <div class="segmentos" id="cs-med-tipo"><button type="button" class="segmento sel" data-m="letras">Letras (P, M, G)</button><button type="button" class="segmento" data-m="numeros">Números (36, 38…)</button></div>
+            <div class="cs-med" id="cs-med"></div>
+            <label class="check"><input type="checkbox" id="cs-med-ligar" ${cfg.catalogo_medidas ? 'checked' : ''}> Mostrar a tabela no site</label>
+            <button type="button" class="btn btn-claro btn-peq" id="cs-med-salvar">${Icone('check')} Salvar a tabela</button>
+          </details>
           <details class="cs-bloco" ${st.tem_chave ? '' : 'open'}><summary>${Icone('ajustes')} Textos do site</summary>
             <label>Título<input id="cs-titulo" maxlength="40" value="${esc(cfg.catalogo_titulo || '')}" placeholder="${esc(cfg.loja_nome || 'Clara Styllus')}"></label>
             <label>Frase de apresentação<textarea id="cs-sub" rows="2" maxlength="160" placeholder="Escolha suas peças favoritas, monte a sua sacola e mande o pedido direto no nosso WhatsApp.">${esc(cfg.catalogo_subtitulo || '')}</textarea></label>
@@ -584,6 +591,54 @@ const Catalogo = (() => {
         st = await U.api('/api/catalogo/site');
         desenharCapa();
         recarregar();
+      } catch (e) { erro(e); }
+    };
+
+    // Tabela de medidas
+    const MED_PADRAO = {
+      letras: { colunas: ['Busto', 'Cintura', 'Quadril'], linhas: [['PP', '82', '64', '90'], ['P', '86', '68', '94'], ['M', '90', '72', '98'], ['G', '96', '78', '104'], ['GG', '102', '84', '110']] },
+      numeros: { colunas: ['Cintura', 'Quadril'], linhas: [['36', '66', '92'], ['38', '70', '96'], ['40', '74', '100'], ['42', '78', '104'], ['44', '82', '108'], ['46', '86', '112']] },
+    };
+    let med;
+    try { med = JSON.parse(cfg.catalogo_medidas || 'null'); } catch { med = null; }
+    med = { letras: (med && med.letras) || JSON.parse(JSON.stringify(MED_PADRAO.letras)), numeros: (med && med.numeros) || JSON.parse(JSON.stringify(MED_PADRAO.numeros)) };
+    let medTipo = 'letras';
+    const medEl = corpo.querySelector('#cs-med');
+    const desenharMed = () => {
+      const t = med[medTipo];
+      medEl.innerHTML = `<table><thead><tr><th>Tam</th>${t.colunas.map((c, j) => `<th><input data-col="${j}" value="${esc(c)}" maxlength="20"></th>`).join('')}
+        ${t.colunas.length < 5 ? '<th><button type="button" class="link" data-addcol title="Mais uma medida">+ medida</button></th>' : ''}</tr></thead>
+        <tbody>${t.linhas.map((l, i) => `<tr><th><input data-l="${i}" data-c="0" value="${esc(l[0])}" maxlength="8"></th>${t.colunas.map((_, j) => `<td><input data-l="${i}" data-c="${j + 1}" value="${esc(l[j + 1] || '')}" maxlength="12" inputmode="decimal"></td>`).join('')}
+          <td><button type="button" class="link txt-perigo" data-rmlin="${i}" title="Tirar este tamanho">✕</button></td></tr>`).join('')}</tbody></table>
+        <button type="button" class="link" data-addlin>+ tamanho</button>`;
+    };
+    desenharMed();
+    medEl.addEventListener('input', (ev) => {
+      const i = ev.target;
+      const t = med[medTipo];
+      if (i.dataset.col !== undefined) t.colunas[Number(i.dataset.col)] = i.value;
+      else if (i.dataset.l !== undefined) t.linhas[Number(i.dataset.l)][Number(i.dataset.c)] = i.value;
+    });
+    medEl.addEventListener('click', (ev) => {
+      const t = med[medTipo];
+      if (ev.target.closest('[data-addcol]')) { t.colunas.push(''); t.linhas.forEach((l) => l.push('')); desenharMed(); medEl.querySelector(`[data-col="${t.colunas.length - 1}"]`).focus(); }
+      if (ev.target.closest('[data-addlin]')) { t.linhas.push(['', ...t.colunas.map(() => '')]); desenharMed(); medEl.querySelector(`[data-l="${t.linhas.length - 1}"][data-c="0"]`).focus(); }
+      const rm = ev.target.closest('[data-rmlin]');
+      if (rm) { t.linhas.splice(Number(rm.dataset.rmlin), 1); desenharMed(); }
+    });
+    corpo.querySelector('#cs-med-tipo').onclick = (ev) => {
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      medTipo = b.dataset.m;
+      corpo.querySelectorAll('#cs-med-tipo .segmento').forEach((x) => x.classList.toggle('sel', x === b));
+      desenharMed();
+    };
+    corpo.querySelector('#cs-med-salvar').onclick = async () => {
+      const ligar = corpo.querySelector('#cs-med-ligar').checked;
+      try {
+        await U.api('/api/config', { metodo: 'PUT', corpo: { catalogo_medidas: ligar ? JSON.stringify(med) : '' } });
+        recarregar();
+        aviso(ligar ? 'Tabela salva. Abra uma peça na prévia e toque em "Qual o meu tamanho?".' : 'A tabela não aparece mais no site.');
       } catch (e) { erro(e); }
     };
 

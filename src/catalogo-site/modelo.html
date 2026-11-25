@@ -357,7 +357,120 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
 @media (max-width: 860px) { .chegou-setas { display: none; } .chegou { padding-top: 48px; } .nov { flex-basis: 62vw; } .prov-conta { bottom: 86px; } }
 @media (prefers-reduced-motion: reduce) { .nov { opacity: 1; transform: none; } .peca-foto, .nov-foto, .anel figure { animation: none; } }
 
+/* Favoritas */
+.bt-fav { position: absolute; right: 12px; bottom: 12px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); color: var(--vinho); display: grid; place-items: center;
+  box-shadow: 0 6px 14px rgba(0,0,0,.15); transition: transform .2s; transform: translateZ(2px); }
+.bt-fav svg { width: 20px; height: 20px; fill: none; transition: fill .2s, color .2s; }
+.bt-fav.on { color: #e0245e; }
+.bt-fav.on svg { fill: #e0245e; }
+.bt-fav:hover { transform: translateZ(2px) scale(1.08); }
+.bt-fav.pulsa { animation: coracao .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes coracao { 30% { transform: translateZ(2px) scale(1.35); } 60% { transform: translateZ(2px) scale(.92); } }
+.bt-fav-g { position: static; transform: none; width: 52px; height: 52px; flex: 0 0 52px; border: 1.5px solid var(--borda); box-shadow: none; }
+.bt-favs { color: #ff8fb1; }
+.bt-favs svg { width: 20px; height: 20px; }
+.cats .c-fav { border-color: #f3c1d2; }
+.cats .c-fav.sel { background: #e0245e; border-color: #e0245e; }
+
+/* Filtros */
+.cats .bt-filtro { display: inline-flex; align-items: center; gap: 7px; border-color: var(--vinho); color: var(--vinho); }
+.cats .bt-filtro svg { width: 17px; height: 17px; }
+.cats .bt-filtro small { display: inline-grid; place-items: center; min-width: 20px; height: 20px; border-radius: 10px; background: var(--ouro); color: var(--vinho); margin: 0; font-size: 11px; }
+.cats .bt-filtro.sel { background: var(--vinho); color: #fff; }
+.cats .bt-filtro[aria-expanded=true] { background: var(--vinho); color: #fff; }
+.filtros { background: #fff; border: 1px solid var(--borda); border-radius: 22px; padding: 18px 20px; margin: -6px 0 20px; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 20px 40px -24px rgba(77,49,57,.45); opacity: 0; transform: translateY(-8px); transition: opacity .25s, transform .25s; }
+.filtros.aberto { opacity: 1; transform: none; }
+.filtro-grupo h4 { margin: 0 0 8px; font-size: 11.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--suave); }
+.filtros .escolha button { min-width: 0; padding: 9px 14px; font-size: 14px; }
+.filtros-pe { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--borda); padding-top: 14px; }
+.filtros-pe .bt-pedido { padding: 13px 24px; font-size: 15px; }
+.filtros-pe .bt-voltar[disabled] { opacity: .4; }
+.tams i.on { background: var(--vinho); color: #fff; }
+.link-limpar { border: 0; background: none; color: var(--rosa-escuro); font-weight: 700; text-decoration: underline; padding: 0; }
+
+/* Vídeo da peça */
+.selo.video { background: var(--vinho); color: #fff; display: inline-flex; align-items: center; gap: 4px; }
+.prov-video { position: absolute; inset: 0; z-index: 1; background: #000; }
+.prov-video video { width: 100%; height: 100%; object-fit: cover; }
+.video-som { position: absolute; left: 14px; top: 14px; width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(20,12,15,.6); color: #fff; display: grid; place-items: center; backdrop-filter: blur(6px); }
+.video-som svg { width: 20px; height: 20px; }
+.prov-mini .bt-video { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--vinho); color: #fff; }
+.prov-mini .bt-video svg { width: 20px; height: 20px; }
+.prov-mini .bt-video small { font-size: 10px; font-weight: 700; }
+.prov-mini .bt-video.sel { border-color: var(--ouro); }
+
+/* Qual o meu tamanho? */
+.h4-tam { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.link-medidas { border: 0; background: none; padding: 0; color: var(--rosa-escuro); font-weight: 700; font-size: 13px; letter-spacing: 0; text-transform: none; text-decoration: underline; text-underline-offset: 3px; }
+.medidas { background: #fff; border: 1px solid var(--borda); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; animation: entra-item .3s ease; }
+.medidas table { width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: center; }
+.medidas th, .medidas td { padding: 7px 4px; border-bottom: 1px solid #f1eaec; }
+.medidas thead th { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--suave); }
+.medidas tbody tr { color: #a99da3; }
+.medidas tbody tr.tem { color: var(--texto); font-weight: 700; }
+.medidas tbody tr.sugerido { background: var(--ouro-claro); color: var(--vinho); }
+.medidas-nota { color: var(--suave); font-size: 12px; }
+.medidas-ajuda { background: var(--rosa-claro); border-radius: 14px; padding: 12px; }
+.medidas-ajuda > b { font-size: 13.5px; }
+.medidas-campos { display: flex; gap: 8px; margin-top: 8px; }
+.medidas-campos label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--suave); min-width: 0; }
+.medidas-campos input { width: 100%; font: inherit; font-size: 16px; padding: 9px 10px; border-radius: 12px; border: 1.5px solid var(--borda); background: #fff; outline: none; }
+.medidas-campos input:focus { border-color: var(--rosa); }
+.medidas-r { margin: 8px 0 0; font-size: 14px; line-height: 1.4; }
+.medidas-r:empty { display: none; }
+
+/* Stories */
+.stories { grid-column: 1 / -1; position: relative; z-index: 3; display: flex; gap: 16px; overflow-x: auto; scrollbar-width: none; padding: 4px 2px 2px; margin-bottom: -10px; }
+.stories::-webkit-scrollbar { display: none; }
+.story { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; background: none; color: #fff; padding: 0; width: 76px; }
+.story small { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.story-anel { display: block; width: 72px; height: 72px; border-radius: 50%; padding: 3px; background: conic-gradient(from 200deg, var(--ouro-claro), var(--ouro), #e0705f, var(--rosa), var(--ouro-claro)); transition: transform .2s; }
+.story:hover .story-anel { transform: scale(1.06); }
+.story.bf .story-anel { background: conic-gradient(from 200deg, #ffe266, #ffcc00, #ff5a3c, #ffcc00, #ffe266); }
+.story.visto .story-anel { background: rgba(255,255,255,.28); }
+.story-img { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 3px solid var(--vinho); background: var(--rosa-claro); color: var(--vinho); }
+.story-img img { width: 100%; height: 100%; object-fit: cover; }
+.story-img svg { width: 24px; height: 24px; }
+.hero.com-stories { padding-top: 96px; align-content: center; }
+
+.story-tela { position: fixed; inset: 0; z-index: 85; background: rgba(10,6,8,.94); display: grid; place-items: center; opacity: 0; transition: opacity .25s; }
+.story-tela.aberta { opacity: 1; }
+.story-caixa { position: relative; width: min(440px, 100vw); height: min(92svh, 800px); border-radius: 22px; overflow: hidden; background: #111; user-select: none; -webkit-user-select: none; touch-action: none;
+  transform: scale(.94); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.story-tela.aberta .story-caixa { transform: none; }
+.story-midia { position: absolute; inset: 0; }
+.story-midia img, .story-midia video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.story-midia img.kb { animation: kenburns 6s ease-out both; }
+@keyframes kenburns { from { transform: scale(1.12); } }
+.story-tela.pausado .story-midia img.kb { animation-play-state: paused; }
+.story-barras { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); z-index: 3; display: flex; gap: 4px; }
+.story-barras i { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.35); overflow: hidden; }
+.story-barras b { display: block; height: 100%; background: #fff; }
+.story-topo { position: absolute; left: 12px; right: 8px; top: calc(22px + env(safe-area-inset-top)); z-index: 3; display: flex; align-items: center; gap: 10px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.story-topo .espaco { flex: 1; }
+.story-av { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; border: 2px solid #fff; background: var(--vinho); }
+.story-av img { width: 100%; height: 100%; object-fit: cover; }
+.story-topo b { font-size: 14px; }
+.story-bt { width: 40px; height: 40px; border: 0; background: none; color: #fff; display: grid; place-items: center; font-size: 20px; font-weight: 700; }
+.story-bt svg { width: 22px; height: 22px; }
+.story-lado { position: absolute; top: 80px; bottom: 170px; z-index: 2; width: 40%; border: 0; background: none; padding: 0; }
+.story-lado.ant { left: 0; } .story-lado.prox { right: 0; width: 60%; }
+.story-info { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 90px 20px calc(22px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(10,6,8,.85) 45%); color: #fff; }
+.story-info small { font-size: 11.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ouro-claro); }
+.story-info h3 { font-family: var(--serif); font-size: 28px; font-weight: 600; margin: 4px 0 6px; line-height: 1.1; }
+.story-preco { margin-bottom: 14px; font-size: 15px; }
+.story-preco s { color: rgba(255,255,255,.6); }
+.story-preco b { font-size: 22px; color: var(--ouro-claro); }
+.story-info .bt-ouro { width: 100%; justify-content: center; }
+@media (max-width: 600px) { .story-caixa { width: 100vw; height: 100svh; border-radius: 0; } .stories { gap: 12px; } .story { width: 68px; } .story-anel { width: 64px; height: 64px; }
+  .bt-fav { width: 34px; height: 34px; right: 8px; bottom: 8px; } .bt-fav svg { width: 17px; height: 17px; } .bt-fav-g { width: 48px; height: 48px; flex-basis: 48px; } .bt-fav-g svg { width: 20px; height: 20px; }
+  .filtros { padding: 16px; } .medidas-campos input { padding: 8px; }
+  .prov-acoes .bt-linha { flex: 1; white-space: nowrap; padding: 14px 12px; } .prov-acoes .bt-ouro { flex: 1 1 100%; order: 3; } }
+
 @media (max-width: 860px) {
+  .stories { order: -2; justify-content: flex-start; }
+  .hero.com-stories { padding-top: 78px; }
   .hero { grid-template-columns: 1fr; padding-top: 90px; text-align: center; min-height: auto; }
   .hero p { margin-left: auto; margin-right: auto; }
   .hero-acoes, .hero-nums { justify-content: center; }
@@ -399,11 +512,13 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   <img class="topo-logo" src="assets/logo.png" alt="__LOJA__">
   <span class="espaco"></span>
   <a class="bt-zap" id="topo-zap" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.6-3.9-3.4-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.6.7.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 21.8c-1.7 0-3.4-.5-4.9-1.3l-.4-.2-3.6.9 1-3.5-.2-.4C2.9 15.8 2.4 14 2.4 12.1 2.4 6.8 6.7 2.4 12 2.4c2.6 0 5 1 6.8 2.8 1.8 1.8 2.8 4.2 2.8 6.8 0 5.4-4.3 9.8-9.6 9.8zM20.5 3.5C18.2 1.2 15.2 0 12 0 5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6c1.8 1 3.8 1.5 5.8 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4z"/></svg><span>Chamar no WhatsApp</span></a>
+  <button class="bt-sacola bt-favs" id="bt-favs" aria-label="Minhas favoritas" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5s-7.5-4.4-9.4-9.2C1.3 7.9 3.4 4.5 6.9 4.5c2.1 0 3.7 1.2 5.1 3 1.4-1.8 3-3 5.1-3 3.5 0 5.6 3.4 4.3 6.8-1.9 4.8-9.4 9.2-9.4 9.2Z"/></svg><b id="favs-n">0</b></button>
   <button class="bt-sacola" id="bt-sacola" aria-label="Minha sacola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><b id="sacola-n" hidden>0</b></button>
 </header>
 
 <section class="hero" id="hero">
   <span class="hero-marca" id="hero-marca" aria-hidden="true"></span>
+  <div class="stories" id="stories" hidden></div>
   <div class="hero-txt">
     <span class="kicker" id="kicker"></span>
     <h1 id="titulo"></h1>
@@ -439,6 +554,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
         <input id="q" type="search" placeholder="Procurar peça, cor ou tamanho" autocomplete="off"></label>
     </div>
     <nav class="cats" id="cats"></nav>
+    <div class="filtros" id="filtros" hidden></div>
     <div class="grade" id="grade"></div>
   </section>
 </main>
@@ -459,6 +575,17 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   <div class="gaveta-pe" id="gaveta-pe"></div>
 </aside>
 <div class="toast" id="toast"></div>
+<div class="story-tela" id="story-tela" hidden role="dialog" aria-modal="true" aria-label="Novidades">
+  <div class="story-caixa" id="story-caixa">
+    <div class="story-midia" id="story-midia"></div>
+    <div class="story-barras" id="story-barras"></div>
+    <div class="story-topo"><span class="story-av" id="story-av"></span><b id="story-grupo"></b><span class="espaco"></span>
+      <button class="story-bt" id="story-som" aria-label="Som" hidden></button><button class="story-bt" id="story-x" aria-label="Fechar">✕</button></div>
+    <button class="story-lado ant" data-sl="-1" aria-label="Anterior"></button><button class="story-lado prox" data-sl="1" aria-label="Próxima"></button>
+    <div class="story-info"><small id="story-cat"></small><h3 id="story-nome"></h3><div class="story-preco" id="story-preco"></div>
+      <button class="bt-ouro" id="story-ver">Ver a peça</button></div>
+  </div>
+</div>
 <div class="lupa" id="lupa" hidden role="dialog" aria-modal="true" aria-label="Foto de perto">
   <div class="lupa-palco" id="lupa-palco"><img id="lupa-img" alt="" draggable="false"></div>
   <button class="lupa-seta ant" data-l="-1" aria-label="Foto anterior">‹</button>
@@ -476,10 +603,14 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const brl = (c) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const semMouse = matchMedia('(hover: none)').matches; // celular: sem inclinação que segue o mouse
   const zap = (texto) => (D.whatsapp ? `https://wa.me/${D.whatsapp}${texto ? `?text=${encodeURIComponent(texto)}` : ''}` : null);
   const ICONE_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   const ICONE_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
+  const ICONE_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>';
+  const ICONE_SOM = (mudo) => (mudo ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6M16 9l6 6"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>');
   const ICONE_LUPA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
   /** Todas as fotos da peça: uma por cor e depois as "mais fotos" (costas, detalhe…). */
   const fotosDa = (p) => [...p.fotos, ...(p.mais || [])];
@@ -671,45 +802,284 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   })();
 
   // ---------- Vitrine
+  // ---------- Favoritas (ficam guardadas neste celular)
+  const CHAVE_FAV = `favoritas-${D.loja}`;
+  let favs = new Set();
+  try { favs = new Set(JSON.parse(localStorage.getItem(CHAVE_FAV) || '[]').filter((lk) => D.pecas.some((p) => p.lk === lk))); } catch { favs = new Set(); }
+  const ICONE_CORACAO = '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.4-9.4-9.2C1.3 7.9 3.4 4.5 6.9 4.5c2.1 0 3.7 1.2 5.1 3 1.4-1.8 3-3 5.1-3 3.5 0 5.6 3.4 4.3 6.8-1.9 4.8-9.4 9.2-9.4 9.2Z"/></svg>';
+  const coracao = (p, classe = 'bt-fav') => `<button class="${classe} ${favs.has(p.lk) ? 'on' : ''}" data-fav="${p.lk}" aria-label="Favoritar" aria-pressed="${favs.has(p.lk)}">${ICONE_CORACAO}</button>`;
+  function marcarFav(lk) {
+    const on = !favs.has(lk);
+    if (on) favs.add(lk); else favs.delete(lk);
+    try { localStorage.setItem(CHAVE_FAV, JSON.stringify([...favs])); } catch { /* só nesta visita */ }
+    document.querySelectorAll(`[data-fav="${lk}"]`).forEach((b) => {
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on);
+      b.classList.remove('pulsa'); void b.offsetWidth; if (on) b.classList.add('pulsa');
+    });
+    desenharFavsTopo();
+    desenharCats();
+    if (categoria === '__fav') { if (!favs.size) categoria = ''; desenharGrade(); }
+    toast(on ? 'Guardada nas suas favoritas ❤️' : 'Tirada das favoritas');
+  }
+  function desenharFavsTopo() {
+    const b = $('#bt-favs');
+    b.hidden = !favs.size;
+    $('#favs-n').textContent = favs.size;
+  }
+  $('#bt-favs').onclick = () => {
+    categoria = '__fav';
+    desenharCats();
+    desenharGrade();
+    scrollTo({ top: $('#vitrine').offsetTop + ($('#chegou').hidden ? 0 : $('#chegou').offsetHeight), behavior: calmo ? 'auto' : 'smooth' });
+  };
+
+  // ---------- Vitrine: categorias, busca, filtros (tamanho, cor, preço) e ordem
   let categoria = '';
+  const F = { tams: new Set(), cores: new Set(), preco: '', ordem: '' };
+  const FAIXAS = [['0-10000', 'Até R$ 100'], ['10000-20000', 'R$ 100 a 200'], ['20000-30000', 'R$ 200 a 300'], ['30000-50000', 'R$ 300 a 500'], ['50000-', 'Acima de R$ 500']]
+    .filter(([k]) => { const [a, b] = k.split('-').map(Number); return D.pecas.some((p) => p.preco >= a && (!b || p.preco < b)); });
+  const ORDENS = [['', 'Destaques'], ['menor', 'Menor preço'], ['maior', 'Maior preço'], ['novas', 'Novidades']];
   const cats = $('#cats');
   const contar = (c) => D.pecas.filter((p) => !c || p.categoria === c).length;
-  cats.innerHTML = [['', 'Todas'], ...D.categorias.map((c) => [c, c])].map(([k, t]) => `<button data-c="${esc(k)}" class="${k === categoria ? 'sel' : ''}">${esc(t)}<small>${contar(k)}</small></button>`).join('');
+  const nFiltros = () => F.tams.size + F.cores.size + (F.preco ? 1 : 0) + (F.ordem ? 1 : 0);
+  const ICONE_FILTRO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
+  function desenharCats() {
+    const n = nFiltros();
+    cats.innerHTML = `<button class="bt-filtro ${n ? 'sel' : ''}" data-filtro aria-expanded="${!$('#filtros').hidden}">${ICONE_FILTRO} Filtrar${n ? `<small>${n}</small>` : ''}</button>`
+      + [['', 'Todas'], ...(favs.size ? [['__fav', '❤ Favoritas']] : []), ...D.categorias.map((c) => [c, c])]
+        .map(([k, t]) => `<button data-c="${esc(k)}" class="${k === categoria ? 'sel' : ''} ${k === '__fav' ? 'c-fav' : ''}">${esc(t)}<small>${k === '__fav' ? favs.size : contar(k)}</small></button>`).join('');
+  }
   cats.onclick = (e) => {
+    if (e.target.closest('[data-filtro]')) return abrirFiltros();
     const b = e.target.closest('[data-c]');
     if (!b) return;
     categoria = b.dataset.c;
-    cats.querySelectorAll('button').forEach((x) => x.classList.toggle('sel', x === b));
+    desenharCats();
     desenharGrade();
     const g = $('#vitrine');
-    if (g.getBoundingClientRect().top < 0) scrollTo({ top: g.offsetTop + 40, behavior: calmo ? 'auto' : 'smooth' });
+    if (g.getBoundingClientRect().top < 0) scrollTo({ top: cats.getBoundingClientRect().top + scrollY - 70, behavior: calmo ? 'auto' : 'smooth' });
   };
   const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   $('#q').addEventListener('input', () => desenharGrade());
 
-  const selos = (p) => [p.giro && p.giro.length && `<span class="selo giro">${ICONE_GIRO.replace('<svg', '<svg width="13" height="13"')} 360°</span>`, p.novo && '<span class="selo novo">Novidade</span>', p.de && `<span class="selo desc">−${Math.round((1 - p.preco / p.de) * 100)}%</span>`,
+  function filtrar() {
+    const q = semAcento($('#q').value.trim());
+    const [pa, pb] = F.preco ? F.preco.split('-').map(Number) : [0, 0];
+    const lista = D.pecas.filter((p) => (!categoria || (categoria === '__fav' ? favs.has(p.lk) : p.categoria === categoria))
+      && (!q || semAcento([p.nome, p.categoria, p.cores.join(' '), p.tamanhos.join(' '), p.num].join(' ')).includes(q))
+      && (!F.tams.size || p.tamanhos.some((t) => F.tams.has(t)))
+      && (!F.cores.size || p.cores.some((c) => F.cores.has(c)))
+      && (!F.preco || (p.preco >= pa && (!pb || p.preco < pb))));
+    if (F.ordem === 'menor') lista.sort((a, b) => a.preco - b.preco);
+    if (F.ordem === 'maior') lista.sort((a, b) => b.preco - a.preco);
+    if (F.ordem === 'novas') lista.sort((a, b) => (b.chegou - a.chegou) || (b.novo - a.novo) || (b.lk - a.lk));
+    return lista;
+  }
+  function desenharFiltros() {
+    const fl = $('#filtros');
+    const chip = (grupo, v, t, sel) => `<button data-${grupo}="${esc(v)}" class="${sel ? 'sel' : ''}">${esc(t)}</button>`;
+    fl.innerHTML = `
+      ${D.tamanhos.length > 1 ? `<div class="filtro-grupo"><h4>Tamanho</h4><div class="escolha">${D.tamanhos.map((t) => chip('ft', t, t, F.tams.has(t))).join('')}</div></div>` : ''}
+      ${D.cores.length > 1 ? `<div class="filtro-grupo"><h4>Cor</h4><div class="escolha">${D.cores.map((c) => chip('fc', c, c, F.cores.has(c))).join('')}</div></div>` : ''}
+      ${D.mostrarPreco && FAIXAS.length > 1 ? `<div class="filtro-grupo"><h4>Preço</h4><div class="escolha">${FAIXAS.map(([k, t]) => chip('fp', k, t, F.preco === k)).join('')}</div></div>` : ''}
+      <div class="filtro-grupo"><h4>Ordenar por</h4><div class="escolha">${ORDENS.filter(([k]) => D.mostrarPreco || !['menor', 'maior'].includes(k)).map(([k, t]) => chip('fo', k, t, F.ordem === k)).join('')}</div></div>
+      <div class="filtros-pe"><button class="bt-voltar" id="f-limpar" ${nFiltros() ? '' : 'disabled'}>Limpar filtros</button>
+        <button class="bt-pedido" id="f-ver">Ver ${filtrar().length} peça${filtrar().length === 1 ? '' : 's'}</button></div>`;
+  }
+  function abrirFiltros(abrir) {
+    const fl = $('#filtros');
+    const vai = abrir === undefined ? fl.hidden : abrir;
+    if (vai) { desenharFiltros(); fl.hidden = false; requestAnimationFrame(() => fl.classList.add('aberto')); } else { fl.classList.remove('aberto'); fl.hidden = true; }
+    desenharCats();
+  }
+  $('#filtros').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.id === 'f-ver') { abrirFiltros(false); scrollTo({ top: cats.getBoundingClientRect().top + scrollY - 70, behavior: calmo ? 'auto' : 'smooth' }); return; }
+    if (b.id === 'f-limpar') { F.tams.clear(); F.cores.clear(); F.preco = ''; F.ordem = ''; } else if (b.dataset.ft !== undefined) {
+      if (F.tams.has(b.dataset.ft)) F.tams.delete(b.dataset.ft); else F.tams.add(b.dataset.ft);
+    } else if (b.dataset.fc !== undefined) {
+      if (F.cores.has(b.dataset.fc)) F.cores.delete(b.dataset.fc); else F.cores.add(b.dataset.fc);
+    } else if (b.dataset.fp !== undefined) F.preco = F.preco === b.dataset.fp ? '' : b.dataset.fp;
+    else if (b.dataset.fo !== undefined) F.ordem = b.dataset.fo;
+    desenharFiltros();
+    desenharCats();
+    desenharGrade();
+  });
+
+  const selos = (p) => [p.giro && p.giro.length && `<span class="selo giro">${ICONE_GIRO.replace('<svg', '<svg width="13" height="13"')} 360°</span>`,
+    p.video && `<span class="selo video">${ICONE_PLAY.replace('<svg', '<svg width="11" height="11"')} Vídeo</span>`, p.novo && '<span class="selo novo">Novidade</span>', p.de && `<span class="selo desc">−${Math.round((1 - p.preco / p.de) * 100)}%</span>`,
     p.top && '<span class="selo top">Mais vendida</span>', p.ultima && '<span class="selo ultima">Última peça</span>'].filter(Boolean).join('');
   const precoHtml = (p) => (D.mostrarPreco ? `<div class="preco">${p.de ? `<s>${brl(p.de)}</s>` : ''}<b>${p.varia ? 'a partir de ' : ''}${brl(p.preco)}</b>
     ${D.parcelas && p.preco >= D.parcelas * 1000 ? `<small>ou ${D.parcelas}x de ${brl(Math.ceil(p.preco / D.parcelas))} sem juros</small>` : ''}</div>` : '');
 
   let observador = null;
   function desenharGrade() {
-    const q = semAcento($('#q').value.trim());
-    const lista = D.pecas.filter((p) => (!categoria || p.categoria === categoria)
-      && (!q || semAcento([p.nome, p.categoria, p.cores.join(' '), p.tamanhos.join(' '), p.num].join(' ')).includes(q)));
+    const lista = filtrar();
     const g = $('#grade');
+    const vazio = categoria === '__fav' ? 'Você ainda não tem favoritas. Toque no ❤ das peças que gostar.'
+      : nFiltros() ? 'Nenhuma peça com esses filtros. <button class="link-limpar" id="limpar-vazio">Limpar filtros</button>' : 'Nenhuma peça encontrada. Tente outra busca ou fale com a gente no WhatsApp 💬';
     g.innerHTML = lista.map((p, i) => `<article class="peca" data-id="${p.id}" style="--atraso:${(i % 4) * 0.07}s" tabindex="0">
       <div class="peca-foto">${p.fotos.length ? `<img src="${p.fotos[0]}" alt="${esc(p.nome)}" loading="lazy" decoding="async" ${OK}>` : '<div class="sem">foto em breve</div>'}
-        <div class="selos">${selos(p)}</div><span class="num">${p.num}</span><span class="brilho"></span></div>
+        <div class="selos">${selos(p)}</div><span class="num">${p.num}</span><span class="brilho"></span>${coracao(p)}</div>
       <div class="peca-txt"><span class="peca-cat">${esc(p.categoria)}</span><h3>${esc(p.nome)}</h3>
-        ${p.tamanhos.length ? `<div class="tams">${p.tamanhos.map((t) => `<i>${esc(t)}</i>`).join('')}</div>` : ''}${precoHtml(p)}</div>
+        ${p.tamanhos.length ? `<div class="tams">${p.tamanhos.map((t) => `<i class="${F.tams.has(t) ? 'on' : ''}">${esc(t)}</i>`).join('')}</div>` : ''}${precoHtml(p)}</div>
       <button class="bt-add" data-add="${p.id}" aria-label="Pôr na sacola">${ICONE_MAIS}</button>
-    </article>`).join('') || '<div class="nada">Nenhuma peça encontrada. Tente outra busca ou fale com a gente no WhatsApp 💬</div>';
+    </article>`).join('') || `<div class="nada">${vazio}</div>`;
+    const lv = g.querySelector('#limpar-vazio');
+    if (lv) lv.onclick = () => { F.tams.clear(); F.cores.clear(); F.preco = ''; F.ordem = ''; desenharCats(); desenharGrade(); if (!$('#filtros').hidden) desenharFiltros(); };
     if (observador) observador.disconnect();
     observador = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('visivel'); observador.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
     g.querySelectorAll('.peca').forEach((el) => (calmo ? el.classList.add('visivel') : observador.observe(el)));
   }
+  desenharCats();
+  desenharFavsTopo();
   desenharGrade();
+
+  // ---------- Stories: bolinhas no topo com as novidades, promoções, vídeos… em tela cheia, uma depois da outra
+  (() => {
+    const tem = (p) => p.fotos.length || p.video;
+    const grupos = [
+      ['novas', 'Novidades', D.pecas.filter((p) => (p.chegou || p.novo) && tem(p))],
+      ['promo', T && D.tema.id === 'black_friday' ? 'Black Friday' : 'Promoções', D.pecas.filter((p) => p.de && tem(p))],
+      ['video', 'Vídeos', D.pecas.filter((p) => p.video)],
+      ['giro', '360°', D.pecas.filter((p) => p.giro && p.giro.length && tem(p))],
+      ['top', 'Mais vendidas', D.pecas.filter((p) => p.top && tem(p))],
+    ].filter(([, , l]) => l.length).map(([k, nome, l]) => ({ k, nome, pecas: l.slice(0, 10) }));
+    if (!grupos.length) return;
+    const CHAVE_VISTOS = `stories-${D.loja}`;
+    let vistos = {};
+    try { vistos = JSON.parse(localStorage.getItem(CHAVE_VISTOS) || '{}'); } catch { vistos = {}; }
+    const assinatura = (g) => g.pecas.map((p) => p.lk).join(',');
+    const capa = (p) => p.fotos[0] || (p.mais && p.mais[0]) || '';
+    const faixa = $('#stories');
+    const desenharFaixa = () => {
+      faixa.innerHTML = grupos.map((g, i) => `<button class="story ${vistos[g.k] === assinatura(g) ? 'visto' : ''} ${g.k === 'promo' && D.tema && D.tema.id === 'black_friday' ? 'bf' : ''}" data-g="${i}">
+        <span class="story-anel"><span class="story-img">${capa(g.pecas[0]) ? `<img src="${capa(g.pecas[0])}" alt="" decoding="async">` : ICONE_PLAY}</span></span><small>${esc(g.nome)}</small></button>`).join('');
+    };
+    desenharFaixa();
+    faixa.hidden = false;
+    $('#hero').classList.add('com-stories');
+    const tela = $('#story-tela');
+    const midia = $('#story-midia');
+    const barras = $('#story-barras');
+    const som = $('#story-som');
+    let S = null;
+    let mudo = true;
+    let raf = 0;
+    const DUR = 5000;
+    function mostrar() {
+      const g = grupos[S.g];
+      const p = g.pecas[S.i];
+      vistos[g.k] = assinatura(g);
+      try { localStorage.setItem(CHAVE_VISTOS, JSON.stringify(vistos)); } catch { /* ok */ }
+      barras.innerHTML = g.pecas.map((_, i) => `<i><b style="width:${i < S.i ? 100 : 0}%"></b></i>`).join('');
+      $('#story-av').innerHTML = capa(g.pecas[0]) ? `<img src="${capa(g.pecas[0])}" alt="">` : '';
+      $('#story-grupo').textContent = g.nome;
+      $('#story-cat').textContent = `${p.categoria} · nº ${p.num}`;
+      $('#story-nome').textContent = p.nome;
+      $('#story-preco').innerHTML = D.mostrarPreco ? `${p.de ? `<s>${brl(p.de)}</s> ` : ''}<b>${brl(p.preco)}</b>` : '';
+      S.dur = DUR;
+      S.passado = 0;
+      S.inicio = performance.now();
+      if (p.video) {
+        midia.innerHTML = `<video src="${p.video}" ${mudo ? 'muted' : ''} playsinline autoplay preload="auto"></video>`;
+        const v = midia.querySelector('video');
+        S.video = v;
+        v.onloadedmetadata = () => { S.dur = Math.min(15, v.duration || 5) * 1000; };
+        v.onended = () => proxima(1);
+        v.play().catch(() => { v.muted = true; mudo = true; v.play().catch(() => {}); });
+        som.hidden = false;
+        som.innerHTML = ICONE_SOM(mudo);
+      } else {
+        S.video = null;
+        midia.innerHTML = `<img src="${capa(p)}" alt="" class="${calmo ? '' : 'kb'}">`;
+        som.hidden = true;
+      }
+      // Já busca a próxima.
+      const prox = g.pecas[S.i + 1] || (grupos[S.g + 1] && grupos[S.g + 1].pecas[0]);
+      if (prox && capa(prox)) { const im = new Image(); im.src = capa(prox); }
+    }
+    function proxima(d) {
+      if (!S) return;
+      const g = grupos[S.g];
+      if (d > 0 && S.i < g.pecas.length - 1) S.i += 1;
+      else if (d > 0) { if (S.g >= grupos.length - 1) return fechar(); S.g += 1; S.i = 0; }
+      else if (S.i > 0) S.i -= 1;
+      else if (S.g > 0) { S.g -= 1; S.i = 0; } else S.i = 0;
+      mostrar();
+    }
+    function tic(t) {
+      if (!S) return;
+      if (!S.pausado && !document.hidden) {
+        const feito = S.video && S.video.duration ? Math.min(1, (S.video.currentTime * 1000) / S.dur) : Math.min(1, (S.passado + t - S.inicio) / S.dur);
+        const b = barras.children[S.i] && barras.children[S.i].firstChild;
+        if (b) b.style.width = `${feito * 100}%`;
+        if (feito >= 1) { proxima(1); }
+      }
+      raf = requestAnimationFrame(tic);
+    }
+    function pausar(sim) {
+      if (!S || S.pausado === sim) return;
+      const agora = performance.now();
+      if (sim) S.passado += agora - S.inicio; else S.inicio = agora;
+      S.pausado = sim;
+      if (S.video) { if (sim) S.video.pause(); else S.video.play().catch(() => {}); }
+      tela.classList.toggle('pausado', sim);
+    }
+    function abrir(gi) {
+      S = { g: gi, i: 0, pausado: false };
+      tela.hidden = false;
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => tela.classList.add('aberta'));
+      mostrar();
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tic);
+    }
+    function fechar() {
+      if (!S) return;
+      S = null;
+      cancelAnimationFrame(raf);
+      tela.classList.remove('aberta');
+      midia.querySelectorAll('video').forEach((v) => v.pause());
+      if (cortina.hidden) document.body.style.overflow = '';
+      setTimeout(() => { if (!S) { tela.hidden = true; midia.innerHTML = ''; } }, 250);
+      desenharFaixa();
+    }
+    faixa.onclick = (e) => { const b = e.target.closest('[data-g]'); if (b) abrir(Number(b.dataset.g)); };
+    $('#story-x').onclick = fechar;
+    som.onclick = () => { mudo = !mudo; if (S && S.video) S.video.muted = mudo; som.innerHTML = ICONE_SOM(mudo); };
+    $('#story-ver').onclick = () => { const p = grupos[S.g].pecas[S.i]; fechar(); abrirPeca(p.id); };
+    // Toque rápido: anterior/próxima; segurar: pausa; arrastar para baixo: fecha.
+    let toqueS = null;
+    const caixa = $('#story-caixa');
+    caixa.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.story-bt, #story-ver')) return;
+      toqueS = { x: e.clientX, y: e.clientY, t: Date.now(), lado: e.target.closest('[data-sl]') };
+      setTimeout(() => { if (toqueS && Date.now() - toqueS.t >= 190) pausar(true); }, 200);
+    });
+    caixa.addEventListener('pointerup', (e) => {
+      if (!toqueS) return;
+      const t = toqueS;
+      toqueS = null;
+      const dy = e.clientY - t.y;
+      const dx = e.clientX - t.x;
+      pausar(false);
+      if (dy > 90 && Math.abs(dy) > Math.abs(dx)) return fechar();
+      if (Math.abs(dx) > 60) return proxima(dx < 0 ? 1 : -1);
+      if (Date.now() - t.t < 250 && t.lado) proxima(Number(t.lado.dataset.sl));
+    });
+    caixa.addEventListener('pointercancel', () => { toqueS = null; pausar(false); });
+    tela.addEventListener('click', (e) => { if (e.target === tela) fechar(); });
+    addEventListener('keydown', (e) => {
+      if (!S) return;
+      if (e.key === 'Escape') fechar();
+      else if (e.key === 'ArrowRight') proxima(1);
+      else if (e.key === 'ArrowLeft') proxima(-1);
+      else if (e.key === ' ') { e.preventDefault(); pausar(!S.pausado); }
+    });
+  })();
 
   // ---------- Chegou essa semana (ou as novidades dos últimos dias)
   (() => {
@@ -751,7 +1121,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   // Inclinação 3D do cartão seguindo o mouse (ou o dedo).
   const grade = $('#grade');
   grade.addEventListener('pointermove', (e) => {
-    if (calmo || e.pointerType === 'touch') return;
+    if (calmo || e.pointerType === 'touch' || semMouse) return;
     const c = e.target.closest('.peca.visivel');
     if (!c) return;
     const r = c.getBoundingClientRect();
@@ -767,6 +1137,8 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     if (c && !c.contains(e.relatedTarget)) { c.classList.remove('mexendo'); c.style.transform = ''; }
   });
   grade.addEventListener('click', (e) => {
+    const fav = e.target.closest('[data-fav]');
+    if (fav) return marcarFav(Number(fav.dataset.fav));
     const add = e.target.closest('[data-add]');
     const c = e.target.closest('.peca');
     if (!c) return;
@@ -788,6 +1160,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     let virado = false;
     const temGiro = !!(p.giro && p.giro.length > 1);
     const lista = fotosDa(p);
+    const tabMedidas = tabelaDe(p);
     provador.innerHTML = `
       <div class="prov-fotos">
         <div class="prov-cartao" id="prov-cartao">
@@ -795,19 +1168,22 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
           <div class="prov-face verso">${lista[0] ? `<img src="${lista[0]}" alt="" decoding="async" draggable="false">` : ''}</div>
         </div>
         ${temGiro ? '<div class="giro360" id="giro360"></div>' : ''}
+        ${p.video ? `<div class="prov-video" id="prov-video" hidden><video src="${p.video}" loop muted playsinline preload="none"></video><button class="video-som" id="video-som" aria-label="Ligar o som">${ICONE_SOM(true)}</button></div>` : ''}
         ${lista.length ? `<button class="bt-lupa" id="prov-lupa" aria-label="Ver a foto de perto">${ICONE_LUPA}</button>` : ''}
         ${lista.length > 1 ? `<span class="prov-conta" id="prov-conta">1/${lista.length}</span>` : ''}
-        ${lista.length > 1 || temGiro ? `<div class="prov-mini">${temGiro ? '<button data-g class="bt-360 sel" aria-label="Ver girando em 360°">360°</button>' : ''}${lista.map((f, i) => `<button data-f="${i}" class="${i || temGiro ? '' : 'sel'}"><img src="${f}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>` : ''}
+        ${lista.length > 1 || temGiro || p.video ? `<div class="prov-mini">${temGiro ? '<button data-g class="bt-360 sel" aria-label="Ver girando em 360°">360°</button>' : ''}${p.video ? `<button data-v class="bt-video" aria-label="Ver o vídeo">${ICONE_PLAY}<small>vídeo</small></button>` : ''}${lista.map((f, i) => `<button data-f="${i}" class="${i || temGiro ? '' : 'sel'}"><img src="${f}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>` : ''}
       </div>
       <div class="prov-txt">
         <span class="peca-cat">${esc(p.categoria)} · nº ${p.num}</span>
         <h2>${esc(p.nome)}</h2>
         <div class="selos" style="position:static;flex-direction:row;transform:none">${selos(p)}</div>
         ${precoHtml(p)}
-        ${p.tamanhos.length ? `<h4>Tamanho</h4><div class="escolha" id="esc-tam">${p.tamanhos.map((t) => `<button data-t="${esc(t)}" class="${t === tam ? 'sel' : ''}">${esc(t)}</button>`).join('')}</div>` : ''}
+        ${p.tamanhos.length ? `<h4 class="h4-tam">Tamanho${tabMedidas ? '<button class="link-medidas" id="prov-medidas" type="button">📏 Qual o meu tamanho?</button>' : ''}</h4>
+          ${tabMedidas ? `<div class="medidas" id="medidas" hidden>${medidasHtml(tabMedidas, p)}</div>` : ''}<div class="escolha" id="esc-tam">${p.tamanhos.map((t) => `<button data-t="${esc(t)}" class="${t === tam ? 'sel' : ''}">${esc(t)}</button>`).join('')}</div>` : ''}
         ${p.cores.length ? `<h4>Cor</h4><div class="escolha" id="esc-cor">${p.cores.map((c) => `<button data-c="${esc(c)}" class="${c === cor ? 'sel' : ''}">${esc(c)}</button>`).join('')}</div>` : ''}
         <span class="aviso-escolha" id="aviso-escolha" hidden></span>
         <div class="prov-acoes">
+          ${coracao(p, 'bt-fav bt-fav-g')}
           <button class="bt-linha" id="prov-sacola">${ICONE_MAIS} Pôr na sacola</button>
           ${D.whatsapp || D.pedidos ? '<button class="bt-ouro" id="prov-quero">Quero essa!</button>' : ''}
         </div>
@@ -823,14 +1199,39 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     if (giro) montarGiro(giro, p.giro);
     const fotosEl = provador.querySelector('.prov-fotos');
     fotosEl.classList.toggle('girando', !!giro);
+    const vid = provador.querySelector('#prov-video');
+    const video = vid && vid.querySelector('video');
+    const verVideo = (sim) => {
+      if (!vid) return;
+      vid.hidden = !sim;
+      fotosEl.classList.toggle('girando', sim || !!(giro && !giro.hidden));
+      provador.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('sel', sim));
+      if (sim) {
+        if (giro) { giro.hidden = true; provador.querySelectorAll('[data-g]').forEach((b) => b.classList.remove('sel')); }
+        provador.querySelectorAll('[data-f]').forEach((b) => b.classList.remove('sel'));
+        video.play().catch(() => {});
+      } else video.pause();
+    };
+    if (vid) {
+      vid.querySelector('#video-som').onclick = (e) => {
+        e.stopPropagation();
+        video.muted = !video.muted;
+        e.currentTarget.innerHTML = ICONE_SOM(video.muted);
+      };
+    }
     const verGiro = (sim) => {
       if (!giro) return;
+      if (sim) verVideo(false);
       giro.hidden = !sim;
       fotosEl.classList.toggle('girando', sim);
       provador.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('sel', sim));
       if (sim) provador.querySelectorAll('[data-f]').forEach((b) => b.classList.remove('sel'));
     };
     const trocarFoto = (i) => {
+      if (vid && !vid.hidden) {
+        verVideo(false);
+        if (i === foto) { provador.querySelectorAll('[data-f]').forEach((b) => b.classList.toggle('sel', Number(b.dataset.f) === i)); return; }
+      }
       if (giro && !giro.hidden) {
         verGiro(false);
         if (i === foto) { provador.querySelectorAll('[data-f]').forEach((b) => b.classList.toggle('sel', Number(b.dataset.f) === i)); return; }
@@ -852,6 +1253,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     fotosEl.addEventListener('dragstart', (e) => e.preventDefault());
     fotosEl.addEventListener('pointerdown', (e) => {
       if ((giro && !giro.hidden) || e.target.closest('button')) return;
+      if (vid && !vid.hidden) return;
       toque = { x: e.clientX, y: e.clientY, t: Date.now() };
     });
     fotosEl.addEventListener('pointerup', (e) => {
@@ -878,6 +1280,15 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
       const f = e.target.closest('[data-f]');
       if (f) return trocarFoto(Number(f.dataset.f));
       if (e.target.closest('[data-g]')) return verGiro(true);
+      if (e.target.closest('[data-v]')) return verVideo(true);
+      const fv = e.target.closest('[data-fav]');
+      if (fv) return marcarFav(Number(fv.dataset.fav));
+      if (e.target.closest('#prov-medidas')) {
+        const m = provador.querySelector('#medidas');
+        m.hidden = !m.hidden;
+        if (!m.hidden) { const i = m.querySelector('input'); if (i && !toqueTela) i.focus(); }
+        return;
+      }
       if (e.target.closest('#prov-link')) return compartilhar(p);
       if (e.target.closest('#prov-lupa')) return abrirLupa(lista, foto, (i) => trocarFoto(i));
       const t = e.target.closest('[data-t]');
@@ -892,6 +1303,24 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
         window.open(zap(`Oi! Vi no catálogo e quero:\n• nº ${p.num} ${p.nome}${tam ? ` — Tam ${tam}` : ''}${cor ? ` · ${cor}` : ''}${D.mostrarPreco ? ` — ${brl(p.preco)}` : ''}`), '_blank');
       }
     };
+    // "Qual o meu tamanho?": a cliente escreve as medidas e o site sugere (e já escolhe) o tamanho.
+    const med = provador.querySelector('#medidas');
+    if (med) {
+      med.addEventListener('input', () => {
+        const valores = [...med.querySelectorAll('input')].map((i) => Number(String(i.value).replace(',', '.')) || 0);
+        const r = med.querySelector('#medidas-r');
+        if (!valores.some(Boolean)) { r.innerHTML = ''; return; }
+        const sug = sugerirTamanho(tabMedidas, valores);
+        med.querySelectorAll('tbody tr').forEach((tr) => tr.classList.toggle('sugerido', !!sug && tr.dataset.t === sug));
+        if (!sug) { r.innerHTML = 'Suas medidas passam do maior tamanho da tabela. Fale com a gente no WhatsApp que a gente te ajuda 💬'; return; }
+        const tem = p.tamanhos.includes(sug);
+        r.innerHTML = tem ? `O seu tamanho é <b>${esc(sug)}</b> ✓ e tem nesta peça!` : `O seu tamanho é <b>${esc(sug)}</b>, mas esta peça não tem ele agora 😢`;
+        if (tem) {
+          tam = sug;
+          provador.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('sel', b.dataset.t === sug));
+        }
+      });
+    }
     // Inclinação da foto acompanhando o mouse.
     const fotos = provador.querySelector('.prov-fotos');
     fotos.onpointermove = (e) => {
@@ -901,6 +1330,26 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
     };
     fotos.onpointerleave = () => { cartao.style.transform = ''; };
   }
+  // ---------- Tabela de medidas (a da loja): letras (P, M, G) ou números (36, 38…), conforme os tamanhos da peça
+  const ehNumero = (t) => /^\d+([.,]\d+)?$/.test(String(t).trim());
+  function tabelaDe(p) {
+    if (!D.medidas || !p.tamanhos.length) return null;
+    const t = p.tamanhos.every(ehNumero) ? D.medidas.numeros : D.medidas.letras;
+    return t && t.linhas.some((l) => p.tamanhos.includes(l[0])) ? t : null;
+  }
+  const maiorDe = (v) => Math.max(...(String(v).replace(',', '.').match(/\d+(\.\d+)?/g) || ['0']).map(Number));
+  function sugerirTamanho(t, valores) {
+    const l = t.linhas.find((linha) => valores.every((v, i) => !v || !maiorDe(linha[i + 1]) || v <= maiorDe(linha[i + 1]) + 1));
+    return l ? l[0] : '';
+  }
+  function medidasHtml(t, p) {
+    return `<table><thead><tr><th>Tam</th>${t.colunas.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+      <tbody>${t.linhas.map((l) => `<tr data-t="${esc(l[0])}" class="${p.tamanhos.includes(l[0]) ? 'tem' : ''}"><th>${esc(l[0])}</th>${l.slice(1).map((v) => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+      <small class="medidas-nota">Medidas do corpo, em centímetros. Em negrito, os tamanhos que esta peça tem.</small>
+      <div class="medidas-ajuda"><b>Me ajuda a escolher</b><div class="medidas-campos">${t.colunas.map((c) => `<label>${esc(c)}<input type="number" inputmode="decimal" min="30" max="200" placeholder="cm"></label>`).join('')}</div>
+      <p class="medidas-r" id="medidas-r"></p></div>`;
+  }
+
   /** Giro de 360°: as fotos em volta do manequim; gira sozinho até a cliente arrastar. */
   function montarGiro(el, quadros) {
     const n = quadros.length;
@@ -1069,6 +1518,7 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
   }, { passive: false });
 
   function fecharPeca() {
+    provador.querySelectorAll('video').forEach((v) => v.pause());
     if (/^#peca-/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
     cortina.classList.remove('aberta');
     document.body.style.overflow = '';

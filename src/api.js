@@ -376,6 +376,12 @@ function criarApi(db, opcoes = {}) {
       if (!c) throw erro(404, 'Arquivo não encontrado.');
       return { __arquivo: true, inline: true, tipo: c.tipo, conteudo: c.dados };
     }
+    if (params.pasta === 'videos') {
+      const g = /^(\d+)-\d+\.(mp4|webm|mov)$/.exec(params.arq || '');
+      const v = g && catalogoSite.lerVideo(db, Number(g[1]));
+      if (!v) throw erro(404, 'Vídeo não encontrado.');
+      return { __arquivo: true, inline: true, tipo: v.tipo, conteudo: v.dados };
+    }
     if (params.pasta === 'mais') {
       const g = /^(\d+)-\d+-(\d+)\.(jpg|png|webp)$/.exec(params.arq || '');
       const f = g && catalogoSite.lerExtra(db, Number(g[1]), Number(g[2]));
@@ -616,6 +622,7 @@ function criarApi(db, opcoes = {}) {
         db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produto_fotos_extras WHERE produto_id = ?').run(p.id);
+        db.prepare('DELETE FROM produto_video WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
       }
     });
@@ -803,6 +810,36 @@ function criarApi(db, opcoes = {}) {
     transacao(db, () => {
       db.prepare('DELETE FROM produto_fotos_extras WHERE produto_id = ? AND ordem >= ?').run(params.id, n);
       db.prepare('UPDATE produtos SET extras_versao = ?, extras_n = ? WHERE id = ?').run(n ? Date.now() : null, n, params.id);
+    });
+    return buscarProduto(params.id);
+  }, 'admin');
+
+  // Vídeo curto da peça (chega como arquivo binário, até 40 MB: ver server.js).
+  rota('GET', '/api/produtos/:id/video', ({ params }) => {
+    const v = catalogoSite.lerVideo(db, Number(params.id));
+    if (!v) throw erro(404, 'Peça sem vídeo.');
+    return { __arquivo: true, inline: true, tipo: v.tipo, conteudo: v.dados };
+  });
+  rota('POST', '/api/produtos/:id/video', ({ params, corpo }) => {
+    buscarProduto(params.id);
+    const dados = corpo && corpo.arquivo;
+    if (!Buffer.isBuffer(dados) || dados.length < 16) throw erro(400, 'Escolha um vídeo.');
+    if (dados.length > 40e6) throw erro(400, 'Vídeo grande demais (até 40 MB).');
+    // Confere pelo conteúdo: MP4/MOV ("ftyp" no começo) ou WEBM.
+    const tipo = dados.subarray(4, 8).toString('latin1') === 'ftyp'
+      ? (dados.subarray(8, 10).toString('latin1') === 'qt' ? 'video/quicktime' : 'video/mp4')
+      : dados.readUInt32BE(0) === 0x1a45dfa3 ? 'video/webm' : null;
+    if (!tipo) throw erro(400, 'Formato de vídeo não aceito (use MP4 ou WEBM).');
+    transacao(db, () => {
+      db.prepare('INSERT OR REPLACE INTO produto_video (produto_id, tipo, dados) VALUES (?,?,?)').run(params.id, tipo, dados);
+      db.prepare('UPDATE produtos SET video_versao = ? WHERE id = ?').run(Date.now(), params.id);
+    });
+    return buscarProduto(params.id);
+  }, 'admin');
+  rota('DELETE', '/api/produtos/:id/video', ({ params }) => {
+    transacao(db, () => {
+      db.prepare('DELETE FROM produto_video WHERE produto_id = ?').run(params.id);
+      db.prepare('UPDATE produtos SET video_versao = NULL WHERE id = ?').run(params.id);
     });
     return buscarProduto(params.id);
   }, 'admin');
@@ -1000,12 +1037,13 @@ function criarApi(db, opcoes = {}) {
       db.prepare('DELETE FROM produto_fotos WHERE produto_id = ?').run(p.id);
       db.prepare('DELETE FROM produto_360 WHERE produto_id = ?').run(p.id);
       db.prepare('DELETE FROM produto_fotos_extras WHERE produto_id = ?').run(p.id);
+      db.prepare('DELETE FROM produto_video WHERE produto_id = ?').run(p.id);
       if (!historico) {
         db.prepare('DELETE FROM estoque_movimentos WHERE produto_id = ?').run(p.id);
         db.prepare('DELETE FROM produtos WHERE id = ?').run(p.id);
         return { ok: true, apagado: true, nome: p.nome };
       }
-      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, foto360_versao = NULL, foto360_n = 0, extras_versao = NULL, extras_n = 0, codigo = codigo || '#excluido' || id,
+      db.prepare(`UPDATE produtos SET ativo = 0, atalho = 0, foto_versao = NULL, foto360_versao = NULL, foto360_n = 0, extras_versao = NULL, extras_n = 0, video_versao = NULL, codigo = codigo || '#excluido' || id,
         excluido_em = datetime('now','localtime') WHERE id = ?`).run(p.id);
       return { ok: true, apagado: false, nome: p.nome };
     });

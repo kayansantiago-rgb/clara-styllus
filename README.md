@@ -9,6 +9,19 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
   campos, tabelas, menu e barras de rolagem), cores das formas de pagamento iguais em todo o sistema e sem
   emojis nos textos do sistema.
 
+- **Vitrine do site mais completa**:
+  - **Filtros**: tamanho, cor, faixa de preço e ordem (menor preço, maior preço, novidades), num botão
+    **Filtrar** na barra das categorias, que mostra quantas peças sobram antes de aplicar.
+  - **Favoritas ❤️**: a cliente marca as peças no coração; elas ficam guardadas no celular dela, com atalho no topo
+    e a categoria "Favoritas".
+  - **Qual o meu tamanho?**: em Site da loja → Tabela de medidas, a loja ajusta a tabela (letras e números; já vem
+    preenchida com uma tabela padrão). Na peça, a cliente vê a tabela e, escrevendo as medidas dela, o site sugere e
+    já escolhe o tamanho.
+  - **Vídeo da peça**: na ficha da peça, **Vídeo** recebe um vídeo curto (MP4 ou WEBM, até 40 MB). No site, ele
+    aparece no botão "vídeo" junto com as fotos (com botão de som) e nos stories.
+  - **Stories**: bolinhas no topo do site (Novidades, Promoções ou Black Friday, Vídeos, 360°, Mais vendidas) que
+    abrem as peças em tela cheia, uma depois da outra, com "Ver a peça". As já vistas ficam apagadas.
+
 - **Fotos do site**:
   - **Mais fotos por peça**: na ficha da peça, **Mais fotos** guarda até 8 fotos além da foto de cada cor (costas,
     detalhe do tecido, peça vestida), com a ordem que a loja quiser.

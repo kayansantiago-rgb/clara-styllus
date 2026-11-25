@@ -197,6 +197,8 @@ const CONFIG_PADRAO = {
   // Tema do site: auto (Black Friday, Natal e Dia das Mães entram sozinhos na época) ou um fixo.
   catalogo_tema: 'auto',
   catalogo_tema_fim: '',
+  // Tabela de medidas do site (JSON: { letras: { colunas, linhas }, numeros: { colunas, linhas } }); vazio = não mostra.
+  catalogo_medidas: '',
   pedidos_url: '',
   pedidos_chave: '',
   pedidos_ultima_busca: '',
@@ -566,6 +568,13 @@ function migrar(db) {
     db.exec('ALTER TABLE produtos ADD COLUMN extras_versao INTEGER');
     db.exec('ALTER TABLE produtos ADD COLUMN extras_n INTEGER NOT NULL DEFAULT 0');
   }
+  // Vídeo curto da peça para o site (o caimento, a peça vestida).
+  db.exec(`CREATE TABLE IF NOT EXISTS produto_video (
+    produto_id INTEGER PRIMARY KEY REFERENCES produtos(id),
+    tipo TEXT NOT NULL,
+    dados BLOB NOT NULL
+  )`);
+  if (!colunas('produtos').includes('video_versao')) db.exec('ALTER TABLE produtos ADD COLUMN video_versao INTEGER');
   // Arquivos da loja (ex.: a foto de capa do site).
   db.exec(`CREATE TABLE IF NOT EXISTS loja_arquivos (
     chave TEXT PRIMARY KEY,

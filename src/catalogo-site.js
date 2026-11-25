@@ -50,7 +50,7 @@ function parcelasSemJuros(cfg) {
 function montarPecas(db, { soEstoque = true } = {}) {
   const produtos = db.prepare(
     `SELECT p.id, p.nome, p.referencia, p.categoria, p.tamanho, p.cor, p.preco_venda, p.preco_anterior, p.estoque, p.foto_versao, p.criado_em,
-       p.foto360_versao, p.foto360_n, p.extras_versao, p.extras_n, f.tipo AS foto_tipo
+       p.foto360_versao, p.foto360_n, p.extras_versao, p.extras_n, p.video_versao, f.tipo AS foto_tipo
      FROM produtos p LEFT JOIN produto_fotos f ON f.produto_id = p.id
      WHERE p.ativo = 1 AND p.servico = 0 AND p.atalho = 0 AND p.excluido_em IS NULL ORDER BY p.id`
   ).all();
@@ -95,6 +95,16 @@ function montarPecas(db, { soEstoque = true } = {}) {
       fotos.set(arq, { id: g.id, ordem: i });
       return arq;
     }) : [];
+    // Vídeo curto (de uma das peças do modelo).
+    const vd = m.itens.find((p) => p.video_versao);
+    let video = '';
+    if (vd) {
+      const t = db.prepare('SELECT tipo FROM produto_video WHERE produto_id = ?').get(vd.id);
+      if (t) {
+        video = `videos/${vd.id}-${vd.video_versao}.${{ 'video/webm': 'webm', 'video/quicktime': 'mov' }[t.tipo] || 'mp4'}`;
+        fotos.set(video, { id: vd.id, video: true });
+      }
+    }
     // Mais fotos (costas, detalhe…), de uma das peças do modelo.
     const ext = { 'image/png': 'png', 'image/webp': 'webp' };
     const e = m.itens.find((p) => p.extras_versao && p.extras_n > 0);
@@ -118,6 +128,7 @@ function montarPecas(db, { soEstoque = true } = {}) {
       fotos: fotosModelo,
       giro,
       mais,
+      video,
       // Número fixo do modelo para o link direto da peça (não muda quando um tamanho esgota).
       lk: m.itens[0].id,
       novo: dias <= 15,
@@ -203,9 +214,14 @@ function montarDados(db, cfg, opcoes = {}) {
     pedidos: /^https:\/\/script\.google(usercontent)?\.com\//.test(cfg.pedidos_url || '') ? cfg.pedidos_url : '',
     prazoReserva: Number(cfg.reserva_prazo_dias) || 7,
     tema: temaDoSite(cfg, hoje),
+    medidas: medidasDoSite(cfg),
     capa: capaDoSite(db),
     atualizado: hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     categorias,
+    // Para os filtros do site: todos os tamanhos (em ordem) e as cores mais comuns.
+    tamanhos: ordenarTamanhos(new Set(pecas.flatMap((p) => p.tamanhos))),
+    cores: [...pecas.flatMap((p) => p.cores).reduce((m, c) => m.set(c, (m.get(c) || 0) + 1), new Map())]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR')).slice(0, 14).map(([c]) => c),
     pecas,
   };
   return { dados, fotos };
@@ -234,6 +250,28 @@ function lerFoto(db, produtoId, ordem = null) {
     ? db.prepare('SELECT tipo, dados FROM produto_fotos WHERE produto_id = ?').get(produtoId)
     : db.prepare('SELECT tipo, dados FROM produto_360 WHERE produto_id = ? AND ordem = ?').get(produtoId, ordem);
   return f ? { tipo: f.tipo, dados: Buffer.from(f.dados) } : null;
+}
+
+/** O vídeo da peça (bytes), ou null. */
+function lerVideo(db, produtoId) {
+  const v = db.prepare('SELECT tipo, dados FROM produto_video WHERE produto_id = ?').get(produtoId);
+  return v ? { tipo: v.tipo, dados: Buffer.from(v.dados) } : null;
+}
+
+/** Tabela de medidas que vai para o site (só o que for válido), ou null. */
+function medidasDoSite(cfg) {
+  let m;
+  try { m = JSON.parse(cfg.catalogo_medidas || 'null'); } catch { return null; }
+  if (!m || typeof m !== 'object') return null;
+  const limpa = (t) => {
+    if (!t || !Array.isArray(t.colunas) || !Array.isArray(t.linhas)) return null;
+    const colunas = t.colunas.map((c) => String(c || '').trim().slice(0, 20)).filter(Boolean).slice(0, 6);
+    const linhas = t.linhas.filter((l) => Array.isArray(l) && String(l[0] || '').trim())
+      .map((l) => [String(l[0]).trim().slice(0, 8), ...colunas.map((_, i) => String(l[i + 1] || '').trim().slice(0, 12))]).slice(0, 20);
+    return colunas.length && linhas.length ? { colunas, linhas } : null;
+  };
+  const r = { letras: limpa(m.letras), numeros: limpa(m.numeros) };
+  return r.letras || r.numeros ? r : null;
 }
 
 /** Uma das "mais fotos" da peça (bytes), ou null. */
@@ -286,8 +324,8 @@ function arquivosDoSite(db, cfg, opcoes = {}) {
   for (const [nome, origem] of ASSETS) {
     if (fs.existsSync(origem)) lista.push({ nome, dados: fs.readFileSync(origem) });
   }
-  for (const [nome, { id, ordem, extra }] of fotos) {
-    const f = extra === undefined ? lerFoto(db, id, ordem) : lerExtra(db, id, extra);
+  for (const [nome, { id, ordem, extra, video }] of fotos) {
+    const f = video ? lerVideo(db, id) : extra === undefined ? lerFoto(db, id, ordem) : lerExtra(db, id, extra);
     if (f) lista.push({ nome, dados: f.dados });
   }
   if (dados.capa) {
@@ -530,4 +568,4 @@ async function publicarGithub({ token, repo, nome, arquivos, loja = 'Clara Styll
 }
 
 module.exports = {
-  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, lerExtra, lerCapa, paginaDaPeca, temaDoSite, blackFriday, diaDasMaes, TEMAS, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };
+  publicarGithub, shaGit, montarDados, montarHtml, arquivosDoSite, lerFoto, lerExtra, lerVideo, medidasDoSite, lerCapa, paginaDaPeca, temaDoSite, blackFriday, diaDasMaes, TEMAS, ASSETS, zipar, publicar, nomeSite, whatsapp, crc32 };

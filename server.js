@@ -92,29 +92,31 @@ function criarServidor(db, opcoes = {}) {
       });
     }
 
-    // Envio do instalador (arquivo binário grande) para atualizar sem internet.
-    if (url.pathname === '/api/atualizacao/arquivo' && req.method === 'POST') {
+    // Arquivos binários grandes: o instalador (atualizar sem internet) e o vídeo da peça (site da loja).
+    const ehVideo = /^\/api\/produtos\/\d+\/video$/.test(url.pathname);
+    if ((url.pathname === '/api/atualizacao/arquivo' || ehVideo) && req.method === 'POST') {
+      const LIMITE = ehVideo ? 40e6 : 300e6;
       // Confere o login antes de receber o arquivo (até 300 MB) para ninguém encher a memória.
       const quem = despachar.usuarioDoToken(lerCookie(req.headers.cookie, COOKIE));
       if (!quem || quem.perfil !== 'admin') {
         req.resume();
-        return enviarJson(res, quem ? 403 : 401, { erro: quem ? 'Só o administrador pode atualizar o sistema.' : 'Entre no sistema.' });
+        return enviarJson(res, quem ? 403 : 401, { erro: quem ? (ehVideo ? 'Só o administrador muda o vídeo da peça.' : 'Só o administrador pode atualizar o sistema.') : 'Entre no sistema.' });
       }
-      if (Number(req.headers['content-length']) > 300e6) {
+      if (Number(req.headers['content-length']) > LIMITE) {
         req.resume();
-        return enviarJson(res, 413, { erro: 'Arquivo grande demais.' });
+        return enviarJson(res, 413, { erro: ehVideo ? 'Vídeo grande demais (até 40 MB). Grave em 720p, com até 15 segundos.' : 'Arquivo grande demais.' });
       }
       const partes = [];
       let tam = 0;
       req.on('data', (c) => {
         tam += c.length;
-        if (tam > 300e6) req.destroy();
+        if (tam > LIMITE) req.destroy();
         else partes.push(c);
       });
       req.on('end', async () => {
         try {
           const token = lerCookie(req.headers.cookie, COOKIE);
-          const corpo = { arquivo: Buffer.concat(partes), nome: decodeURIComponent(req.headers['x-nome-arquivo'] || '') };
+          const corpo = { arquivo: Buffer.concat(partes), nome: decodeURIComponent(req.headers['x-nome-arquivo'] || ''), tipo: String(req.headers['content-type'] || '') };
           const r = await despachar('POST', url.pathname, url.searchParams, corpo, token);
           enviarJson(res, r.status, r.corpo);
         } catch (e) {
