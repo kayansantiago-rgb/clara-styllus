@@ -1,6 +1,6 @@
 {
   "name": "clara-styllus-pdv",
-  "version": "2.45.0",
+  "version": "2.45.1",
   "description": "PDV offline local da loja Clara Styllus: vendas, estoque, etiquetas com código de barras e cupom.",
   "private": true,
   "main": "server.js",
