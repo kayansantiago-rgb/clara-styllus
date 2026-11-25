@@ -7,8 +7,8 @@ Roda em um computador da loja, sem internet, e é usado pelo navegador.
 
 - **Site da loja melhor no celular**: a página não arrasta mais para o lado; a peça abre como uma folha que sobe
   de baixo, com foto grande, tamanho escolhido à vista, um quadro "Formas de pagamento" com o valor no Pix, no
-  dinheiro e no cartão, e uma barra fixa com **Pôr na sacola** e **Finalizar reserva** (que já leva para os dados
-  da reserva). A sacola mostra o mesmo quadro com o total em cada forma.
+  dinheiro e no cartão, e uma barra fixa numa linha só: coração, sacola e **Finalizar reserva** (que já leva para os
+  dados da reserva). A sacola mostra o mesmo quadro com o total em cada forma.
 - **Formas de pagamento no site da loja**: em **Site da loja → Textos do site**, o campo **Desconto no Pix e no
   dinheiro (%)** faz o site mostrar o preço no Pix ao lado do preço normal e das parcelas sem juros. A página da peça
   e a sacola mostram as formas aceitas (Pix, dinheiro e cartão em até 3x), com o total no Pix. Logo depois da faixa,

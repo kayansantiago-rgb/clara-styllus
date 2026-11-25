@@ -221,12 +221,21 @@ main { position: relative; z-index: 2; background: var(--creme); }
 .prov-txt .preco-pix-g { display: flex; align-items: center; gap: 6px; margin-top: -6px; font-size: 14.5px; font-weight: 800; color: #138a5e; }
 .prov-txt .preco-pix-g svg { width: 16px; height: 16px; }
 .prov-txt .preco-pix-g em { font-style: normal; font-weight: 600; color: var(--suave); }
-.h4-tam b { color: var(--vinho); letter-spacing: 0; text-transform: none; font-size: 13px; margin-left: 4px; }
+.h4-tam b { color: var(--vinho); letter-spacing: 0; text-transform: none; font-size: 13px; margin: 0 auto 0 -4px; }
 #esc-tam button { min-width: 50px; height: 50px; padding: 0 12px; border-radius: 16px; font-size: 15px; }
 .prov-acoes { position: sticky; bottom: 0; z-index: 4; margin: 6px -30px -28px; padding: 14px 30px 18px; background: var(--creme); box-shadow: 0 -14px 24px -16px rgba(43,29,34,.35); border-top: 1px solid var(--borda); }
-.prov-acoes .bt-reservar { flex: 1 1 100%; order: 3; justify-content: center; font-size: 16px; padding: 16px 22px; }
-.prov-acoes .bt-reservar svg { width: 20px; height: 20px; }
-.prov-retira { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1 1 100%; order: 4; font-size: 12px; color: var(--suave); }
+.prov-acoes { flex-wrap: nowrap !important; align-items: center; }
+.prov-acoes .bt-fav-g, .prov-acoes .bt-sacola-g { flex: 0 0 52px !important; width: 52px; height: 52px; border-radius: 16px; }
+.bt-sacola-g { position: relative; display: grid; place-items: center; padding: 0; border: 1.5px solid var(--borda); background: #fff; color: var(--vinho); transition: transform .15s, border-color .15s; }
+.bt-sacola-g:hover { border-color: var(--vinho); transform: translateY(-1px); }
+.bt-sacola-g svg { width: 22px !important; height: 22px !important; }
+.bt-sacola-g b { position: absolute; right: 7px; bottom: 6px; width: 17px; height: 17px; border-radius: 50%; background: var(--vinho); color: #fff; font-size: 13px; line-height: 17px; text-align: center; }
+.prov-acoes .bt-fav-g { border-radius: 16px; }
+.prov-acoes .bt-reservar { flex: 1 1 auto !important; order: 0 !important; height: 52px; padding: 0 18px; border-radius: 16px; justify-content: center; gap: 9px; font-size: 15.5px; white-space: nowrap;
+  background: var(--vinho); color: #fff; box-shadow: 0 14px 28px -14px rgba(43,29,34,.8); }
+.prov-acoes .bt-reservar:hover { box-shadow: 0 18px 32px -14px rgba(43,29,34,.9); }
+.prov-acoes .bt-reservar svg { width: 19px; height: 19px; color: var(--ouro-claro); }
+.prov-retira { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--suave); margin-top: -2px; }
 .prov-retira svg { width: 14px; height: 14px; }
 @media (max-width: 860px) {
   .cortina { padding: 0; place-items: end center; }
@@ -1272,13 +1281,13 @@ body[data-tema=verao] .faixa { background: var(--rosa); color: #fff; }
           ${tabMedidas ? `<div class="medidas" id="medidas" hidden>${medidasHtml(tabMedidas, p)}</div>` : ''}<div class="escolha" id="esc-tam">${p.tamanhos.map((t) => `<button data-t="${esc(t)}" class="${t === tam ? 'sel' : ''}">${esc(t)}</button>`).join('')}</div>` : ''}
         ${p.cores.length ? `<h4>Cor</h4><div class="escolha" id="esc-cor">${p.cores.map((c) => `<button data-c="${esc(c)}" class="${c === cor ? 'sel' : ''}">${esc(c)}</button>`).join('')}</div>` : ''}
         ${D.mostrarPreco ? pagamentosValorHtml(p.preco) : ''}
+        ${D.pedidos ? `<span class="prov-retira">${ICONE_RELOGIO} Separamos por ${D.prazoReserva} dias no seu nome · você paga na loja</span>` : ''}
         <span class="aviso-escolha" id="aviso-escolha" hidden></span>
         <div class="prov-acoes">
           ${coracao(p, 'bt-fav bt-fav-g')}
-          <button class="bt-linha" id="prov-sacola">${ICONE_MAIS} Pôr na sacola</button>
+          <button class="bt-sacola-g" id="prov-sacola" aria-label="Pôr na sacola" title="Pôr na sacola">${ICONE_LOJA}<b>+</b></button>
           ${D.pedidos ? `<button class="bt-ouro bt-reservar" id="prov-quero">${ICONE_LOJA} Finalizar reserva</button>`
             : D.whatsapp ? '<button class="bt-ouro bt-reservar" id="prov-quero">Quero essa! (WhatsApp)</button>' : ''}
-          ${D.pedidos ? `<span class="prov-retira">${ICONE_RELOGIO} Separamos por ${D.prazoReserva} dias · você paga na loja</span>` : ''}
         </div>
       </div>
       <button class="compartilhar" id="prov-link" aria-label="Compartilhar esta peça">${ICONE_LINK}<span>Compartilhar</span></button>
